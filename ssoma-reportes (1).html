@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSOMA · Centro de Reportes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F4F6;
+    --panel:#FFFFFF;
+    --panel-alt:#FAFAFB;
+    --border:#E5E7EB;
+    --text:#1A1D23;
+    --muted:#8B92A0;
+    --red:#E31E24;
+    --red-dark:#B9151A;
+    --red-tint:#FDECEC;
+    --green:#16A34A;
+    --green-tint:#E9F9EF;
+    --orange:#F59E0B;
+    --orange-tint:#FEF3E2;
+    --blue:#2563EB;
+    --blue-tint:#EAF1FE;
+    --purple:#7C3AED;
+    --purple-tint:#F3ECFE;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--red);color:#fff;}
+
+  .topbar-red{height:5px;background:var(--red);}
+
+  header.top{
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    padding:20px 28px;
+  }
+  .header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;max-width:1180px;margin:0 auto;}
+  .header-left{display:flex;gap:14px;align-items:center;}
+  .header-bar{width:4px;border-radius:2px;background:var(--red);align-self:stretch;}
+  .header-logo{
+    height:32px;
+    width:auto;
+    flex-shrink:0;
+    object-fit:contain;
+  }
+
+  .sidebar-toggle{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:4px;
+    width:34px;height:34px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:8px;
+    cursor:pointer;
+    flex-shrink:0;
+    align-self:center;
+  }
+  .sidebar-toggle span{
+    display:block;width:16px;height:2px;background:#4B5563;border-radius:2px;
+  }
+  .sidebar-toggle:hover{background:var(--panel-alt);border-color:#C7CBD1;}
+  .sidebar-toggle:hover span{background:var(--red);}
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.1em;
+    color:var(--red);
+    text-transform:uppercase;
+    font-weight:700;
+    margin-bottom:3px;
+  }
+  h1.title{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    font-size:26px;
+    letter-spacing:-.01em;
+    margin:2px 0 4px;
+    color:var(--text);
+  }
+  .subtitle{color:var(--muted);font-size:13px;max-width:560px;line-height:1.5;margin:0;}
+  .header-time{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:20px;
+    white-space:nowrap;
+    align-self:flex-start;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:250px 1fr;
+    max-width:1180px;
+    margin:0 auto;
+    transition:grid-template-columns .2s ease;
+  }
+  @media (max-width:820px){
+    .layout{grid-template-columns:1fr;}
+  }
+  .layout.collapsed{grid-template-columns:0px 1fr;}
+  .layout.collapsed nav.side{
+    padding-left:0;padding-right:0;overflow:hidden;border-right:none;width:0;min-width:0;
+  }
+  .layout.collapsed nav.side > *{display:none;}
+
+  nav.side{
+    background:var(--panel);
+    padding:18px 12px;
+    border-right:1px solid var(--border);
+    overflow:hidden;
+  }
+  @media (max-width:820px){
+    nav.side{
+      border-right:none;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      overflow-x:auto;
+      overflow-y:visible;
+      gap:8px;
+      padding:12px;
+    }
+  }
+  .navlabel{
+    font-size:10.5px;
+    letter-spacing:.1em;
+    color:var(--muted);
+    text-transform:uppercase;
+    font-weight:700;
+    margin:6px 10px 10px;
+  }
+  @media (max-width:820px){ .navlabel{display:none;} }
+
+  button.navitem{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px 8px;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:1px solid transparent;
+    color:#4B5563;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    line-height:1.3;
+    padding:10px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    margin-bottom:4px;
+    white-space:normal;
+  }
+  button.navitem .dot{
+    width:9px;height:9px;border-radius:3px;background:var(--muted);flex-shrink:0;
+  }
+  button.navitem .label{flex:1;min-width:0;}
+  button.navitem.active{
+    background:var(--red);
+    color:#fff;
+  }
+  button.navitem.active .dot{background:#fff;}
+  button.navitem .tag{
+    margin-left:auto;
+    flex-shrink:0;
+    font-family:'Inter',sans-serif;
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:.03em;
+    color:var(--red);
+    background:var(--red-tint);
+    padding:2px 7px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  button.navitem.active .tag{background:rgba(255,255,255,.22);color:#fff;}
+  button.navitem .tag.pending{
+    background:var(--panel-alt);
+    color:var(--muted);
+    border:1px solid var(--border);
+  }
+  button.navitem:hover{background:var(--panel-alt);color:var(--text);}
+  button.navitem.active:hover{background:var(--red-dark);}
+
+  button.navitem-sub{
+    width:calc(100% - 18px);
+    margin-left:18px;
+    padding:8px 10px;
+    font-size:12px;
+    position:relative;
+  }
+  button.navitem-sub::before{
+    content:"";
+    position:absolute;
+    left:-11px;top:50%;
+    width:8px;height:1px;
+    background:var(--border);
+  }
+  button.navitem-sub .dot{width:7px;height:7px;}
+  @media (max-width:820px){
+    button.navitem-sub{width:auto;margin-left:0;}
+    button.navitem-sub::before{display:none;}
+  }
+  @media (max-width:820px){
+    button.navitem{width:auto;white-space:nowrap;flex-wrap:nowrap;}
+  }
+
+  main{padding:22px 28px 60px;min-width:0;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+  .stats-row-3{grid-template-columns:repeat(3,1fr);}
+  @media (max-width:980px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:520px){.stats-row{grid-template-columns:1fr;}}
+  .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 16px 14px;box-shadow:var(--shadow);}
+  .stat-label{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:700;}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:600;margin:6px 0 2px;}
+  .stat-sub{font-size:12px;color:var(--muted);}
+
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:4px;
+    flex-wrap:wrap;
+  }
+  h2.section-title{
+    font-family:'Inter',sans-serif;
+    font-size:19px;
+    font-weight:800;
+    letter-spacing:-.01em;
+    margin:0;
+    color:var(--text);
+  }
+  .section-desc{color:var(--muted);font-size:13px;margin:6px 0 20px;max-width:600px;line-height:1.5;}
+  .count-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--muted);
+    border:1px solid var(--border);
+    background:var(--panel-alt);
+    padding:4px 10px;
+    border-radius:20px;
+  }
+
+  form.report-form{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:22px;
+    margin-bottom:26px;
+    box-shadow:var(--shadow);
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:600px){.grid2{grid-template-columns:1fr;}}
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--text);
+  }
+  .field label .req{color:var(--red);margin-left:2px;}
+  .field .hint{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.4;}
+
+  select, input[type=text], input[type=date], textarea{
+    width:100%;
+    background:#fff;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    padding:10px 11px;
+    border-radius:8px;
+    outline:none;
+  }
+  select:focus, input:focus, textarea:focus{
+    border-color:var(--red);
+    box-shadow:0 0 0 3px rgba(227,30,36,.12);
+  }
+  textarea{resize:vertical;min-height:80px;font-family:'Inter',sans-serif;}
+
+  .toggle-group{display:flex;gap:10px;}
+  .toggle-btn{
+    flex:1;
+    padding:12px;
+    text-align:center;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--muted);
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:13px;
+  }
+  .toggle-btn.sel-acto.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
+  .toggle-btn.sel-cond.active{border-color:var(--orange);color:#B45309;background:var(--orange-tint);}
+
+  .conditional{display:none;padding-top:4px;border-top:1px dashed var(--border);margin-top:4px;}
+  .conditional.show{display:block;}
+
+  .form-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:10px;}
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    padding:11px 20px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--red);color:#fff;}
+  .btn-primary:hover{background:var(--red-dark);}
+  .btn-ghost{background:#fff;color:#4B5563;border:1px solid var(--border);}
+  .btn-ghost:hover{color:var(--text);border-color:#C7CBD1;}
+  .form-note{font-size:11.5px;color:var(--muted);}
+
+  .list-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;}
+  .filters select, .filters input{width:auto;padding:8px 10px;font-size:12.5px;}
+
+  .entry{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-left:4px solid var(--red);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:10px;
+    box-shadow:var(--shadow);
+  }
+  .entry.cond{border-left-color:var(--orange);}
+  .entry-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;}
+  .entry-id{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;color:var(--red);}
+  .entry.cond .entry-id{color:#B45309;}
+  .entry-meta{font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .entry-type{
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    padding:3px 9px;
+    border-radius:20px;
+    background:var(--red-tint);
+    color:var(--red);
+    white-space:nowrap;
+  }
+  .entry.cond .entry-type{background:var(--orange-tint);color:#B45309;}
+  .entry-body{margin-top:10px;font-size:13.5px;line-height:1.55;}
+  .entry-body strong{color:var(--text);}
+  .entry-desc{color:#374151;margin-top:6px;}
+  .entry-del{
+    background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11.5px;
+    text-decoration:underline;padding:0;
+  }
+  .entry-del:hover{color:var(--red);}
+
+  .empty{
+    text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;
+    border:1px dashed var(--border);border-radius:10px;background:var(--panel-alt);
+  }
+
+  .pending-card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:30px 26px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .pending-banner{
+    position:absolute;top:18px;right:-46px;
+    background:var(--red);
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-size:11px;font-weight:700;letter-spacing:.08em;
+    padding:5px 50px;
+    transform:rotate(38deg);
+    text-align:center;
+  }
+  .pending-title{font-family:'Inter',sans-serif;font-weight:800;font-size:17px;margin:0 0 10px;max-width:80%;color:var(--text);}
+  .pending-text{font-size:13.5px;color:var(--muted);line-height:1.6;max-width:520px;}
+  .pending-text b{color:var(--text);}
+  .pending-steps{margin:16px 0 0;padding-left:0;list-style:none;font-size:12.5px;color:var(--muted);}
+  .pending-steps li{padding:6px 0 6px 22px;position:relative;border-top:1px solid var(--border);}
+  .pending-steps li:first-child{border-top:none;}
+  .pending-steps li::before{content:"→";position:absolute;left:0;color:var(--red);}
+
+  .intro-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-left:4px solid var(--blue);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:22px;
+    font-size:12.5px;
+    color:var(--muted);
+    line-height:1.6;
+    box-shadow:var(--shadow);
+  }
+  .intro-card b{color:var(--text);}
+  .intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-top:10px;}
+  @media (max-width:600px){.intro-grid{grid-template-columns:1fr;}}
+  .intro-grid div{padding:4px 0;}
+  .intro-grid span.n{color:var(--blue);font-family:'IBM Plex Mono',monospace;margin-right:6px;font-weight:600;}
+
+  .checklist{border-top:1px solid var(--border);margin-top:6px;padding-top:4px;}
+  .check-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    padding:13px 2px;
+    border-bottom:1px dashed var(--border);
+  }
+  .check-row:last-child{border-bottom:none;}
+  .check-q{font-size:13px;line-height:1.45;flex:1;color:var(--text);}
+  .check-q .req{color:var(--red);margin-left:2px;}
+  .sino{display:flex;gap:6px;flex-shrink:0;}
+  .sino-btn{
+    width:52px;
+    text-align:center;
+    padding:8px 0;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--muted);
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:12px;
+  }
+  .sino-btn.si.active{border-color:var(--green);color:var(--green);background:var(--green-tint);}
+  .sino-btn.no.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
+
+  .score-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    font-weight:600;
+    padding:3px 10px;
+    border-radius:20px;
+    border:1px solid var(--border);
+    white-space:nowrap;
+    background:var(--panel-alt);
+  }
+  .score-badge.high{color:var(--green);border-color:var(--green);background:var(--green-tint);}
+  .score-badge.mid{color:#B45309;border-color:var(--orange);background:var(--orange-tint);}
+  .score-badge.low{color:var(--red);border-color:var(--red);background:var(--red-tint);}
+
+  .estado-badge{
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    padding:4px 10px;
+    border-radius:20px;
+    white-space:nowrap;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+  }
+  .estado-badge::before{content:"";width:6px;height:6px;border-radius:50%;}
+  .estado-badge.pendiente{background:var(--orange-tint);color:#B45309;}
+  .estado-badge.pendiente::before{background:var(--orange);}
+  .estado-badge.levantado{background:var(--green-tint);color:var(--green);}
+  .estado-badge.levantado::before{background:var(--green);}
+
+  .lev-tab{background:#fff;}
+  .lev-tab.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
+
+  .lev-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-left:4px solid var(--orange);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:10px;
+    box-shadow:var(--shadow);
+  }
+  .lev-card.done{border-left-color:var(--green);}
+  .lev-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+  .lev-actions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
+  .lev-form{
+    display:none;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px dashed var(--border);
+  }
+  .lev-form.show{display:block;}
+  .lev-result{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px dashed var(--border);
+    font-size:13px;
+    line-height:1.6;
+    color:#374151;
+  }
+  .lev-result b{color:var(--text);}
+
+  .img-widget{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
+  .img-slot{
+    width:96px;height:96px;
+    border-radius:8px;
+    position:relative;
+    flex-shrink:0;
+    overflow:hidden;
+  }
+  .img-empty{
+    display:flex;align-items:center;justify-content:center;
+    width:100%;height:100%;
+    border:1.5px dashed var(--border);
+    border-radius:8px;
+    background:var(--panel-alt);
+    cursor:pointer;
+    color:var(--muted);
+    font-size:26px;
+    font-weight:300;
+  }
+  .img-empty:hover{border-color:var(--red);color:var(--red);background:var(--red-tint);}
+  .img-thumb{width:100%;height:100%;object-fit:cover;display:block;border:1px solid var(--border);border-radius:8px;}
+  .img-remove{
+    position:absolute;top:4px;right:4px;
+    width:20px;height:20px;
+    border-radius:50%;
+    border:none;
+    background:rgba(0,0,0,.6);
+    color:#fff;
+    font-size:13px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .img-remove:hover{background:var(--red);}
+
+  .img-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .img-thumb-sm{
+    width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;
+  }
+
+  .modal-overlay{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(17,20,24,.55);
+    z-index:1000;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:#fff;
+    border-radius:14px;
+    width:100%;
+    max-width:640px;
+    max-height:88vh;
+    overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+  }
+  .modal-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 22px;
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;background:#fff;border-radius:14px 14px 0 0;
+  }
+  .modal-head h3{margin:0;font-size:17px;font-weight:800;color:var(--text);}
+  .modal-close{
+    width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:#fff;
+    color:var(--muted);font-size:18px;cursor:pointer;line-height:1;
+  }
+  .modal-close:hover{color:var(--red);border-color:var(--red);}
+  .modal-body{padding:20px 22px 26px;font-size:13.5px;line-height:1.6;color:var(--text);}
+  .modal-body .mrow{margin-bottom:10px;}
+  .modal-body .mrow b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px;}
+  .modal-section-title{
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--red);
+    margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);
+  }
+  .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
+  .modal-body .img-row{margin-top:8px;}
+  .modal-body .img-thumb-sm{width:76px;height:76px;}
+
+  .page-footer{
+    max-width:1180px;margin:0 auto;padding:16px 28px 30px;
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-size:11.5px;color:var(--muted);
+  }
+
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div class="topbar-red"></div>
+<header class="top">
+  <div class="header-row">
+    <div class="header-left">
+      <button class="sidebar-toggle" id="sidebar-toggle" title="Ocultar/mostrar menú" aria-label="Ocultar/mostrar menú">
+        <span></span><span></span><span></span>
+      </button>
+      <img src="data:image/png;base64,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" alt="Adecco" class="header-logo">
+      <div class="header-bar"></div>
+      <div>
+        <div class="eyebrow">Seguridad · Salud Ocupacional · Medio Ambiente</div>
+        <h1 class="title">Centro de Reportes SSOMA</h1>
+        <p class="subtitle">Registro y consulta de los reportes de campo. Cada formulario replica la estructura oficial usada en los Google Forms del equipo.</p>
+      </div>
+    </div>
+    <div class="header-time" id="header-time"></div>
+  </div>
+</header>
+
+<div class="layout" id="layout">
+  <nav class="side" id="sidebar">
+    <div class="navlabel">Reportes</div>
+    <button class="navitem active" data-view="racs"><span class="dot" style="background:#E31E24;"></span><span class="label">RACS</span><span class="tag">Activo</span></button>
+    <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
+    <button class="navitem navitem-sub" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
+  </nav>
+
+  <main>
+
+    <!-- RACS PANEL -->
+    <section class="panel active" id="panel-racs">
+      <div class="section-head">
+        <h2 class="section-title">Reporte de Seguridad — RACS</h2>
+        <span class="count-pill" id="racs-count">0 reportes</span>
+      </div>
+      <p class="section-desc">Actos y Condiciones Subestándar. Reporta de forma rápida cualquier acto inseguro o condición peligrosa detectada en planta.</p>
+
+      <div class="stats-row stats-row-3">
+        <div class="stat-card">
+          <div class="stat-label">RACS total</div>
+          <div class="stat-value" id="stat-racs-total" style="color:#E31E24;">0</div>
+          <div class="stat-sub">reportes registrados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pendientes</div>
+          <div class="stat-value" id="stat-pendientes" style="color:#B45309;">0</div>
+          <div class="stat-sub">de levantamiento</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Levantados</div>
+          <div class="stat-value" id="stat-levantados" style="color:#16A34A;">0</div>
+          <div class="stat-sub">cerrados</div>
+        </div>
+      </div>
+
+      <form class="report-form" id="racs-form">
+        <div class="grid2">
+          <div class="field">
+            <label>Nombre del observador<span class="req">*</span></label>
+            <select id="f-observador" required></select>
+          </div>
+          <div class="field">
+            <label>Fecha<span class="req">*</span></label>
+            <input type="date" id="f-fecha" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Ubicación del reporte<span class="req">*</span></label>
+          <select id="f-ubicacion" required></select>
+        </div>
+
+        <div class="field">
+          <label>Tipo de hallazgo<span class="req">*</span></label>
+          <div class="toggle-group">
+            <div class="toggle-btn sel-acto" data-val="ACTO SUB ESTANDAR">Acto sub estándar</div>
+            <div class="toggle-btn sel-cond" data-val="CONDICION SUB ESTANDAR">Condición sub estándar</div>
+          </div>
+          <input type="hidden" id="f-tipo" required>
+        </div>
+
+        <!-- ACTO SUB ESTANDAR fields -->
+        <div class="conditional" id="block-acto">
+          <p class="form-note" style="margin:10px 0 14px;">"Acción o comportamiento que puede causar un accidente o poner en riesgo la seguridad."</p>
+          <div class="field">
+            <label>Identifique la ocurrencia detectada<span class="req">*</span></label>
+            <select id="f-ocurrencia"></select>
+          </div>
+          <div class="field" id="f-ocurrencia-otro-wrap" style="display:none;">
+            <label>Especifique otro</label>
+            <input type="text" id="f-ocurrencia-otro" placeholder="Detalle la ocurrencia">
+          </div>
+          <div class="field">
+            <label>Nombre(s) del trabajador observado<span class="req">*</span></label>
+            <input type="text" id="f-trabajador" placeholder="Nombre completo">
+          </div>
+          <div class="field">
+            <label>Descripción detallada<span class="req">*</span></label>
+            <textarea id="f-desc-acto" placeholder="Qué observó, qué pasó o qué podría pasar si no se corrige"></textarea>
+          </div>
+          <div class="field">
+            <label>Evidencia visual <span class="hint" style="display:inline;">(hasta 3 fotos)</span></label>
+            <div class="img-widget" id="img-widget-acto"></div>
+          </div>
+        </div>
+
+        <!-- CONDICION SUB ESTANDAR fields -->
+        <div class="conditional" id="block-cond">
+          <p class="form-note" style="margin:10px 0 14px;">"Situación o entorno que puede generar riesgo o accidentes."</p>
+          <div class="field">
+            <label>Tipo de condición sub estándar<span class="req">*</span></label>
+            <select id="f-condicion"></select>
+          </div>
+          <div class="field" id="f-condicion-otro-wrap" style="display:none;">
+            <label>Especifique otro</label>
+            <input type="text" id="f-condicion-otro" placeholder="Detalle la condición">
+          </div>
+          <div class="field">
+            <label>Describe la condición peligrosa en detalle<span class="req">*</span></label>
+            <textarea id="f-desc-cond" placeholder="Explica qué hace que la situación sea peligrosa y por qué representa un riesgo"></textarea>
+          </div>
+          <div class="field">
+            <label>Evidencia visual <span class="hint" style="display:inline;">(hasta 3 fotos)</span></label>
+            <div class="img-widget" id="img-widget-cond"></div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <span class="form-note" id="form-error"></span>
+          <div style="display:flex;gap:10px;">
+            <button type="button" class="btn btn-ghost" id="racs-reset">Limpiar</button>
+            <button type="submit" class="btn btn-primary">Guardar reporte</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- COMPORTAMENTAL PANEL -->
+    <section class="panel" id="panel-comportamental">
+      <div class="section-head">
+        <h2 class="section-title">Evaluaciones Comportamentales — SST</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="count-pill" id="comp-count">0 evaluaciones</span>
+          <button class="btn btn-ghost" id="comp-export-csv" style="padding:6px 12px;font-size:12px;">Exportar CSV</button>
+        </div>
+      </div>
+      <p class="section-desc">Guía de observación y test de seguridad. Observa, analiza y registra el comportamiento del colaborador frente a los riesgos de su actividad.</p>
+
+      <div class="stats-row stats-row-3">
+        <div class="stat-card">
+          <div class="stat-label">Evaluaciones</div>
+          <div class="stat-value" id="stat-comp-total" style="color:#2563EB;">0</div>
+          <div class="stat-sub">comportamentales totales</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Aprobadas</div>
+          <div class="stat-value" id="stat-comp-aprobadas" style="color:#16A34A;">0</div>
+          <div class="stat-sub">cumplimiento ≥ 85%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cumplimiento prom.</div>
+          <div class="stat-value" id="stat-comp-avg" style="color:#7C3AED;">—</div>
+          <div class="stat-sub">checklist SST</div>
+        </div>
+      </div>
+
+      <div class="intro-card">
+        <b>Antes de evaluar:</b> observa brevemente (~5 min) al colaborador, aborda el test con él, consulta qué peligros identifica en su actividad y cierra con feedback y motivación.
+        <div class="intro-grid">
+          <div><span class="n">01</span>Observación previa (5 min)</div>
+          <div><span class="n">02</span>Abordaje del test</div>
+          <div><span class="n">03</span>Consulta de riesgos</div>
+          <div><span class="n">04</span>Feedback y motivación</div>
+        </div>
+      </div>
+
+      <form class="report-form" id="comp-form">
+        <div class="grid2">
+          <div class="field">
+            <label>Supervisor que reporta<span class="req">*</span></label>
+            <select id="c-supervisor" required></select>
+          </div>
+          <div class="field">
+            <label>Fecha<span class="req">*</span></label>
+            <input type="date" id="c-fecha" required>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Nombre del colaborador evaluado<span class="req">*</span></label>
+            <input type="text" id="c-colaborador" placeholder="Nombre completo" required>
+          </div>
+          <div class="field">
+            <label>Área de trabajo del colaborador<span class="req">*</span></label>
+            <input type="text" id="c-area" placeholder="Ej. Despacho B2C" required>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Turno del colaborador<span class="req">*</span></label>
+            <select id="c-turno" required>
+              <option value="" disabled selected>Selecciona un turno</option>
+              <option value="Mañana">Mañana</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Noche">Noche</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Centro de distribución CD (Sede)<span class="req">*</span></label>
+            <select id="c-sede" required>
+              <option value="" disabled selected>Selecciona una sede</option>
+              <option value="FAPE - SANTA ANITA">FAPE - SANTA ANITA</option>
+              <option value="Opción 2">Opción 2</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="checklist" id="comp-checklist"></div>
+
+        <div class="field" style="margin-top:14px;">
+          <label>Comente las observaciones acerca del colaborador evaluado<span class="req">*</span></label>
+          <textarea id="c-observaciones" placeholder="Describa brevemente lo observado"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Evidencia fotográfica <span class="hint" style="display:inline;">(hasta 3 fotos, opcional)</span></label>
+          <div class="img-widget" id="img-widget-comp"></div>
+        </div>
+
+        <div class="form-actions">
+          <span class="form-note" id="comp-form-error"></span>
+          <div style="display:flex;gap:10px;">
+            <button type="button" class="btn btn-ghost" id="comp-reset">Limpiar</button>
+            <button type="submit" class="btn btn-primary">Guardar evaluación</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- LEVANTAMIENTO PANEL -->
+    <section class="panel" id="panel-levantamiento">
+      <div class="section-head">
+        <h2 class="section-title">Informes — Levantamiento de Observaciones</h2>
+      </div>
+      <p class="section-desc">Seguimiento y cierre de cada RACS registrado. Todo reporte nace como <b style="color:var(--orange)">pendiente de levantamiento</b> hasta que se documenta la acción correctiva.</p>
+
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+        <div class="intro-card" style="flex:1;min-width:160px;margin-bottom:0;border-left-color:var(--orange);">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--orange);" id="lev-pend-count">0</div>
+          <div>Pendientes de levantamiento</div>
+        </div>
+        <div class="intro-card" style="flex:1;min-width:160px;margin-bottom:0;border-left-color:var(--green);">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--green);" id="lev-done-count">0</div>
+          <div>Levantados</div>
+        </div>
+      </div>
+
+      <div class="list-head">
+        <div class="filters" style="gap:6px;">
+          <button class="btn btn-ghost lev-tab active" data-tab="pendiente" style="padding:8px 14px;font-size:12px;">Pendientes</button>
+          <button class="btn btn-ghost lev-tab" data-tab="levantado" style="padding:8px 14px;font-size:12px;">Levantados</button>
+          <button class="btn btn-ghost lev-tab" data-tab="todos" style="padding:8px 14px;font-size:12px;">Todos</button>
+        </div>
+        <button class="btn btn-ghost" id="export-csv" style="padding:8px 12px;font-size:12px;">Exportar CSV</button>
+      </div>
+      <div id="lev-list"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="page-footer">
+  <span>Centro de Reportes SSOMA — Vista previa</span>
+  <span id="footer-count">0 registros en total</span>
+</div>
+
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title">Informe</h3>
+      <button class="modal-close" id="modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL = "https://zlukrktpjffiycarpduc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_QFLNZihxZRqdvyc-GSRZPw_Q-rkA6No";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let personalObservadores = [];
+let personalSupervisores = [];
+let ubicacionesCat = [];
+let ocurrenciasCat = [];
+let condicionesCat = [];
+
+const COMP_PREGUNTAS = [
+  {id:"epp", q:"¿El colaborador evaluado usa sus EPPs correctamente, inclusive los necesarios para las tareas críticas?"},
+  {id:"espalda", q:"¿El colaborador flexiona sus rodillas y mantiene su espalda recta al levantar y descender cargas?"},
+  {id:"ayudaPaletas", q:"¿Se ayuda por otra persona para manipular paletas vacías?"},
+  {id:"transpaleta", q:"¿El colaborador adopta una posición adecuada cuando mueve cargas con un transpaleta manual/coche de acarreo?"},
+  {id:"señales", q:"¿El colaborador respeta las señales de la zona?"},
+  {id:"orden", q:"¿El colaborador mantiene el área de trabajo, limpieza, ordenada y organizada, sin exceso de materiales ni suelos mojados?"},
+  {id:"atencionCamino", q:"¿El colaborador presta atención al camino que recorre (escaleras, piso, baches)? ¿Usa el pasamanos para subir y bajar escaleras sin saltar escalones? (incluye no usar celular/tablet)"},
+  {id:"reportaProactivo", q:"¿El colaborador reporta actos y condiciones de seguridad proactivamente?"},
+  {id:"conoceRiesgos", q:"¿El colaborador conoce los peligros y riesgos vinculados a su actividad y sabe las consecuencias?"},
+  {id:"atencionTarea", q:"¿El colaborador presta toda su atención en la tarea que está desarrollando?"},
+  {id:"feedback", q:"¿El colaborador evaluado responde de buena manera ante la retroalimentación?"}
+];
+
+let reports = [];
+let compReports = [];
+let selectedTipo = "";
+let compAnswers = {};
+
+/* ---- Widget de fotos (hasta 3 por sección) ---- */
+const imageStates = {};
+
+function initImageWidget(key){
+  const containerEl = document.getElementById("img-widget-" + key);
+  if(!containerEl) return;
+  if(!imageStates[key]) imageStates[key] = [null, null, null];
+  renderImageWidget(key);
+}
+
+function renderImageWidget(key){
+  const containerEl = document.getElementById("img-widget-" + key);
+  if(!containerEl) return;
+  const arr = imageStates[key];
+  containerEl.innerHTML = arr.map((img, i) => `
+    <div class="img-slot">
+      ${img
+        ? `<img src="${img}" class="img-thumb"><button type="button" class="img-remove" data-key="${key}" data-idx="${i}">×</button>`
+        : `<label class="img-empty"><input type="file" accept="image/*" class="img-input" data-key="${key}" data-idx="${i}" hidden>+</label>`
+      }
+    </div>
+  `).join("");
+
+  containerEl.querySelectorAll(".img-input").forEach(inp=>{
+    inp.addEventListener("change", e=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      compressImage(file, dataUrl=>{
+        imageStates[key][inp.dataset.idx] = dataUrl;
+        renderImageWidget(key);
+      });
+    });
+  });
+  containerEl.querySelectorAll(".img-remove").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      imageStates[btn.dataset.key][btn.dataset.idx] = null;
+      renderImageWidget(btn.dataset.key);
+    });
+  });
+}
+
+function compressImage(file, callback){
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxDim = 700;
+      let w = img.width, h = img.height;
+      if(w > maxDim || h > maxDim){
+        if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else{ w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL("image/jpeg", 0.65));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function getImages(key){
+  return (imageStates[key] || []).filter(Boolean);
+}
+function clearImages(key){
+  imageStates[key] = [null, null, null];
+  renderImageWidget(key);
+}
+function imgRowHtml(images){
+  if(!images || images.length === 0) return "";
+  return `<div class="img-row">${images.map(src=>`<a href="${src}" target="_blank"><img src="${src}" class="img-thumb-sm"></a>`).join("")}</div>`;
+}
+
+/* ---- Ver / Descargar informe individual ---- */
+function buildReportDetails(r){
+  const tipoLabel = r.tipo === "ACTO SUB ESTANDAR" ? "Acto sub estándar" : "Condición sub estándar";
+  const isDone = r.estado === "Levantado";
+  let html = `
+    <div class="modal-section-title">Datos del reporte</div>
+    <div class="mrow"><b>ID</b>${r.id}</div>
+    <div class="mrow"><b>Fecha</b>${formatDate(r.fecha)}</div>
+    <div class="mrow"><b>Observador</b>${escapeHtml(r.observador)}</div>
+    <div class="mrow"><b>Ubicación</b>${escapeHtml(r.ubicacion)}</div>
+    <div class="mrow"><b>Tipo de hallazgo</b>${tipoLabel}</div>
+    <div class="mrow"><b>Estado</b><span class="estado-badge ${isDone ? 'levantado' : 'pendiente'}">${r.estado || 'Pendiente'}</span></div>
+  `;
+  if(r.tipo === "ACTO SUB ESTANDAR"){
+    html += `
+      <div class="mrow"><b>Ocurrencia detectada</b>${escapeHtml(r.ocurrencia||"")}</div>
+      <div class="mrow"><b>Trabajador observado</b>${escapeHtml(r.trabajador||"")}</div>
+      <div class="mrow"><b>Descripción</b>${escapeHtml(r.descripcion||"")}</div>
+    `;
+  }else{
+    html += `
+      <div class="mrow"><b>Tipo de condición</b>${escapeHtml(r.condicion||"")}</div>
+      <div class="mrow"><b>Descripción</b>${escapeHtml(r.descripcion||"")}</div>
+    `;
+  }
+  if(r.evidencia && r.evidencia.length){
+    html += `<div class="mrow"><b>Evidencia visual</b>${imgRowHtml(r.evidencia)}</div>`;
+  }
+  if(isDone && r.levantamiento){
+    const ms = (r.createdAt && r.levantamiento.createdAt) ? new Date(r.levantamiento.createdAt) - new Date(r.createdAt) : null;
+    const dias = ms !== null ? Math.max(0, Math.round(ms / (1000*60*60*24) * 10) / 10) : null;
+    html += `
+      <div class="modal-section-title">Levantamiento</div>
+      <div class="mrow"><b>Acción correctiva</b>${escapeHtml(r.levantamiento.accion||"")}</div>
+      <div class="mrow"><b>Responsable</b>${escapeHtml(r.levantamiento.responsable||"")}</div>
+      <div class="mrow"><b>Fecha de levantamiento</b>${formatDate(r.levantamiento.fecha)}</div>
+      ${dias !== null ? `<div class="mrow"><b>Tiempo hasta el levantamiento</b>${dias}${dias===1?" día":" días"}</div>` : ""}
+      ${r.levantamiento.evidencia && r.levantamiento.evidencia.length ? `<div class="mrow"><b>Evidencia del levantamiento</b>${imgRowHtml(r.levantamiento.evidencia)}</div>` : ""}
+    `;
+  }
+  return html;
+}
+
+function openReportModal(id){
+  const r = reports.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById("modal-title").textContent = r.id + " — Informe RACS";
+  document.getElementById("modal-body").innerHTML = buildReportDetails(r);
+  document.getElementById("report-modal").classList.add("show");
+}
+function closeReportModal(){
+  document.getElementById("report-modal").classList.remove("show");
+}
+document.getElementById("modal-close").addEventListener("click", closeReportModal);
+document.getElementById("report-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "report-modal") closeReportModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape") closeReportModal();
+});
+
+function downloadReport(id){
+  const r = reports.find(x => x.id === id);
+  if(!r) return;
+  const bodyHtml = buildReportDetails(r);
+  const win = window.open("", "_blank");
+  if(!win){ alert("Habilita las ventanas emergentes para descargar el informe."); return; }
+  win.document.write(`
+    <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    <title>${r.id} — Informe RACS</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:680px;margin:0 auto;}
+      .hd{border-left:4px solid #E31E24;padding-left:14px;margin-bottom:22px;}
+      .hd .eyebrow{color:#E31E24;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
+      .hd h1{margin:2px 0 0;font-size:22px;}
+      .modal-section-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#E31E24;margin:18px 0 8px;padding-top:12px;border-top:1px solid #E5E7EB;}
+      .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
+      .mrow{margin-bottom:9px;font-size:13.5px;}
+      .mrow b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:2px;}
+      .estado-badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;background:#FEF3E2;color:#B45309;}
+      .img-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+      .img-row img{width:130px;height:130px;object-fit:cover;border-radius:6px;border:1px solid #E5E7EB;}
+      @media print{ body{padding:0;} }
+    </style>
+    </head><body>
+      <div class="hd">
+        <div class="eyebrow">Centro de Reportes SSOMA</div>
+        <h1>${r.id} — Informe RACS</h1>
+      </div>
+      ${bodyHtml}
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 400);
+}
+
+const headerTimeEl = document.getElementById("header-time");
+if(headerTimeEl){
+  headerTimeEl.textContent = new Date().toLocaleString("es-PE", {day:"2-digit", month:"2-digit", year:"2-digit", hour:"numeric", minute:"2-digit"});
+}
+
+const sidebarToggle = document.getElementById("sidebar-toggle");
+const layoutEl = document.getElementById("layout");
+if(sidebarToggle && layoutEl){
+  sidebarToggle.addEventListener("click", ()=>{
+    layoutEl.classList.toggle("collapsed");
+  });
+}
+
+function updateStats(){
+  const total = reports.length;
+  const pendientes = reports.filter(r => (r.estado || "Pendiente") === "Pendiente").length;
+  const levantados = reports.filter(r => r.estado === "Levantado").length;
+  document.getElementById("stat-racs-total").textContent = total;
+  document.getElementById("stat-pendientes").textContent = pendientes;
+  document.getElementById("stat-levantados").textContent = levantados;
+  document.getElementById("stat-comp-total").textContent = compReports.length;
+
+  if(compReports.length === 0){
+    document.getElementById("stat-comp-avg").textContent = "—";
+    document.getElementById("stat-comp-aprobadas").textContent = "0";
+  }else{
+    const totalQ = COMP_PREGUNTAS.length;
+    let sumPct = 0;
+    let aprobadas = 0;
+    compReports.forEach(r => {
+      const si = COMP_PREGUNTAS.filter(p => r.respuestas[p.id] === "SI").length;
+      const pct = (si/totalQ)*100;
+      sumPct += pct;
+      if(pct >= 85) aprobadas++;
+    });
+    document.getElementById("stat-comp-avg").textContent = Math.round(sumPct/compReports.length) + "%";
+    document.getElementById("stat-comp-aprobadas").textContent = aprobadas;
+  }
+
+  const footerCount = document.getElementById("footer-count");
+  if(footerCount) footerCount.textContent = (total + compReports.length) + " registros en total";
+}
+
+function fillSelect(el, items, placeholder, valueKey, labelKey){
+  el.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = ""; ph.textContent = placeholder; ph.disabled = true; ph.selected = true;
+  el.appendChild(ph);
+  items.forEach(o=>{
+    const opt = document.createElement("option");
+    opt.value = o[valueKey]; opt.textContent = o[labelKey];
+    el.appendChild(opt);
+  });
+}
+
+async function loadCatalogos(){
+  const [personalRes, ubicRes, ocuRes, condRes] = await Promise.all([
+    sb.from("ssoma_personal").select("id, nombre_completo, puede_observar, puede_supervisar").eq("activo", true).order("id"),
+    sb.from("ssoma_ubicaciones").select("id, nombre").eq("activo", true).order("id"),
+    sb.from("ssoma_ocurrencias").select("id, descripcion").eq("activo", true).order("id"),
+    sb.from("ssoma_condiciones").select("id, descripcion").eq("activo", true).order("id")
+  ]);
+  const personal = personalRes.data || [];
+  personalObservadores = personal.filter(p => p.puede_observar);
+  personalSupervisores = personal.filter(p => p.puede_supervisar);
+  ubicacionesCat = ubicRes.data || [];
+  ocurrenciasCat = ocuRes.data || [];
+  condicionesCat = condRes.data || [];
+
+  fillSelect(document.getElementById("f-observador"), personalObservadores, "Selecciona un observador", "id", "nombre_completo");
+  fillSelect(document.getElementById("f-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
+  fillSelect(document.getElementById("f-ocurrencia"), ocurrenciasCat, "Selecciona la ocurrencia", "descripcion", "descripcion");
+  fillSelect(document.getElementById("f-condicion"), condicionesCat, "Selecciona la condición", "descripcion", "descripcion");
+  fillSelect(document.getElementById("c-supervisor"), personalSupervisores, "Selecciona un supervisor", "id", "nombre_completo");
+}
+
+document.getElementById("f-fecha").valueAsDate = new Date();
+document.getElementById("c-fecha").valueAsDate = new Date();
+
+initImageWidget("acto");
+initImageWidget("cond");
+initImageWidget("comp");
+
+function renderChecklist(){
+  const el = document.getElementById("comp-checklist");
+  el.innerHTML = COMP_PREGUNTAS.map((p,i)=>`
+    <div class="check-row">
+      <div class="check-q">${i+1}. ${p.q}<span class="req">*</span></div>
+      <div class="sino" data-id="${p.id}">
+        <div class="sino-btn si" data-val="SI">SI</div>
+        <div class="sino-btn no" data-val="NO">NO</div>
+      </div>
+    </div>
+  `).join("");
+  el.querySelectorAll(".sino").forEach(group=>{
+    group.querySelectorAll(".sino-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        group.querySelectorAll(".sino-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        compAnswers[group.dataset.id] = btn.dataset.val;
+      });
+    });
+  });
+}
+renderChecklist();
+
+// nav switching
+document.querySelectorAll(".navitem").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".navitem").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-"+btn.dataset.view).classList.add("active");
+  });
+});
+
+// toggle acto/condicion
+document.querySelectorAll(".toggle-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedTipo = btn.dataset.val;
+    document.getElementById("f-tipo").value = selectedTipo;
+    const isActo = selectedTipo === "ACTO SUB ESTANDAR";
+    document.getElementById("block-acto").classList.toggle("show", isActo);
+    document.getElementById("block-cond").classList.toggle("show", !isActo);
+  });
+});
+
+document.getElementById("f-ocurrencia").addEventListener("change", e=>{
+  document.getElementById("f-ocurrencia-otro-wrap").style.display = e.target.value.startsWith("Otros") ? "block" : "none";
+});
+document.getElementById("f-condicion").addEventListener("change", e=>{
+  document.getElementById("f-condicion-otro-wrap").style.display = e.target.value.startsWith("Otros") ? "block" : "none";
+});
+
+async function loadReports(){
+  const { data, error } = await sb
+    .from("ssoma_racs_reports")
+    .select(`
+      id, racs_code, fecha, tipo, estado, ocurrencia, trabajador, condicion, descripcion, evidencia, created_at,
+      observador:ssoma_personal(nombre_completo),
+      ubicacion:ssoma_ubicaciones(nombre),
+      ssoma_levantamientos(id, accion, responsable, fecha, evidencia, activo, created_at)
+    `)
+    .order("id", { ascending: true });
+
+  if(error){
+    console.error("No se pudieron cargar los reportes RACS", error);
+    reports = [];
+  }else{
+    reports = (data || []).map(r => {
+      const lev = (r.ssoma_levantamientos || []).find(l => l.activo) || null;
+      return {
+        id: r.racs_code,
+        dbId: r.id,
+        fecha: r.fecha,
+        observador: r.observador ? r.observador.nombre_completo : "",
+        ubicacion: r.ubicacion ? r.ubicacion.nombre : "",
+        tipo: r.tipo,
+        estado: r.estado,
+        ocurrencia: r.ocurrencia,
+        trabajador: r.trabajador,
+        condicion: r.condicion,
+        descripcion: r.descripcion,
+        evidencia: r.evidencia || [],
+        createdAt: r.created_at,
+        levantamiento: lev ? {
+          accion: lev.accion, responsable: lev.responsable, fecha: lev.fecha,
+          evidencia: lev.evidencia || [], createdAt: lev.created_at
+        } : null
+      };
+    });
+  }
+  renderList();
+  renderLevList();
+  updateStats();
+}
+
+function renderList(){
+  document.getElementById("racs-count").textContent = reports.length + (reports.length===1 ? " reporte" : " reportes");
+}
+
+function escapeHtml(s){
+  if(!s) return "";
+  return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function formatDate(d){
+  if(!d) return "";
+  const parts = d.split("-");
+  if(parts.length!==3) return d;
+  return parts[2]+"/"+parts[1]+"/"+parts[0];
+}
+
+document.getElementById("racs-reset").addEventListener("click", ()=>{
+  document.getElementById("racs-form").reset();
+  document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("block-acto").classList.remove("show");
+  document.getElementById("block-cond").classList.remove("show");
+  document.getElementById("f-fecha").valueAsDate = new Date();
+  document.getElementById("form-error").textContent = "";
+  clearImages("acto");
+  clearImages("cond");
+  selectedTipo = "";
+});
+
+document.getElementById("racs-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const errorEl = document.getElementById("form-error");
+  errorEl.textContent = "";
+
+  const observadorId = document.getElementById("f-observador").value;
+  const ubicacionId = document.getElementById("f-ubicacion").value;
+  const fecha = document.getElementById("f-fecha").value;
+
+  if(!observadorId || !ubicacionId || !fecha || !selectedTipo){
+    errorEl.textContent = "Completa observador, ubicación, fecha y tipo de hallazgo.";
+    return;
+  }
+
+  const entry = {
+    fecha,
+    observador_id: Number(observadorId),
+    ubicacion_id: Number(ubicacionId),
+    tipo: selectedTipo
+  };
+
+  if(selectedTipo === "ACTO SUB ESTANDAR"){
+    let ocurrencia = document.getElementById("f-ocurrencia").value;
+    const otro = document.getElementById("f-ocurrencia-otro").value.trim();
+    const trabajador = document.getElementById("f-trabajador").value.trim();
+    const descripcion = document.getElementById("f-desc-acto").value.trim();
+    if(!ocurrencia || !trabajador || !descripcion){
+      errorEl.textContent = "Completa ocurrencia, trabajador observado y descripción.";
+      return;
+    }
+    if(ocurrencia.startsWith("Otros") && otro) ocurrencia = "Otros: " + otro;
+    entry.ocurrencia = ocurrencia;
+    entry.trabajador = trabajador;
+    entry.descripcion = descripcion;
+    entry.evidencia = getImages("acto");
+  }else{
+    let condicion = document.getElementById("f-condicion").value;
+    const otro = document.getElementById("f-condicion-otro").value.trim();
+    const descripcion = document.getElementById("f-desc-cond").value.trim();
+    if(!condicion || !descripcion){
+      errorEl.textContent = "Completa tipo de condición y descripción.";
+      return;
+    }
+    if(condicion.startsWith("Otros") && otro) condicion = "Otros: " + otro;
+    entry.condicion = condicion;
+    entry.descripcion = descripcion;
+    entry.evidencia = getImages("cond");
+  }
+
+  const { error } = await sb.from("ssoma_racs_reports").insert(entry);
+  if(error){
+    errorEl.textContent = "No se pudo guardar: " + error.message;
+    return;
+  }
+
+  await loadReports();
+  document.getElementById("racs-form").reset();
+  document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("block-acto").classList.remove("show");
+  document.getElementById("block-cond").classList.remove("show");
+  document.getElementById("f-fecha").valueAsDate = new Date();
+  clearImages("acto");
+  clearImages("cond");
+  selectedTipo = "";
+});
+
+document.getElementById("export-csv").addEventListener("click", ()=>{
+  if(reports.length === 0){ alert("No hay reportes para exportar."); return; }
+  const headers = ["ID","Fecha","Observador","Ubicación","Tipo","Ocurrencia/Condición","Trabajador observado","Descripción","Evidencia"];
+  const rows = reports.map(r => [
+    r.id, r.fecha, r.observador, r.ubicacion, r.tipo,
+    r.tipo === "ACTO SUB ESTANDAR" ? (r.ocurrencia||"") : (r.condicion||""),
+    r.trabajador || "",
+    r.descripcion || "",
+    (r.evidencia && r.evidencia.length) ? r.evidencia.length + " foto(s) adjunta(s)" : "Sin fotos"
+  ]);
+  const csv = [headers, ...rows].map(row =>
+    row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+  ).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "reportes-racs.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+async function loadCompReports(){
+  const { data, error } = await sb
+    .from("ssoma_comportamental_evaluaciones")
+    .select(`
+      id, evc_code, fecha, colaborador, area, turno, sede, observaciones, respuestas, evidencia, created_at,
+      supervisor:ssoma_personal(nombre_completo)
+    `)
+    .order("id", { ascending: true });
+
+  if(error){
+    console.error("No se pudieron cargar las evaluaciones comportamentales", error);
+    compReports = [];
+  }else{
+    compReports = (data || []).map(r => ({
+      id: r.evc_code,
+      dbId: r.id,
+      fecha: r.fecha,
+      supervisor: r.supervisor ? r.supervisor.nombre_completo : "",
+      colaborador: r.colaborador,
+      area: r.area,
+      turno: r.turno,
+      sede: r.sede,
+      observaciones: r.observaciones,
+      respuestas: r.respuestas || {},
+      evidencia: r.evidencia || [],
+      createdAt: r.created_at
+    }));
+  }
+  renderCompList();
+  updateStats();
+}
+function scoreClass(pct){
+  if(pct >= 85) return "high";
+  if(pct >= 60) return "mid";
+  return "low";
+}
+function renderCompList(){
+  document.getElementById("comp-count").textContent = compReports.length + (compReports.length===1 ? " evaluación" : " evaluaciones");
+}
+
+document.getElementById("comp-reset").addEventListener("click", ()=>{
+  document.getElementById("comp-form").reset();
+  compAnswers = {};
+  renderChecklist();
+  document.getElementById("c-fecha").valueAsDate = new Date();
+  document.getElementById("comp-form-error").textContent = "";
+  clearImages("comp");
+});
+
+document.getElementById("comp-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const errorEl = document.getElementById("comp-form-error");
+  errorEl.textContent = "";
+
+  const supervisorId = document.getElementById("c-supervisor").value;
+  const fecha = document.getElementById("c-fecha").value;
+  const colaborador = document.getElementById("c-colaborador").value.trim();
+  const area = document.getElementById("c-area").value.trim();
+  const turno = document.getElementById("c-turno").value;
+  const sede = document.getElementById("c-sede").value;
+  const observaciones = document.getElementById("c-observaciones").value.trim();
+
+  if(!supervisorId || !fecha || !colaborador || !area || !turno || !sede || !observaciones){
+    errorEl.textContent = "Completa todos los campos obligatorios del formulario.";
+    return;
+  }
+  const missing = COMP_PREGUNTAS.filter(p => !compAnswers[p.id]);
+  if(missing.length > 0){
+    errorEl.textContent = "Responde SI o NO en las " + missing.length + " preguntas del checklist que faltan.";
+    return;
+  }
+
+  const entry = {
+    fecha, supervisor_id: Number(supervisorId), colaborador, area, turno, sede, observaciones,
+    respuestas: {...compAnswers},
+    evidencia: getImages("comp")
+  };
+  const { error } = await sb.from("ssoma_comportamental_evaluaciones").insert(entry);
+  if(error){
+    errorEl.textContent = "No se pudo guardar: " + error.message;
+    return;
+  }
+  await loadCompReports();
+
+  document.getElementById("comp-form").reset();
+  compAnswers = {};
+  renderChecklist();
+  document.getElementById("c-fecha").valueAsDate = new Date();
+  clearImages("comp");
+});
+
+document.getElementById("comp-export-csv").addEventListener("click", ()=>{
+  if(compReports.length === 0){ alert("No hay evaluaciones para exportar."); return; }
+  const headers = ["ID","Fecha","Supervisor","Colaborador","Área","Turno","Sede", ...COMP_PREGUNTAS.map((p,i)=>"P"+(i+1)), "SI count","% cumplimiento","Observaciones","Fotos"];
+  const rows = compReports.map(r=>{
+    const total = COMP_PREGUNTAS.length;
+    const siCount = COMP_PREGUNTAS.filter(p => r.respuestas[p.id] === "SI").length;
+    const pct = Math.round((siCount/total)*100);
+    return [r.id, r.fecha, r.supervisor, r.colaborador, r.area, r.turno, r.sede,
+      ...COMP_PREGUNTAS.map(p => r.respuestas[p.id] || ""),
+      siCount, pct+"%", r.observaciones, (r.evidencia && r.evidencia.length) ? r.evidencia.length + " foto(s)" : "Sin fotos"];
+  });
+  const csv = [headers, ...rows].map(row =>
+    row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+  ).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "evaluaciones-comportamentales.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+let levTab = "pendiente";
+
+document.querySelectorAll(".lev-tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".lev-tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    levTab = btn.dataset.tab;
+    renderLevList();
+  });
+});
+
+function renderLevList(){
+  const list = document.getElementById("lev-list");
+  if(!list) return;
+
+  const pendientes = reports.filter(r => (r.estado || "Pendiente") === "Pendiente");
+  const levantados = reports.filter(r => r.estado === "Levantado");
+  document.getElementById("lev-pend-count").textContent = pendientes.length;
+  document.getElementById("lev-done-count").textContent = levantados.length;
+
+  let shown;
+  if(levTab === "pendiente") shown = pendientes;
+  else if(levTab === "levantado") shown = levantados;
+  else shown = reports;
+  shown = shown.slice().reverse();
+
+  if(shown.length === 0){
+    list.innerHTML = '<div class="empty">No hay reportes ' + (levTab==="pendiente"?"pendientes":levTab==="levantado"?"levantados":"") + ' por ahora.</div>';
+    return;
+  }
+
+  list.innerHTML = shown.map(r=>{
+    const isDone = r.estado === "Levantado";
+    const tipoLabel = r.tipo === "ACTO SUB ESTANDAR" ? "Acto sub estándar" : "Condición sub estándar";
+    const desc = r.descripcion || "";
+    let diasTexto = "";
+    if(isDone && r.createdAt && r.levantamiento && r.levantamiento.createdAt){
+      const ms = new Date(r.levantamiento.createdAt) - new Date(r.createdAt);
+      const dias = Math.max(0, Math.round(ms / (1000*60*60*24) * 10) / 10);
+      diasTexto = dias + (dias === 1 ? " día" : " días");
+    }
+    return `<div class="lev-card ${isDone ? 'done' : ''}" data-id="${r.id}">
+      <div class="entry-top">
+        <div>
+          <span class="entry-id">${r.id}</span>
+          <div class="entry-meta">${escapeHtml(r.observador)} · ${escapeHtml(r.ubicacion)} · ${formatDate(r.fecha)} · ${tipoLabel}</div>
+        </div>
+        <div class="lev-side">
+          <span class="estado-badge ${isDone ? 'levantado' : 'pendiente'}">${r.estado || 'Pendiente'}</span>
+          ${!isDone ? `<button class="btn btn-primary lev-open" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Registrar levantamiento</button>` : ""}
+        </div>
+      </div>
+      <div class="entry-body"><div class="entry-desc">${escapeHtml(desc)}</div></div>
+
+      ${isDone ? `
+        <div class="lev-result">
+          <div><b>Acción correctiva:</b> ${escapeHtml(r.levantamiento.accion)}</div>
+          <div><b>Responsable:</b> ${escapeHtml(r.levantamiento.responsable)} · <b>Fecha de levantamiento:</b> ${formatDate(r.levantamiento.fecha)}</div>
+          ${diasTexto ? `<div><b>Tiempo hasta el levantamiento:</b> ${diasTexto} desde el registro del RACS</div>` : ""}
+          ${imgRowHtml(r.levantamiento.evidencia)}
+        </div>
+        <div class="lev-actions">
+          <button class="btn btn-ghost lev-view" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>
+          <button class="btn btn-ghost lev-download" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Descargar</button>
+          <button class="btn btn-ghost lev-reabrir" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Reabrir</button>
+          <button class="btn btn-ghost lev-del" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Eliminar</button>
+        </div>
+      ` : `
+        <div class="lev-form" id="lev-form-${r.id}">
+          <div class="field">
+            <label>Acción correctiva tomada<span class="req">*</span></label>
+            <textarea id="lev-accion-${r.id}" placeholder="Qué se hizo para corregir el acto o condición"></textarea>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Responsable del levantamiento<span class="req">*</span></label>
+              <input type="text" id="lev-resp-${r.id}" placeholder="Nombre completo">
+            </div>
+            <div class="field">
+              <label>Fecha de levantamiento<span class="req">*</span></label>
+              <input type="date" id="lev-fecha-${r.id}">
+            </div>
+          </div>
+          <div class="field">
+            <label>Evidencia <span class="hint" style="display:inline;">(hasta 3 fotos, opcional)</span></label>
+            <div class="img-widget" id="img-widget-lev-${r.id}"></div>
+          </div>
+          <div class="form-actions">
+            <span class="form-note" id="lev-error-${r.id}"></span>
+            <button class="btn btn-primary lev-save" data-id="${r.id}" style="padding:9px 16px;font-size:12px;">Guardar levantamiento</button>
+          </div>
+        </div>
+        <div class="lev-actions">
+          <button class="btn btn-ghost lev-view" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>
+          <button class="btn btn-ghost lev-download" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Descargar</button>
+          <button class="btn btn-ghost lev-del" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Eliminar</button>
+        </div>
+      `}
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll(".lev-del").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("¿Eliminar este reporte?")) return;
+      const r = reports.find(x => x.id === btn.dataset.id);
+      if(!r) return;
+      const { error } = await sb.from("ssoma_racs_reports").delete().eq("id", r.dbId);
+      if(error){ alert("No se pudo eliminar: " + error.message); return; }
+      await loadReports();
+    });
+  });
+
+  list.querySelectorAll(".lev-view").forEach(btn=>{
+    btn.addEventListener("click", ()=> openReportModal(btn.dataset.id));
+  });
+  list.querySelectorAll(".lev-download").forEach(btn=>{
+    btn.addEventListener("click", ()=> downloadReport(btn.dataset.id));
+  });
+
+  list.querySelectorAll(".lev-open").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const f = document.getElementById("lev-form-" + btn.dataset.id);
+      f.classList.toggle("show");
+      if(f.classList.contains("show")){
+        document.getElementById("lev-fecha-" + btn.dataset.id).valueAsDate = new Date();
+        initImageWidget("lev-" + btn.dataset.id);
+      }
+    });
+  });
+
+  list.querySelectorAll(".lev-save").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = btn.dataset.id;
+      const accion = document.getElementById("lev-accion-" + id).value.trim();
+      const responsable = document.getElementById("lev-resp-" + id).value.trim();
+      const fecha = document.getElementById("lev-fecha-" + id).value;
+      const evidencia = getImages("lev-" + id);
+      const errorEl = document.getElementById("lev-error-" + id);
+      if(!accion || !responsable || !fecha){
+        errorEl.textContent = "Completa acción correctiva, responsable y fecha.";
+        return;
+      }
+      const r = reports.find(x => x.id === id);
+      if(!r) return;
+      const { error } = await sb.from("ssoma_levantamientos").insert({
+        racs_report_id: r.dbId, accion, responsable, fecha, evidencia, activo: true
+      });
+      if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+      await loadReports();
+    });
+  });
+
+  list.querySelectorAll(".lev-reabrir").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("¿Reabrir este reporte como pendiente de levantamiento?")) return;
+      const r = reports.find(x => x.id === btn.dataset.id);
+      if(!r) return;
+      const { error } = await sb.from("ssoma_levantamientos")
+        .update({ activo: false })
+        .eq("racs_report_id", r.dbId)
+        .eq("activo", true);
+      if(error){ alert("No se pudo reabrir: " + error.message); return; }
+      await loadReports();
+    });
+  });
+}
+
+(async function init(){
+  await loadCatalogos();
+  await Promise.all([loadReports(), loadCompReports()]);
+})();
+</script>
+</body>
+</html>
