@@ -583,6 +583,8 @@
   .modal-body{padding:20px 22px 26px;font-size:13.5px;line-height:1.6;color:var(--text);}
   .modal-body .mrow{margin-bottom:10px;}
   .modal-body .mrow b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px;}
+  .modal-body .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;}
+  .modal-body .mrow-full{margin-top:4px;}
   .modal-section-title{
     font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--red);
     margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);
@@ -1022,38 +1024,44 @@ function buildReportDetails(r, interactive){
   const isDone = r.estado === "Levantado";
   let html = `
     <div class="modal-section-title">Datos del reporte</div>
-    <div class="mrow"><b>ID</b>${r.id}</div>
-    <div class="mrow"><b>Fecha</b>${formatDate(r.fecha)}</div>
-    <div class="mrow"><b>Observador</b>${escapeHtml(r.observador)}</div>
-    <div class="mrow"><b>Ubicación</b>${escapeHtml(r.ubicacion)}</div>
-    <div class="mrow"><b>Tipo de hallazgo</b>${tipoLabel}</div>
-    <div class="mrow"><b>Estado</b><span class="estado-badge ${isDone ? 'levantado' : 'pendiente'}">${r.estado || 'Pendiente'}</span></div>
+    <div class="info-grid">
+      <div class="mrow"><b>ID</b>${r.id}</div>
+      <div class="mrow"><b>Fecha</b>${formatDate(r.fecha)}</div>
+      <div class="mrow"><b>Observador</b>${escapeHtml(r.observador)}</div>
+      <div class="mrow"><b>Ubicación</b>${escapeHtml(r.ubicacion)}</div>
+      <div class="mrow"><b>Tipo de hallazgo</b>${tipoLabel}</div>
+      <div class="mrow"><b>Estado</b><span class="estado-badge ${isDone ? 'levantado' : 'pendiente'}">${r.estado || 'Pendiente'}</span></div>
+    </div>
   `;
   if(r.tipo === "ACTO SUB ESTANDAR"){
     html += `
-      <div class="mrow"><b>Ocurrencia detectada</b>${escapeHtml(r.ocurrencia||"")}</div>
-      <div class="mrow"><b>Trabajador observado</b>${escapeHtml(r.trabajador||"")}</div>
-      <div class="mrow"><b>Descripción</b>${escapeHtml(r.descripcion||"")}</div>
+      <div class="info-grid">
+        <div class="mrow"><b>Ocurrencia detectada</b>${escapeHtml(r.ocurrencia||"")}</div>
+        <div class="mrow"><b>Trabajador observado</b>${escapeHtml(r.trabajador||"")}</div>
+      </div>
+      <div class="mrow mrow-full"><b>Descripción</b>${escapeHtml(r.descripcion||"")}</div>
     `;
   }else{
     html += `
-      <div class="mrow"><b>Tipo de condición</b>${escapeHtml(r.condicion||"")}</div>
-      <div class="mrow"><b>Descripción</b>${escapeHtml(r.descripcion||"")}</div>
+      <div class="mrow mrow-full"><b>Tipo de condición</b>${escapeHtml(r.condicion||"")}</div>
+      <div class="mrow mrow-full"><b>Descripción</b>${escapeHtml(r.descripcion||"")}</div>
     `;
   }
   if(r.evidencia && r.evidencia.length){
-    html += `<div class="mrow"><b>Evidencia visual</b>${imgRowHtml(r.evidencia, interactive)}</div>`;
+    html += `<div class="mrow mrow-full"><b>Evidencia visual</b>${imgRowHtml(r.evidencia, interactive)}</div>`;
   }
   if(isDone && r.levantamiento){
     const ms = (r.createdAt && r.levantamiento.createdAt) ? new Date(r.levantamiento.createdAt) - new Date(r.createdAt) : null;
     const dias = ms !== null ? Math.max(0, Math.round(ms / (1000*60*60*24) * 10) / 10) : null;
     html += `
       <div class="modal-section-title">Levantamiento</div>
-      <div class="mrow"><b>Acción correctiva</b>${escapeHtml(r.levantamiento.accion||"")}</div>
-      <div class="mrow"><b>Responsable</b>${escapeHtml(r.levantamiento.responsable||"")}</div>
-      <div class="mrow"><b>Fecha de levantamiento</b>${formatDate(r.levantamiento.fecha)}</div>
-      ${dias !== null ? `<div class="mrow"><b>Tiempo hasta el levantamiento</b>${dias}${dias===1?" día":" días"}</div>` : ""}
-      ${r.levantamiento.evidencia && r.levantamiento.evidencia.length ? `<div class="mrow"><b>Evidencia del levantamiento</b>${imgRowHtml(r.levantamiento.evidencia, interactive)}</div>` : ""}
+      <div class="mrow mrow-full"><b>Acción correctiva</b>${escapeHtml(r.levantamiento.accion||"")}</div>
+      <div class="info-grid">
+        <div class="mrow"><b>Responsable</b>${escapeHtml(r.levantamiento.responsable||"")}</div>
+        <div class="mrow"><b>Fecha de levantamiento</b>${formatDate(r.levantamiento.fecha)}</div>
+        ${dias !== null ? `<div class="mrow"><b>Tiempo hasta el levantamiento</b>${dias}${dias===1?" día":" días"}</div>` : ""}
+      </div>
+      ${r.levantamiento.evidencia && r.levantamiento.evidencia.length ? `<div class="mrow mrow-full"><b>Evidencia del levantamiento</b>${imgRowHtml(r.levantamiento.evidencia, interactive)}</div>` : ""}
     `;
   }
   return html;
@@ -1087,21 +1095,23 @@ function downloadReport(id){
     <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <title>${r.id} — Informe RACS</title>
     <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:680px;margin:0 auto;}
-      .hd{border-left:4px solid #E31E24;padding-left:14px;margin-bottom:22px;}
-      .hd .eyebrow{color:#E31E24;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
-      .hd h1{margin:2px 0 0;font-size:22px;}
-      .modal-section-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#E31E24;margin:18px 0 8px;padding-top:12px;border-top:1px solid #E5E7EB;}
+      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:720px;margin:0 auto;font-size:15px;line-height:1.5;}
+      .hd{border-left:5px solid #E31E24;padding-left:18px;margin-bottom:32px;}
+      .hd .eyebrow{color:#E31E24;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
+      .hd h1{margin:4px 0 0;font-size:28px;}
+      .modal-section-title{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#E31E24;margin:28px 0 14px;padding-top:16px;border-top:1px solid #E5E7EB;}
       .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
-      .mrow{margin-bottom:9px;font-size:13.5px;}
-      .mrow b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:2px;}
-      .estado-badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;background:#FEF3E2;color:#B45309;}
-      .img-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
-      .img-row img{width:130px;height:130px;object-fit:cover;border-radius:6px;border:1px solid #E5E7EB;}
+      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 32px;margin-bottom:6px;}
+      .mrow{margin-bottom:16px;font-size:15px;}
+      .mrow-full{margin-top:8px;}
+      .mrow b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:4px;}
+      .estado-badge{font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:#FEF3E2;color:#B45309;}
+      .img-row{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;}
+      .img-row img{width:200px;height:200px;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB;}
       @page{ size:A4; margin:18mm; }
       @media print{
         body{padding:0;max-width:none;}
-        .mrow, .modal-section-title, .img-row{ break-inside:avoid; }
+        .mrow, .info-grid, .modal-section-title, .img-row{ break-inside:avoid; }
       }
     </style>
     </head><body>
