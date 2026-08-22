@@ -1098,7 +1098,11 @@ function downloadReport(id){
       .estado-badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;background:#FEF3E2;color:#B45309;}
       .img-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
       .img-row img{width:130px;height:130px;object-fit:cover;border-radius:6px;border:1px solid #E5E7EB;}
-      @media print{ body{padding:0;} }
+      @page{ size:A4; margin:18mm; }
+      @media print{
+        body{padding:0;max-width:none;}
+        .mrow, .modal-section-title, .img-row{ break-inside:avoid; }
+      }
     </style>
     </head><body>
       <div class="hd">
