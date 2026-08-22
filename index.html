@@ -889,6 +889,11 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="img-lightbox">
+  <button class="modal-close" id="img-lightbox-close" aria-label="Cerrar" style="position:absolute;top:18px;right:18px;background:#fff;">×</button>
+  <img id="img-lightbox-img" src="" alt="Evidencia" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 const SUPABASE_URL = "https://zlukrktpjffiycarpduc.supabase.co";
@@ -989,13 +994,30 @@ function clearImages(key){
   imageStates[key] = [null, null, null];
   renderImageWidget(key);
 }
-function imgRowHtml(images){
+function imgRowHtml(images, interactive){
   if(!images || images.length === 0) return "";
-  return `<div class="img-row">${images.map(src=>`<a href="${src}" target="_blank"><img src="${src}" class="img-thumb-sm"></a>`).join("")}</div>`;
+  if(interactive === false){
+    return `<div class="img-row">${images.map(src=>`<a href="${src}" target="_blank"><img src="${src}" class="img-thumb-sm"></a>`).join("")}</div>`;
+  }
+  return `<div class="img-row">${images.map(src=>`<img src="${src}" class="img-thumb-sm img-preview-trigger" data-src="${src}">`).join("")}</div>`;
 }
 
+function openImageLightbox(src){
+  document.getElementById("img-lightbox-img").src = src;
+  document.getElementById("img-lightbox").classList.add("show");
+}
+function closeImageLightbox(){
+  document.getElementById("img-lightbox").classList.remove("show");
+  document.getElementById("img-lightbox-img").src = "";
+}
+document.addEventListener("click", (e)=>{
+  const trigger = e.target.closest(".img-preview-trigger");
+  if(trigger){ openImageLightbox(trigger.dataset.src); return; }
+  if(e.target.id === "img-lightbox" || e.target.id === "img-lightbox-close") closeImageLightbox();
+});
+
 /* ---- Ver / Descargar informe individual ---- */
-function buildReportDetails(r){
+function buildReportDetails(r, interactive){
   const tipoLabel = r.tipo === "ACTO SUB ESTANDAR" ? "Acto sub estándar" : "Condición sub estándar";
   const isDone = r.estado === "Levantado";
   let html = `
@@ -1020,7 +1042,7 @@ function buildReportDetails(r){
     `;
   }
   if(r.evidencia && r.evidencia.length){
-    html += `<div class="mrow"><b>Evidencia visual</b>${imgRowHtml(r.evidencia)}</div>`;
+    html += `<div class="mrow"><b>Evidencia visual</b>${imgRowHtml(r.evidencia, interactive)}</div>`;
   }
   if(isDone && r.levantamiento){
     const ms = (r.createdAt && r.levantamiento.createdAt) ? new Date(r.levantamiento.createdAt) - new Date(r.createdAt) : null;
@@ -1031,7 +1053,7 @@ function buildReportDetails(r){
       <div class="mrow"><b>Responsable</b>${escapeHtml(r.levantamiento.responsable||"")}</div>
       <div class="mrow"><b>Fecha de levantamiento</b>${formatDate(r.levantamiento.fecha)}</div>
       ${dias !== null ? `<div class="mrow"><b>Tiempo hasta el levantamiento</b>${dias}${dias===1?" día":" días"}</div>` : ""}
-      ${r.levantamiento.evidencia && r.levantamiento.evidencia.length ? `<div class="mrow"><b>Evidencia del levantamiento</b>${imgRowHtml(r.levantamiento.evidencia)}</div>` : ""}
+      ${r.levantamiento.evidencia && r.levantamiento.evidencia.length ? `<div class="mrow"><b>Evidencia del levantamiento</b>${imgRowHtml(r.levantamiento.evidencia, interactive)}</div>` : ""}
     `;
   }
   return html;
@@ -1052,13 +1074,13 @@ document.getElementById("report-modal").addEventListener("click", (e)=>{
   if(e.target.id === "report-modal") closeReportModal();
 });
 document.addEventListener("keydown", (e)=>{
-  if(e.key === "Escape") closeReportModal();
+  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); }
 });
 
 function downloadReport(id){
   const r = reports.find(x => x.id === id);
   if(!r) return;
-  const bodyHtml = buildReportDetails(r);
+  const bodyHtml = buildReportDetails(r, false);
   const win = window.open("", "_blank");
   if(!win){ alert("Habilita las ventanas emergentes para descargar el informe."); return; }
   win.document.write(`
