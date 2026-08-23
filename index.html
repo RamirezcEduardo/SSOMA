@@ -585,6 +585,7 @@
   .modal-body .mrow b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px;}
   .modal-body .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;}
   .modal-body .mrow-full{margin-top:4px;}
+  @media (max-width:600px){ .modal-body .info-grid{grid-template-columns:1fr;} }
   .modal-section-title{
     font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--red);
     margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);
@@ -1113,6 +1114,7 @@ function downloadReport(id){
         body{padding:0;max-width:none;}
         .mrow, .info-grid, .modal-section-title, .img-row{ break-inside:avoid; }
       }
+      @media screen and (max-width:600px){ .info-grid{grid-template-columns:1fr;} }
     </style>
     </head><body>
       <div class="hd">
