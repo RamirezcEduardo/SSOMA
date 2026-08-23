@@ -793,7 +793,6 @@
     <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
     <button class="navitem navitem-sub" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
     <div class="navlabel" id="encuestas-navlabel" style="display:none;">Encuestas</div>
-    <button class="navitem" data-view="encuestas-clima" id="nav-encuestas-clima" style="display:none;"><span class="dot" style="background:#7C3AED;"></span><span class="label">Clima Laboral</span></button>
     <button class="navitem" data-view="encuestas-charla" id="nav-encuestas-charla" style="display:none;"><span class="dot" style="background:#7C3AED;"></span><span class="label">Charla de Seguridad</span></button>
   </nav>
 
@@ -1038,55 +1037,6 @@
       <div id="lev-list"></div>
     </section>
 
-    <!-- ENCUESTA CLIMA LABORAL PANEL -->
-    <section class="panel" id="panel-encuestas-clima">
-      <div class="section-head">
-        <h2 class="section-title">Encuesta de Clima Laboral</h2>
-        <span class="count-pill" id="clima-count">0 respuestas</span>
-      </div>
-      <p class="section-desc">Resultados anónimos de la encuesta de clima laboral. Solo visible para jefatura, RRHH y administración — las respuestas individuales no incluyen ningún dato identificable.</p>
-
-      <div class="stats-row stats-row-3">
-        <div class="stat-card">
-          <div class="stat-label">Respuestas totales</div>
-          <div class="stat-value" id="clima-stat-total" style="color:#2563EB;">0</div>
-          <div class="stat-sub">encuestas recibidas</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Promedio general</div>
-          <div class="stat-value" id="clima-stat-promedio" style="color:#16A34A;">—</div>
-          <div class="stat-sub">de 5.0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Última respuesta</div>
-          <div class="stat-value" id="clima-stat-ultima" style="font-size:16px;">—</div>
-          <div class="stat-sub" id="clima-stat-turnos">—</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 class="cat-title" style="color:var(--text);">Promedio por categoría</h2>
-        <div id="clima-categorias"></div>
-      </div>
-
-      <div class="card">
-        <h2 class="cat-title" style="color:var(--text);">Promedio por pregunta</h2>
-        <p class="section-desc" style="margin:-6px 0 14px;">Ordenadas de menor a mayor, para ver primero los puntos a mejorar.</p>
-        <div id="clima-preguntas"></div>
-      </div>
-
-      <div class="card">
-        <h2 class="cat-title" style="color:var(--text);">Por supervisor</h2>
-        <p class="section-desc" style="margin:-6px 0 14px;">Solo se muestran supervisores con 5 respuestas o más, para no exponer casos aislados.</p>
-        <div id="clima-supervisores"></div>
-      </div>
-
-      <div class="card">
-        <h2 class="cat-title" style="color:var(--text);">Comentarios recientes</h2>
-        <div id="clima-comentarios"></div>
-      </div>
-    </section>
-
     <!-- ENCUESTA CHARLA DE SEGURIDAD PANEL -->
     <section class="panel" id="panel-encuestas-charla">
       <div class="section-head">
@@ -1272,37 +1222,7 @@ const COMP_PREGUNTAS = [
   {id:"feedback", q:"¿El colaborador evaluado responde de buena manera ante la retroalimentación?"}
 ];
 
-/* ---- Análisis de encuestas (clima laboral + charla de seguridad) ---- */
-const ENCUESTA_CLIMA_PREGUNTAS = [
-  { cat: "Liderazgo y supervisión", items: [
-    {id:"lid_1", q:"Mi supervisor(a) me trata con respeto."},
-    {id:"lid_2", q:"Mi supervisor(a) me brinda la información necesaria para hacer bien mi trabajo."},
-    {id:"lid_3", q:"Confío en las decisiones que toma el liderazgo de mi área."}
-  ]},
-  { cat: "Comunicación", items: [
-    {id:"com_1", q:"Recibo la información que necesito para hacer mi trabajo a tiempo."},
-    {id:"com_2", q:"Puedo expresar mis opiniones o preocupaciones sin temor a represalias."},
-    {id:"com_3", q:"Los cambios importantes se comunican con claridad."}
-  ]},
-  { cat: "Condiciones de trabajo", items: [
-    {id:"cond_1", q:"Cuento con las herramientas y equipos necesarios para hacer mi trabajo de forma segura."},
-    {id:"cond_2", q:"Mi área de trabajo está limpia, ordenada y en buenas condiciones."},
-    {id:"cond_3", q:"Siento que mi carga de trabajo es razonable."}
-  ]},
-  { cat: "Reconocimiento y desarrollo", items: [
-    {id:"rec_1", q:"Mi esfuerzo y buen desempeño son reconocidos."},
-    {id:"rec_2", q:"Tengo oportunidades de aprender y crecer en la empresa."}
-  ]},
-  { cat: "Trabajo en equipo", items: [
-    {id:"eq_1", q:"Existe un buen ambiente de colaboración con mis compañeros."},
-    {id:"eq_2", q:"Puedo contar con mis compañeros cuando necesito ayuda."}
-  ]},
-  { cat: "Bienestar y satisfacción", items: [
-    {id:"bien_1", q:"Puedo balancear mis responsabilidades laborales y personales."},
-    {id:"bien_2", q:"En general, estoy satisfecho(a) trabajando aquí."}
-  ]}
-];
-
+/* ---- Análisis de la encuesta de charla de seguridad ---- */
 const CHARLA_PREGUNTAS = [
   {id:"gusto",        q:"1. ¿Te gustó la última charla de seguridad?", opciones:["Sí","Más o menos","No"]},
   {id:"entendio",      q:"2. ¿Entendiste bien lo que explicaron en la charla?", opciones:["Sí","Más o menos","No"]},
@@ -1319,16 +1239,6 @@ const SUPERVISOR_MIN_N = 5; // no mostrar un supervisor individual con menos res
 function supervisorNombre(id){
   const p = personalSupervisores.find(x => x.id === id);
   return p ? p.nombre_completo : `Supervisor #${id}`;
-}
-
-function barRow(label, avg){
-  const pct = Math.max(0, Math.min(100, Math.round((avg/5)*100)));
-  const cls = avg >= 4 ? "good" : avg >= 3 ? "mid" : "bad";
-  return `
-    <div class="bar-row">
-      <div class="bar-row-head"><span class="bar-label">${escapeHtml(label)}</span><span class="bar-value">${avg.toFixed(1)} / 5</span></div>
-      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-    </div>`;
 }
 
 function supRow(name, avg, n, scale){
@@ -1357,82 +1267,6 @@ function renderSupervisorTable(containerId, perSupervisor, scale){
     html += supRow(`Otros (${hidden.length} supervisor${hidden.length>1?"es":""} con menos de ${SUPERVISOR_MIN_N} respuestas cada uno)`, hiddenN ? hiddenSum/hiddenN : 0, hiddenN, scale);
   }
   document.getElementById(containerId).innerHTML = html || '<div class="empty">Todavía no hay respuestas.</div>';
-}
-
-async function loadEncuestaClima(){
-  const { data, error } = await sb.rpc("ssoma_encuesta_resultados", { p_token: currentSession.token });
-  if(error || !data) return;
-  renderEncuestaClima(data);
-}
-
-function renderEncuestaClima(rows){
-  document.getElementById("clima-count").textContent = `${rows.length} respuesta${rows.length===1?"":"s"}`;
-  document.getElementById("clima-stat-total").textContent = rows.length;
-
-  if(rows.length === 0){
-    document.getElementById("clima-stat-promedio").textContent = "—";
-    document.getElementById("clima-stat-ultima").textContent = "—";
-    document.getElementById("clima-stat-turnos").textContent = "—";
-    document.getElementById("clima-categorias").innerHTML = '<div class="empty">Todavía no hay respuestas.</div>';
-    document.getElementById("clima-preguntas").innerHTML = "";
-    document.getElementById("clima-supervisores").innerHTML = "";
-    document.getElementById("clima-comentarios").innerHTML = '<div class="empty">Sin comentarios todavía.</div>';
-    return;
-  }
-
-  const allItems = ENCUESTA_CLIMA_PREGUNTAS.flatMap(c => c.items);
-  const perPregunta = {};
-  allItems.forEach(it => perPregunta[it.id] = {sum:0, n:0});
-  const perCategoria = {};
-  ENCUESTA_CLIMA_PREGUNTAS.forEach(c => perCategoria[c.cat] = {sum:0, n:0});
-  const perSupervisor = {};
-  const turnoCount = {"Mañana":0, "Tarde":0, "Noche":0};
-  let noTurno = 0, sumAll = 0, nAll = 0;
-
-  rows.forEach(r => {
-    if(r.turno && turnoCount[r.turno] !== undefined) turnoCount[r.turno]++;
-    else noTurno++;
-    if(!perSupervisor[r.supervisor_id]) perSupervisor[r.supervisor_id] = {sum:0, n:0};
-    let rowSum = 0, rowN = 0;
-    ENCUESTA_CLIMA_PREGUNTAS.forEach(cat => {
-      cat.items.forEach(it => {
-        const v = r.respuestas[it.id];
-        if(typeof v === "number"){
-          perPregunta[it.id].sum += v; perPregunta[it.id].n++;
-          perCategoria[cat.cat].sum += v; perCategoria[cat.cat].n++;
-          sumAll += v; nAll++;
-          rowSum += v; rowN++;
-        }
-      });
-    });
-    if(rowN > 0){ perSupervisor[r.supervisor_id].sum += rowSum/rowN; perSupervisor[r.supervisor_id].n++; }
-  });
-
-  document.getElementById("clima-stat-promedio").textContent = nAll ? (sumAll/nAll).toFixed(1) : "—";
-  document.getElementById("clima-stat-ultima").textContent = new Date(rows[0].created_at).toLocaleDateString("es-PE");
-  const turnoResumen = Object.entries(turnoCount).filter(([,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(" · ");
-  document.getElementById("clima-stat-turnos").textContent = turnoResumen || (noTurno ? "Turno no especificado" : "—");
-
-  const catRows = Object.entries(perCategoria)
-    .map(([cat,{sum,n}]) => ({cat, avg: n ? sum/n : 0}))
-    .sort((a,b)=>a.avg-b.avg);
-  document.getElementById("clima-categorias").innerHTML = catRows.map(c => barRow(c.cat, c.avg)).join("");
-
-  const qRows = allItems
-    .map(it => ({label: it.q, avg: perPregunta[it.id].n ? perPregunta[it.id].sum/perPregunta[it.id].n : 0}))
-    .sort((a,b)=>a.avg-b.avg);
-  document.getElementById("clima-preguntas").innerHTML = qRows.map(q => barRow(q.label, q.avg)).join("");
-
-  renderSupervisorTable("clima-supervisores", perSupervisor, 5);
-
-  const comentarios = rows.filter(r => r.comentarios && r.comentarios.trim());
-  document.getElementById("clima-comentarios").innerHTML = comentarios.length
-    ? comentarios.slice(0, 30).map(r => `
-        <div class="comment-item">
-          "${escapeHtml(r.comentarios)}"
-          <div class="comment-meta">${new Date(r.created_at).toLocaleDateString("es-PE")}${r.turno ? " · "+escapeHtml(r.turno) : ""}</div>
-        </div>`).join("")
-    : '<div class="empty">Sin comentarios todavía.</div>';
 }
 
 async function loadEncuestaCharla(){
@@ -1483,11 +1317,12 @@ function renderEncuestaCharla(rows){
 
 function initEncuestasNav(){
   const permisos = (currentSession && currentSession.permisos) || [];
-  const puedeClima = permisos.includes("view.encuesta-clima");
   const puedeCharla = permisos.includes("view.encuesta-charla");
-  if(puedeClima || puedeCharla) document.getElementById("encuestas-navlabel").style.display = "";
-  if(puedeClima){ document.getElementById("nav-encuestas-clima").style.display = ""; loadEncuestaClima(); }
-  if(puedeCharla){ document.getElementById("nav-encuestas-charla").style.display = ""; loadEncuestaCharla(); }
+  if(puedeCharla){
+    document.getElementById("encuestas-navlabel").style.display = "";
+    document.getElementById("nav-encuestas-charla").style.display = "";
+    loadEncuestaCharla();
+  }
 }
 
 let reports = [];
