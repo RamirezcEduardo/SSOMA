@@ -559,13 +559,6 @@
   .bar-fill.mid{background:var(--orange);}
   .bar-fill.bad{background:var(--red);}
 
-  .opt-dist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
-  .opt-dist-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:3px 8px;border-radius:20px;background:var(--panel-alt);border:1px solid var(--border);color:var(--muted);white-space:nowrap;}
-
-  .sup-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border);}
-  .sup-row:last-child{border-bottom:none;}
-  .sup-row .sup-name{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text);}
-  .sup-row .sup-n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
 
   .comment-item{padding:12px 0;border-bottom:1px dashed var(--border);font-size:13px;line-height:1.5;color:var(--text);}
   .comment-item:last-child{border-bottom:none;}
@@ -867,8 +860,6 @@
     <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
     <button class="navitem" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
     <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
-    <div class="navlabel" id="encuestas-navlabel" style="display:none;">Encuestas</div>
-    <button class="navitem" data-view="encuestas-charla" id="nav-encuestas-charla" style="display:none;"><span class="dot" style="background:#7C3AED;"></span><span class="label">Charla de Seguridad</span></button>
   </nav>
 
   <main>
@@ -1248,44 +1239,6 @@
       </div>
     </section>
 
-    <!-- ENCUESTA CHARLA DE SEGURIDAD PANEL -->
-    <section class="panel" id="panel-encuestas-charla">
-      <div class="section-head">
-        <h2 class="section-title">Encuesta de Charla de Seguridad</h2>
-        <span class="count-pill" id="charla-count">0 respuestas</span>
-      </div>
-      <p class="section-desc">Resultados anónimos de la encuesta sobre las charlas de 5 minutos. Solo visible para jefatura, RRHH y administración.</p>
-
-      <div class="stats-row stats-row-3">
-        <div class="stat-card">
-          <div class="stat-label">Respuestas totales</div>
-          <div class="stat-value" id="charla-stat-total" style="color:#2563EB;">0</div>
-          <div class="stat-sub">encuestas recibidas</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Calificación promedio</div>
-          <div class="stat-value" id="charla-stat-buenas" style="color:#16A34A;">—</div>
-          <div class="stat-sub">pregunta 8, escala 1–10</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Última respuesta</div>
-          <div class="stat-value" id="charla-stat-ultima" style="font-size:16px;">—</div>
-          <div class="stat-sub">&nbsp;</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 class="cat-title" style="color:var(--text);">Distribución por pregunta</h2>
-        <div id="charla-preguntas"></div>
-      </div>
-
-      <div class="card">
-        <h2 class="cat-title" style="color:var(--text);">Por supervisor</h2>
-        <p class="section-desc" style="margin:-6px 0 14px;">Solo se muestran supervisores con 5 respuestas o más, para no exponer casos aislados.</p>
-        <div id="charla-supervisores"></div>
-      </div>
-    </section>
-
   </main>
 </div>
 
@@ -1434,118 +1387,6 @@ const COMP_PREGUNTAS = [
   {id:"atencionTarea", q:"¿El colaborador presta toda su atención en la tarea que está desarrollando?"},
   {id:"feedback", q:"¿El colaborador evaluado responde de buena manera ante la retroalimentación?"}
 ];
-
-/* ---- Análisis de la encuesta de charla de seguridad ---- */
-const CHARLA_PREGUNTAS = [
-  {id:"gusto",        type:"scale", q:"1. ¿Qué tan bien te pareció la última charla de seguridad?"},
-  {id:"entendio",     type:"scale", q:"2. ¿Qué tan claro te quedó lo que explicaron en la charla?"},
-  {id:"ayuda",        type:"scale", q:"3. ¿Qué tanto crees que lo aprendido te ayuda a trabajar más seguro?"},
-  {id:"interes",      type:"scale", q:"4. ¿Qué tan interesante fue el tema para tu trabajo?"},
-  {id:"duracion",     type:"chips", q:"5. ¿Las charlas son muy largas o cortas?", opciones:["Están bien","Muy largas","Muy cortas"]},
-  {id:"multimedia",   type:"chips", q:"6. ¿Te gustaría que usen imágenes o videos en las charlas?", opciones:["Sí","No"]},
-  {id:"comodidad",    type:"scale", q:"7. ¿Qué tan cómodo te sientes preguntando o comentando en la charla?"},
-  {id:"calificacion", type:"scale", q:"8. En general, ¿cómo calificarías las charlas de seguridad?"}
-];
-const SUPERVISOR_MIN_N = 5; // no mostrar un supervisor individual con menos respuestas que esto
-
-function supervisorNombre(id){
-  const p = personalSupervisores.find(x => x.id === id);
-  return p ? p.nombre_completo : `Supervisor #${id}`;
-}
-
-function supRow(name, avg, n, scale){
-  const pct = Math.max(0, Math.min(100, Math.round((avg/scale)*100)));
-  const cls = pct >= 80 ? "good" : pct >= 60 ? "mid" : "bad";
-  return `
-    <div class="sup-row">
-      <div class="sup-name">${escapeHtml(name)}</div>
-      <div class="bar-track" style="width:110px;flex-shrink:0;"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-      <div class="sup-n">${avg.toFixed(1)} · n=${n}</div>
-    </div>`;
-}
-
-function renderSupervisorTable(containerId, perSupervisor, scale){
-  const entries = Object.entries(perSupervisor).map(([id,{sum,n}]) => ({id:Number(id), avg: n ? sum/n : 0, n}));
-  if(entries.length === 0){
-    document.getElementById(containerId).innerHTML = '<div class="empty">Todavía no hay respuestas.</div>';
-    return;
-  }
-  const shown = entries.filter(e => e.n >= SUPERVISOR_MIN_N).sort((a,b)=>a.avg-b.avg);
-  const hidden = entries.filter(e => e.n < SUPERVISOR_MIN_N);
-  let html = shown.map(e => supRow(supervisorNombre(e.id), e.avg, e.n, scale)).join("");
-  if(hidden.length){
-    const hiddenN = hidden.reduce((s,e)=>s+e.n,0);
-    const hiddenSum = hidden.reduce((s,e)=>s+e.avg*e.n,0);
-    html += supRow(`Otros (${hidden.length} supervisor${hidden.length>1?"es":""} con menos de ${SUPERVISOR_MIN_N} respuestas cada uno)`, hiddenN ? hiddenSum/hiddenN : 0, hiddenN, scale);
-  }
-  document.getElementById(containerId).innerHTML = html || '<div class="empty">Todavía no hay respuestas.</div>';
-}
-
-async function loadEncuestaCharla(){
-  const { data, error } = await sb.rpc("ssoma_encuesta_charla_resultados", { p_token: currentSession.token });
-  if(error || !data) return;
-  renderEncuestaCharla(data);
-}
-
-function renderEncuestaCharla(rows){
-  document.getElementById("charla-count").textContent = `${rows.length} respuesta${rows.length===1?"":"s"}`;
-  document.getElementById("charla-stat-total").textContent = rows.length;
-
-  if(rows.length === 0){
-    document.getElementById("charla-stat-buenas").textContent = "—";
-    document.getElementById("charla-stat-ultima").textContent = "—";
-    document.getElementById("charla-preguntas").innerHTML = '<div class="empty">Todavía no hay respuestas.</div>';
-    document.getElementById("charla-supervisores").innerHTML = "";
-    return;
-  }
-
-  const califAvg = rows.reduce((s,r) => s + r.respuestas.calificacion, 0) / rows.length;
-  document.getElementById("charla-stat-buenas").textContent = califAvg.toFixed(1) + "/10";
-  document.getElementById("charla-stat-ultima").textContent = new Date(rows[0].created_at).toLocaleDateString("es-PE");
-
-  document.getElementById("charla-preguntas").innerHTML = CHARLA_PREGUNTAS.map(p => {
-    if(p.type === "scale"){
-      const avg = rows.reduce((s,r) => s + r.respuestas[p.id], 0) / rows.length;
-      const pct = Math.max(0, Math.min(100, Math.round(avg*10)));
-      const cls = pct >= 80 ? "good" : pct >= 60 ? "mid" : "bad";
-      return `
-        <div class="bar-row">
-          <div class="bar-row-head"><span class="bar-label">${escapeHtml(p.q)}</span><span class="bar-value">${avg.toFixed(1)}/10</span></div>
-          <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-        </div>`;
-    }
-    const counts = {};
-    p.opciones.forEach(o => counts[o] = 0);
-    rows.forEach(r => { const v = r.respuestas[p.id]; if(v in counts) counts[v]++; });
-    const chips = p.opciones.map(o => {
-      const pct = Math.round(100*counts[o]/rows.length);
-      return `<span class="opt-dist-chip">${escapeHtml(o)}: ${pct}% (${counts[o]})</span>`;
-    }).join("");
-    return `
-      <div class="bar-row">
-        <div class="bar-row-head"><span class="bar-label">${escapeHtml(p.q)}</span></div>
-        <div class="opt-dist">${chips}</div>
-      </div>`;
-  }).join("");
-
-  const perSupervisor = {};
-  rows.forEach(r => {
-    if(!perSupervisor[r.supervisor_id]) perSupervisor[r.supervisor_id] = {sum:0, n:0};
-    perSupervisor[r.supervisor_id].sum += r.respuestas.calificacion;
-    perSupervisor[r.supervisor_id].n++;
-  });
-  renderSupervisorTable("charla-supervisores", perSupervisor, 10);
-}
-
-function initEncuestasNav(){
-  const permisos = (currentSession && currentSession.permisos) || [];
-  const puedeCharla = permisos.includes("view.encuesta-charla");
-  if(puedeCharla){
-    document.getElementById("encuestas-navlabel").style.display = "";
-    document.getElementById("nav-encuestas-charla").style.display = "";
-    loadEncuestaCharla();
-  }
-}
 
 let reports = [];
 let compReports = [];
@@ -2667,7 +2508,6 @@ async function init(){
   await loadCatalogos();
   await Promise.all([loadReports(), loadCompReports(), loadAccidentes()]);
   initImageWidget("acc");
-  initEncuestasNav();
 }
 
 checkSession();
