@@ -536,6 +536,14 @@
   .estado-badge.pendiente::before{background:var(--orange);}
   .estado-badge.levantado{background:var(--green-tint);color:var(--green);}
   .estado-badge.levantado::before{background:var(--green);}
+  .estado-badge.tipo-accidente{background:var(--red-tint);color:var(--red-dark);}
+  .estado-badge.tipo-accidente::before{background:var(--red);}
+  .estado-badge.tipo-incidente{background:var(--blue-tint);color:var(--blue);}
+  .estado-badge.tipo-incidente::before{background:var(--blue);}
+  .estado-badge.en-proceso{background:var(--orange-tint);color:var(--amber-text);}
+  .estado-badge.en-proceso::before{background:var(--orange);}
+  .estado-badge.finalizado{background:var(--green-tint);color:var(--green);}
+  .estado-badge.finalizado::before{background:var(--green);}
 
   .lev-tab{background:var(--panel);}
   .lev-tab.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
@@ -631,6 +639,72 @@
   .img-thumb-sm{
     width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;
   }
+
+  /* ---- Buscador con chips (personal involucrado) ---- */
+  .combo-wrap{position:relative;}
+  .chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .chip-list:empty{margin-bottom:0;}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;background:var(--red-tint);color:var(--red-dark);
+    border:1px solid var(--red);border-radius:20px;padding:5px 6px 5px 12px;font-size:12.5px;font-weight:600;
+  }
+  .chip-x{
+    background:transparent;border:none;color:var(--red-dark);cursor:pointer;font-size:14px;line-height:1;
+    width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .chip-x:hover{background:var(--red);color:#fff;}
+  .combo-dropdown{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--border-strong);
+    border-radius:8px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 8px 20px rgba(16,24,40,.15);display:none;
+  }
+  .combo-option{padding:10px 13px;font-size:13px;color:var(--text);cursor:pointer;}
+  .combo-option:hover, .combo-option.freetext{background:var(--panel-alt);}
+  .combo-option.freetext{color:var(--blue);font-weight:600;}
+  .combo-empty{padding:10px 13px;font-size:12.5px;color:var(--muted);}
+
+  /* ---- Causas básicas: factores personales/laborales ---- */
+  .factor-row{display:flex;gap:10px;padding:12px 0;border-top:1px dashed var(--border);}
+  .factor-row:first-child{border-top:none;padding-top:0;}
+  .factor-num{
+    flex:0 0 auto;width:34px;height:34px;border-radius:8px;background:var(--panel-alt);border:1px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11.5px;color:var(--text-soft);margin-top:1px;
+  }
+  .factor-body{flex:1 1 auto;min-width:0;}
+  .factor-body input{margin-bottom:8px;}
+  .factor-row .btn-remove{margin-top:1px;}
+  .btn-remove{
+    background:transparent;border:1px solid var(--border);color:var(--muted);width:34px;height:34px;flex-shrink:0;
+    border-radius:8px;cursor:pointer;font-size:14px;
+  }
+  .btn-remove:hover{border-color:var(--red);color:var(--red);}
+  .btn-add-row{
+    width:100%;margin-top:8px;padding:11px;border:1px dashed var(--border-strong);background:var(--panel-alt);
+    color:var(--text-soft);border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px;font-family:'Inter',sans-serif;
+  }
+  .btn-add-row:hover{border-color:var(--red);color:var(--red);}
+
+  /* ---- Plan de acciones ---- */
+  .accion-row{display:grid;grid-template-columns:1.6fr 1fr 0.8fr auto;gap:8px;align-items:end;padding:12px 0;border-top:1px dashed var(--border);}
+  .accion-row:first-child{border-top:none;padding-top:0;}
+  @media (max-width:640px){ .accion-row{grid-template-columns:1fr;} }
+  .accion-row label{display:block;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+  .accion-row input{padding:8px 9px;font-size:12.5px;}
+
+  /* ---- Pestañas internas (Registrar / Informes) ---- */
+  .acc-tabs{display:flex;gap:18px;margin-bottom:18px;border-bottom:1px solid var(--border);}
+  .acc-tab{padding:10px 2px;border:none;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;}
+  .acc-tab.active{color:var(--red);border-bottom-color:var(--red);}
+  .acc-view{display:none;}
+  .acc-view.active{display:block;}
+
+  /* ---- Cards de informes de accidentes ---- */
+  .acc-card{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow);}
+  .acc-card.tipo-accidente{border-left-color:var(--red);}
+  .acc-item-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px dashed var(--border);flex-wrap:wrap;}
+  .acc-item-row .a-info{flex:1 1 220px;min-width:0;}
+  .acc-item-row .a-text{font-size:12.5px;color:var(--text);font-weight:600;}
+  .acc-item-row .a-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+  .evidencia-chip{font-size:11px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:4px;}
 
   .modal-overlay{
     display:none;
@@ -792,6 +866,7 @@
     <button class="navitem active" data-view="racs"><span class="dot" style="background:#E31E24;"></span><span class="label">RACS</span><span class="tag">Activo</span></button>
     <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
     <button class="navitem navitem-sub" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
+    <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
     <div class="navlabel" id="encuestas-navlabel" style="display:none;">Encuestas</div>
     <button class="navitem" data-view="encuestas-charla" id="nav-encuestas-charla" style="display:none;"><span class="dot" style="background:#7C3AED;"></span><span class="label">Charla de Seguridad</span></button>
   </nav>
@@ -1037,6 +1112,142 @@
       <div id="lev-list"></div>
     </section>
 
+    <!-- ACCIDENTES / INCIDENTES PANEL -->
+    <section class="panel" id="panel-accidentes">
+      <div class="section-head">
+        <h2 class="section-title">Accidentes / Incidentes</h2>
+        <span class="count-pill" id="acc-count">0 reportes</span>
+      </div>
+      <p class="section-desc">Investigación de causas: causa inmediata (acto/condición) → causas básicas (factores personales/laborales) → plan de acciones.</p>
+
+      <div class="stats-row stats-row-3">
+        <div class="stat-card">
+          <div class="stat-label">Accidentes</div>
+          <div class="stat-value" id="acc-stat-accidentes" style="color:#E31E24;">0</div>
+          <div class="stat-sub">registrados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Incidentes</div>
+          <div class="stat-value" id="acc-stat-incidentes" style="color:#2563EB;">0</div>
+          <div class="stat-sub">registrados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Acciones en proceso</div>
+          <div class="stat-value" id="acc-stat-acciones" style="color:#B45309;">0</div>
+          <div class="stat-sub">pendientes de evidencia de cierre</div>
+        </div>
+      </div>
+
+      <div class="acc-tabs">
+        <button type="button" class="acc-tab active" data-acc-tab="registrar">Registrar reporte</button>
+        <button type="button" class="acc-tab" data-acc-tab="informes">Informes</button>
+      </div>
+
+      <div class="acc-view active" id="acc-view-registrar">
+        <form class="report-form" id="acc-form">
+          <div class="field">
+            <label>Tipo de evento<span class="req">*</span></label>
+            <div class="toggle-group">
+              <div class="toggle-btn sel-cond acc-tipo-btn" data-val="INCIDENTE">Incidente</div>
+              <div class="toggle-btn sel-acto acc-tipo-btn" data-val="ACCIDENTE">Accidente</div>
+            </div>
+            <input type="hidden" id="acc-tipo" required>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>Fecha<span class="req">*</span></label>
+              <input type="date" id="acc-fecha" required>
+            </div>
+            <div class="field">
+              <label>Reportado por (equipo SSOMA)<span class="req">*</span></label>
+              <select id="acc-reportante" required></select>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>Cliente / cuenta<span class="req">*</span></label>
+              <input type="text" id="acc-cliente" placeholder="Ej. IND &amp; LOG">
+            </div>
+            <div class="field">
+              <label>Sede / ubicación<span class="req">*</span></label>
+              <select id="acc-ubicacion" required></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Personal involucrado <span class="hint" style="display:inline;">(busca por palabra clave, puedes agregar varios)</span></label>
+            <div class="combo-wrap" id="acc-involucrado-widget">
+              <div class="chip-list" id="acc-involucrado-chips"></div>
+              <input type="text" id="acc-involucrado-search" placeholder="Ej. Soraluz, Rojas, Elizabeth…" autocomplete="off">
+              <div class="combo-dropdown" id="acc-involucrado-dropdown"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Descripción del evento<span class="req">*</span></label>
+            <textarea id="acc-descripcion" placeholder="Qué pasó, cuándo, quién estuvo involucrado y cómo se detectó"></textarea>
+          </div>
+          <div class="field">
+            <label>Evidencia fotográfica <span class="hint" style="display:inline;">(hasta 3 fotos, opcional)</span></label>
+            <div class="img-widget" id="img-widget-acc"></div>
+          </div>
+
+          <div class="field" style="border-top:1px dashed var(--border);padding-top:16px;margin-top:6px;">
+            <label style="font-size:13.5px;">¿Qué falló? — Causa inmediata</label>
+            <div class="toggle-group" style="margin:8px 0 14px;">
+              <div class="toggle-btn sel-acto acc-causa-tipo-btn" data-val="ACTO SUB ESTANDAR">Acto subestándar</div>
+              <div class="toggle-btn sel-cond acc-causa-tipo-btn" data-val="CONDICION SUB ESTANDAR">Condición subestándar</div>
+            </div>
+            <div class="field">
+              <label>Ítem específico<span class="req">*</span> <span class="hint" style="display:inline;">(catálogo de RACS)</span></label>
+              <select id="acc-causa-item" required></select>
+            </div>
+            <div class="field" id="acc-causa-otro-wrap" style="display:none;">
+              <label>Especifique otro</label>
+              <input type="text" id="acc-causa-otro" placeholder="Detalle el acto/condición">
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>Detalle de lo observado</label>
+              <textarea id="acc-causa-detalle" placeholder="Ej. El operador del equipo realiza una mala alineación al ingresar al pasillo 01"></textarea>
+            </div>
+          </div>
+
+          <div class="field" style="border-top:1px dashed var(--border);padding-top:16px;margin-top:6px;">
+            <label style="font-size:13.5px;">Causas básicas <span class="hint" style="display:inline;">(opcional)</span></label>
+            <p class="form-note" style="margin:6px 0 14px;">La causa inmediata siempre es <b>1</b>. El primer factor personal se numera <b>2</b> (los siguientes 2.2, 2.3…), el primer factor laboral <b>3</b> (los siguientes 3.2, 3.3…).</p>
+            <label style="font-size:12px;font-weight:700;color:var(--text-soft);">Factores personales</label>
+            <div id="acc-personales-list" style="margin-top:6px;"></div>
+            <button type="button" class="btn-add-row" id="acc-add-personal">+ Agregar factor personal</button>
+
+            <label style="font-size:12px;font-weight:700;color:var(--text-soft);display:block;margin-top:18px;">Factores laborales</label>
+            <div id="acc-laborales-list" style="margin-top:6px;"></div>
+            <button type="button" class="btn-add-row" id="acc-add-laboral">+ Agregar factor laboral</button>
+          </div>
+
+          <div class="field" style="border-top:1px dashed var(--border);padding-top:16px;margin-top:6px;margin-bottom:0;">
+            <label style="font-size:13.5px;">Plan de acciones / aprendizaje</label>
+            <p class="form-note" style="margin:6px 0 10px;">Cada acción queda <b>En proceso</b> al registrar. Se finaliza después, desde "Informes", subiendo el archivo (PDF o imagen) que sustenta el cierre.</p>
+            <div id="acc-acciones-list"></div>
+            <button type="button" class="btn-add-row" id="acc-add-accion">+ Agregar acción</button>
+          </div>
+
+          <div class="form-actions">
+            <span class="form-note" id="acc-error"></span>
+            <div style="display:flex;gap:10px;">
+              <button type="button" class="btn btn-ghost" id="acc-reset">Limpiar</button>
+              <button type="submit" class="btn btn-primary">Registrar reporte</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="acc-view" id="acc-view-informes">
+        <div id="acc-informes-list"></div>
+      </div>
+    </section>
+
     <!-- ENCUESTA CHARLA DE SEGURIDAD PANEL -->
     <section class="panel" id="panel-encuestas-charla">
       <div class="section-head">
@@ -1204,9 +1415,11 @@ document.getElementById("login-encuesta-charla-btn").addEventListener("click", (
 
 let personalObservadores = [];
 let personalSupervisores = [];
+let personalTodos = [];
 let ubicacionesCat = [];
 let ocurrenciasCat = [];
 let condicionesCat = [];
+let equipoSsomaCat = [];
 
 const COMP_PREGUNTAS = [
   {id:"epp", q:"¿El colaborador evaluado usa sus EPPs correctamente, inclusive los necesarios para las tareas críticas?"},
@@ -1596,24 +1809,30 @@ function fillSelect(el, items, placeholder, valueKey, labelKey){
 }
 
 async function loadCatalogos(){
-  const [personalRes, ubicRes, ocuRes, condRes] = await Promise.all([
+  const [personalRes, ubicRes, ocuRes, condRes, equipoRes] = await Promise.all([
     sb.from("ssoma_personal").select("id, nombre_completo, puede_observar, puede_supervisar").eq("activo", true).order("id"),
     sb.from("ssoma_ubicaciones").select("id, nombre").eq("activo", true).order("id"),
     sb.from("ssoma_ocurrencias").select("id, descripcion").eq("activo", true).order("id"),
-    sb.from("ssoma_condiciones").select("id, descripcion").eq("activo", true).order("id")
+    sb.from("ssoma_condiciones").select("id, descripcion").eq("activo", true).order("id"),
+    sb.from("ssoma_equipo_ssoma").select("id, nombre_completo").eq("activo", true).order("id")
   ]);
   const personal = personalRes.data || [];
   personalObservadores = personal.filter(p => p.puede_observar);
   personalSupervisores = personal.filter(p => p.puede_supervisar);
+  personalTodos = personal;
   ubicacionesCat = ubicRes.data || [];
   ocurrenciasCat = ocuRes.data || [];
   condicionesCat = condRes.data || [];
+  equipoSsomaCat = equipoRes.data || [];
 
   fillSelect(document.getElementById("f-observador"), personalObservadores, "Selecciona un observador", "id", "nombre_completo");
   fillSelect(document.getElementById("f-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("f-ocurrencia"), ocurrenciasCat, "Selecciona la ocurrencia", "descripcion", "descripcion");
   fillSelect(document.getElementById("f-condicion"), condicionesCat, "Selecciona la condición", "descripcion", "descripcion");
   fillSelect(document.getElementById("c-supervisor"), personalSupervisores, "Selecciona un supervisor", "id", "nombre_completo");
+  fillSelect(document.getElementById("acc-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
+  fillSelect(document.getElementById("acc-reportante"), equipoSsomaCat, "Selecciona quién reporta", "id", "nombre_completo");
+  accSetCausaTipo("ACTO SUB ESTANDAR");
 }
 
 document.getElementById("f-fecha").valueAsDate = new Date();
@@ -1657,9 +1876,9 @@ document.querySelectorAll(".navitem").forEach(btn=>{
 });
 
 // toggle acto/condicion
-document.querySelectorAll(".toggle-btn").forEach(btn=>{
+document.querySelectorAll("#racs-form .toggle-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll("#racs-form .toggle-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     selectedTipo = btn.dataset.val;
     document.getElementById("f-tipo").value = selectedTipo;
@@ -1736,7 +1955,7 @@ function formatDate(d){
 
 document.getElementById("racs-reset").addEventListener("click", ()=>{
   document.getElementById("racs-form").reset();
-  document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll("#racs-form .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("block-acto").classList.remove("show");
   document.getElementById("block-cond").classList.remove("show");
   document.getElementById("f-fecha").valueAsDate = new Date();
@@ -1803,7 +2022,7 @@ document.getElementById("racs-form").addEventListener("submit", async (e)=>{
 
   await loadReports();
   document.getElementById("racs-form").reset();
-  document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll("#racs-form .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("block-acto").classList.remove("show");
   document.getElementById("block-cond").classList.remove("show");
   document.getElementById("f-fecha").valueAsDate = new Date();
@@ -2113,9 +2332,341 @@ function renderLevList(){
   });
 }
 
+/* =====================================================
+   ACCIDENTES / INCIDENTES
+   ===================================================== */
+let accTipoEvento = "";
+let accCausaTipo = "ACTO SUB ESTANDAR";
+let accInvolucrados = [];
+let accFactoresPersonales = [];
+let accFactoresLaborales = [];
+let accAcciones = [];
+let accidentesReports = [];
+
+document.querySelectorAll(".acc-tipo-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".acc-tipo-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    accTipoEvento = btn.dataset.val;
+    document.getElementById("acc-tipo").value = accTipoEvento;
+  });
+});
+
+function accSetCausaTipo(tipo){
+  accCausaTipo = tipo;
+  document.querySelectorAll(".acc-causa-tipo-btn").forEach(b=>b.classList.toggle("active", b.dataset.val === tipo));
+  const cat = tipo === "ACTO SUB ESTANDAR" ? ocurrenciasCat : condicionesCat;
+  fillSelect(document.getElementById("acc-causa-item"), cat, "Selecciona un ítem", "descripcion", "descripcion");
+  document.getElementById("acc-causa-otro-wrap").style.display = "none";
+}
+document.querySelectorAll(".acc-causa-tipo-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=> accSetCausaTipo(btn.dataset.val));
+});
+document.getElementById("acc-causa-item").addEventListener("change", e=>{
+  document.getElementById("acc-causa-otro-wrap").style.display = e.target.value.startsWith("Otros") ? "block" : "none";
+});
+
+/* ---- Personal involucrado: buscador con chips ---- */
+const accInvolSearch = document.getElementById("acc-involucrado-search");
+const accInvolDropdown = document.getElementById("acc-involucrado-dropdown");
+
+function accRenderChips(){
+  document.getElementById("acc-involucrado-chips").innerHTML = accInvolucrados.map((n,i) => `
+    <span class="chip">${escapeHtml(n)}<button type="button" class="chip-x" data-i="${i}" aria-label="Quitar">×</button></span>
+  `).join("");
+  document.querySelectorAll("#acc-involucrado-chips .chip-x").forEach(b => b.addEventListener("click", () => {
+    accInvolucrados.splice(Number(b.dataset.i), 1);
+    accRenderChips();
+  }));
+}
+function accAddInvolucrado(nombre){
+  if(!accInvolucrados.includes(nombre)) accInvolucrados.push(nombre);
+  accInvolSearch.value = "";
+  accInvolDropdown.style.display = "none";
+  accRenderChips();
+  accInvolSearch.focus();
+}
+function accRenderInvolDropdown(query){
+  const q = query.trim().toLowerCase();
+  if(q === ""){ accInvolDropdown.style.display = "none"; return; }
+  const nombres = personalTodos.map(p => p.nombre_completo);
+  const matches = nombres.filter(n => !accInvolucrados.includes(n) && n.toLowerCase().includes(q)).slice(0, 8);
+  let html = matches.map(n => `<div class="combo-option" data-n="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join("");
+  const exact = nombres.some(n => n.toLowerCase() === q);
+  if(!exact) html += `<div class="combo-option freetext" data-freetext="1">+ Agregar "${escapeHtml(query.trim())}" (no está en la lista — tercero/proveedor)</div>`;
+  if(matches.length === 0 && exact) html = `<div class="combo-empty">Ya está agregado.</div>`;
+  accInvolDropdown.innerHTML = html;
+  accInvolDropdown.style.display = "block";
+  accInvolDropdown.querySelectorAll(".combo-option[data-n]").forEach(opt => opt.addEventListener("click", () => accAddInvolucrado(opt.dataset.n)));
+  const ft = accInvolDropdown.querySelector(".combo-option.freetext");
+  if(ft) ft.addEventListener("click", () => accAddInvolucrado(accInvolSearch.value.trim()));
+}
+accInvolSearch.addEventListener("input", e => accRenderInvolDropdown(e.target.value));
+accInvolSearch.addEventListener("focus", e => { if(e.target.value) accRenderInvolDropdown(e.target.value); });
+document.addEventListener("click", e => { if(!e.target.closest("#acc-involucrado-widget")) accInvolDropdown.style.display = "none"; });
+
+/* ---- Factores (causas básicas): numeración automática 2/2.2/2.3… y 3/3.2/3.3… ---- */
+function accNumeroFactor(base, i){ return i === 0 ? `${base}` : `${base}.${i+1}`; }
+
+function accMakeFactorList(base, arr, listId, btnId){
+  function render(){
+    const el = document.getElementById(listId);
+    if(arr.length === 0){
+      el.innerHTML = '<p class="form-note" style="margin:0;">Sin factores agregados.</p>';
+      return;
+    }
+    el.innerHTML = arr.map((it, i) => `
+      <div class="factor-row" data-i="${i}">
+        <div class="factor-num">${accNumeroFactor(base, i)}</div>
+        <div class="factor-body">
+          <input type="text" class="f-item" value="${it.item.replace(/"/g,'&quot;')}" placeholder="Ej. Capacidad mental/psicológica inadecuada">
+          <textarea class="f-detalle" placeholder="Detalle de lo observado" style="min-height:46px;">${it.detalle}</textarea>
+        </div>
+        <button type="button" class="btn-remove" title="Quitar">✕</button>
+      </div>
+    `).join("");
+    el.querySelectorAll(".factor-row").forEach(row => {
+      const i = Number(row.dataset.i);
+      row.querySelector(".f-item").addEventListener("input", e => arr[i].item = e.target.value);
+      row.querySelector(".f-detalle").addEventListener("input", e => arr[i].detalle = e.target.value);
+      row.querySelector(".btn-remove").addEventListener("click", () => { arr.splice(i,1); render(); });
+    });
+  }
+  document.getElementById(btnId).addEventListener("click", () => { arr.push({item:"", detalle:""}); render(); });
+  render();
+  return {
+    render,
+    getNumbered: () => arr.map((it,i) => ({ numero: accNumeroFactor(base,i), item: it.item, detalle: it.detalle }))
+  };
+}
+const accFactoresPersonalesCtl = accMakeFactorList(2, accFactoresPersonales, "acc-personales-list", "acc-add-personal");
+const accFactoresLaboralesCtl = accMakeFactorList(3, accFactoresLaborales, "acc-laborales-list", "acc-add-laboral");
+
+/* ---- Plan de acciones ---- */
+function accRenderAcciones(){
+  const el = document.getElementById("acc-acciones-list");
+  if(accAcciones.length === 0){
+    el.innerHTML = '<p class="form-note" style="margin:0;">Todavía no agregaste ninguna acción.</p>';
+    return;
+  }
+  el.innerHTML = accAcciones.map((a, i) => `
+    <div class="accion-row" data-i="${i}">
+      <div><label>Acción</label><input type="text" class="a-accion" value="${a.accion.replace(/"/g,'&quot;')}" placeholder="Ej. Retroalimentación a los operadores"></div>
+      <div><label>Responsable</label><input type="text" class="a-responsable" value="${a.responsable.replace(/"/g,'&quot;')}" placeholder="Ej. Supervisor SSOMA"></div>
+      <div><label>Plazo</label><input type="date" class="a-plazo" value="${a.plazo}"></div>
+      <button type="button" class="btn-remove" title="Quitar">✕</button>
+    </div>
+  `).join("");
+  el.querySelectorAll(".accion-row").forEach(row => {
+    const i = Number(row.dataset.i);
+    row.querySelector(".a-accion").addEventListener("input", e => accAcciones[i].accion = e.target.value);
+    row.querySelector(".a-responsable").addEventListener("input", e => accAcciones[i].responsable = e.target.value);
+    row.querySelector(".a-plazo").addEventListener("input", e => accAcciones[i].plazo = e.target.value);
+    row.querySelector(".btn-remove").addEventListener("click", () => { accAcciones.splice(i,1); accRenderAcciones(); });
+  });
+}
+document.getElementById("acc-add-accion").addEventListener("click", () => {
+  accAcciones.push({accion:"", responsable:"", plazo:""});
+  accRenderAcciones();
+});
+accRenderAcciones();
+
+/* ---- Pestañas Registrar / Informes ---- */
+document.querySelectorAll(".acc-tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".acc-tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".acc-view").forEach(v=>v.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("acc-view-" + btn.dataset.accTab).classList.add("active");
+  });
+});
+
+/* ---- Reset del formulario ---- */
+function accResetForm(){
+  document.getElementById("acc-form").reset();
+  document.querySelectorAll(".acc-tipo-btn").forEach(b=>b.classList.remove("active"));
+  accTipoEvento = "";
+  accSetCausaTipo("ACTO SUB ESTANDAR");
+  document.getElementById("acc-fecha").valueAsDate = new Date();
+  clearImages("acc");
+  accInvolucrados = [];
+  accRenderChips();
+  accFactoresPersonales.length = 0;
+  accFactoresLaborales.length = 0;
+  accFactoresPersonalesCtl.render();
+  accFactoresLaboralesCtl.render();
+  accAcciones.length = 0;
+  accRenderAcciones();
+  document.getElementById("acc-error").textContent = "";
+}
+document.getElementById("acc-reset").addEventListener("click", accResetForm);
+
+document.getElementById("acc-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const errorEl = document.getElementById("acc-error");
+  errorEl.textContent = "";
+
+  const fecha = document.getElementById("acc-fecha").value;
+  const reportanteId = document.getElementById("acc-reportante").value;
+  const cliente = document.getElementById("acc-cliente").value.trim();
+  const ubicacionId = document.getElementById("acc-ubicacion").value;
+  const descripcion = document.getElementById("acc-descripcion").value.trim();
+  let causaItem = document.getElementById("acc-causa-item").value;
+  const causaOtro = document.getElementById("acc-causa-otro").value.trim();
+  const causaDetalle = document.getElementById("acc-causa-detalle").value.trim();
+
+  if(!accTipoEvento || !fecha || !reportanteId || !cliente || !ubicacionId || !descripcion || !causaItem){
+    errorEl.textContent = "Completa tipo de evento, fecha, reportante, cliente, ubicación, descripción e ítem de causa inmediata.";
+    return;
+  }
+  if(causaItem.startsWith("Otros") && causaOtro) causaItem = "Otros: " + causaOtro;
+
+  for(const a of accAcciones){
+    if(!a.accion.trim() || !a.responsable.trim() || !a.plazo){
+      errorEl.textContent = "Completa acción, responsable y plazo en cada fila del plan de acciones, o quita las filas vacías.";
+      return;
+    }
+  }
+
+  const entry = {
+    tipo: accTipoEvento,
+    fecha,
+    reportado_por_id: Number(reportanteId),
+    cliente,
+    ubicacion_id: Number(ubicacionId),
+    personal_involucrado: [...accInvolucrados],
+    descripcion,
+    causa_inmediata_tipo: accCausaTipo,
+    causa_inmediata_item: causaItem,
+    causa_inmediata_detalle: causaDetalle || null,
+    factores_personales: accFactoresPersonalesCtl.getNumbered().filter(f => f.item.trim()),
+    factores_laborales: accFactoresLaboralesCtl.getNumbered().filter(f => f.item.trim()),
+    evidencia: getImages("acc"),
+  };
+
+  const { data, error } = await sb.from("ssoma_accidentes_incidentes").insert(entry).select("id").single();
+  if(error){ errorEl.textContent = "No se pudo guardar el reporte: " + error.message; return; }
+
+  if(accAcciones.length > 0){
+    const filas = accAcciones.map(a => ({
+      accidente_id: data.id, accion: a.accion.trim(), responsable: a.responsable.trim(), plazo: a.plazo
+    }));
+    const { error: accionesError } = await sb.from("ssoma_accidentes_acciones").insert(filas);
+    if(accionesError){ errorEl.textContent = "El reporte se guardó, pero el plan de acciones no: " + accionesError.message; }
+  }
+
+  accResetForm();
+  await loadAccidentes();
+});
+
+/* ---- Informes de accidentes/incidentes ---- */
+async function loadAccidentes(){
+  const { data, error } = await sb
+    .from("ssoma_accidentes_incidentes")
+    .select(`
+      id, codigo, tipo, fecha, cliente, personal_involucrado, descripcion,
+      causa_inmediata_tipo, causa_inmediata_item, causa_inmediata_detalle,
+      factores_personales, factores_laborales, evidencia, created_at,
+      reportado_por:ssoma_equipo_ssoma(nombre_completo),
+      ubicacion:ssoma_ubicaciones(nombre),
+      ssoma_accidentes_acciones(id, accion, responsable, plazo, evidencia_cierre, finalizado_at)
+    `)
+    .order("id", { ascending: false });
+
+  if(error){
+    console.error("No se pudieron cargar los accidentes/incidentes", error);
+    accidentesReports = [];
+  }else{
+    accidentesReports = data || [];
+  }
+  renderAccidentesInformes();
+}
+
+function accReadFileAsDataUrl(file, callback){
+  const reader = new FileReader();
+  reader.onload = ev => callback(ev.target.result);
+  reader.readAsDataURL(file);
+}
+
+function renderAccidentesInformes(){
+  const accidentes = accidentesReports.filter(r => r.tipo === "ACCIDENTE").length;
+  const incidentes = accidentesReports.filter(r => r.tipo === "INCIDENTE").length;
+  const enProceso = accidentesReports.reduce((s,r) => s + (r.ssoma_accidentes_acciones || []).filter(a => !a.finalizado_at).length, 0);
+  document.getElementById("acc-count").textContent = `${accidentesReports.length} reporte${accidentesReports.length===1?"":"s"}`;
+  document.getElementById("acc-stat-accidentes").textContent = accidentes;
+  document.getElementById("acc-stat-incidentes").textContent = incidentes;
+  document.getElementById("acc-stat-acciones").textContent = enProceso;
+
+  const list = document.getElementById("acc-informes-list");
+  if(accidentesReports.length === 0){
+    list.innerHTML = '<div class="empty">Todavía no hay reportes de accidentes/incidentes.</div>';
+    return;
+  }
+
+  list.innerHTML = accidentesReports.map(r => {
+    const involucrados = (r.personal_involucrado || []).join(", ") || "—";
+    const causaLabel = r.causa_inmediata_tipo === "ACTO SUB ESTANDAR" ? "Acto subestándar" : "Condición subestándar";
+    const acciones = r.ssoma_accidentes_acciones || [];
+    return `
+    <div class="acc-card ${r.tipo === 'ACCIDENTE' ? 'tipo-accidente' : ''}" data-id="${r.id}">
+      <div class="entry-top">
+        <div>
+          <span class="entry-id">${r.codigo}</span>
+          <div class="entry-meta">${escapeHtml(r.reportado_por ? r.reportado_por.nombre_completo : "")} · ${escapeHtml(r.ubicacion ? r.ubicacion.nombre : "")} · ${formatDate(r.fecha)} · ${escapeHtml(r.cliente)}</div>
+        </div>
+        <span class="estado-badge ${r.tipo === 'ACCIDENTE' ? 'tipo-accidente' : 'tipo-incidente'}">${r.tipo}</span>
+      </div>
+      <div class="entry-body">
+        <div class="entry-desc">${escapeHtml(r.descripcion)}</div>
+        <div class="form-note" style="margin-top:8px;"><b>Personal involucrado:</b> ${escapeHtml(involucrados)}</div>
+        <div class="form-note" style="margin-top:4px;"><b>Causa inmediata (${causaLabel}):</b> ${escapeHtml(r.causa_inmediata_item)}${r.causa_inmediata_detalle ? " — " + escapeHtml(r.causa_inmediata_detalle) : ""}</div>
+        ${imgRowHtml(r.evidencia, false)}
+      </div>
+      ${acciones.length === 0 ? "" : `
+        <div style="margin-top:10px;">
+          ${acciones.map(a => `
+            <div class="acc-item-row" data-accion-id="${a.id}">
+              <div class="a-info">
+                <div class="a-text">${escapeHtml(a.accion)}</div>
+                <div class="a-meta">${escapeHtml(a.responsable)} · plazo ${formatDate(a.plazo)}</div>
+              </div>
+              ${a.finalizado_at
+                ? `<span class="evidencia-chip">📎 ${escapeHtml((a.evidencia_cierre && a.evidencia_cierre.nombre) || "evidencia")}</span><span class="estado-badge finalizado">Finalizado</span>`
+                : `<span class="estado-badge en-proceso">En proceso</span><button type="button" class="btn btn-ghost acc-finalizar-btn" data-accion-id="${a.id}" style="padding:7px 12px;font-size:11.5px;">Subir evidencia y finalizar</button>`
+              }
+            </div>
+          `).join("")}
+        </div>
+      `}
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll(".acc-finalizar-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/pdf,image/*";
+      input.addEventListener("change", () => {
+        const file = input.files[0];
+        if(!file) return;
+        accReadFileAsDataUrl(file, async dataUrl => {
+          const { error } = await sb.from("ssoma_accidentes_acciones").update({
+            evidencia_cierre: { nombre: file.name, tipo: file.type, contenido: dataUrl },
+            finalizado_at: new Date().toISOString()
+          }).eq("id", btn.dataset.accionId);
+          if(error){ alert("No se pudo finalizar la acción: " + error.message); return; }
+          await loadAccidentes();
+        });
+      });
+      input.click();
+    });
+  });
+}
+
 async function init(){
   await loadCatalogos();
-  await Promise.all([loadReports(), loadCompReports()]);
+  await Promise.all([loadReports(), loadCompReports(), loadAccidentes()]);
+  initImageWidget("acc");
   initEncuestasNav();
 }
 
