@@ -100,6 +100,19 @@
   }
   .opt-btn.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
 
+  .pregunta-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .pregunta-eyebrow.general{color:var(--red);}
+
+  .scale-group{display:flex;gap:6px;flex-wrap:wrap;}
+  .scale-btn{
+    flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--border);background:var(--panel);color:var(--text);
+    border-radius:9px;cursor:pointer;font-weight:700;font-size:13px;font-family:'IBM Plex Mono',monospace;
+  }
+  .scale-btn.active{border-color:var(--red);color:#fff;background:var(--red);}
+  .scale-anchors{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:var(--muted);gap:10px;}
+  .scale-anchors span:last-child{text-align:right;}
+
   .form-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:10px;}
   .btn{font-family:'Inter',sans-serif;font-weight:700;font-size:13px;padding:12px 22px;border-radius:8px;border:none;cursor:pointer;}
   .btn-primary{background:var(--red);color:#fff;width:100%;padding:14px;font-size:14px;}
@@ -179,14 +192,14 @@ document.getElementById("theme-toggle-btn").addEventListener("click", ()=>{
 applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
 
 const CHARLA_PREGUNTAS = [
-  {id:"gusto",        q:"1. ¿Te gustó la última charla de seguridad?", opciones:["Sí","Más o menos","No"]},
-  {id:"entendio",      q:"2. ¿Entendiste bien lo que explicaron en la charla?", opciones:["Sí","Más o menos","No"]},
-  {id:"ayuda",         q:"3. ¿Crees que lo aprendido en la charla te ayuda a trabajar más seguro?", opciones:["Sí, mucho","Un poco","No"]},
-  {id:"interes",       q:"4. ¿El tema de la charla fue interesante para tu trabajo?", opciones:["Sí","Mas o menos","No"]},
-  {id:"duracion",      q:"5. ¿Las charlas son muy largas o cortas?", opciones:["Están bien","Muy largas","Muy cortas"]},
-  {id:"multimedia",    q:"6. ¿Te gustaría que usen imágenes o videos en las charlas?", opciones:["SI","NO"]},
-  {id:"comodidad",     q:"7. ¿Te sientes cómodo preguntando o comentando durante la charla?", opciones:["Sí","A veces","No"]},
-  {id:"calificacion",  q:"8. ¿Cómo calificarías las charlas de seguridad?", opciones:["Muy buenas","Buenas","Regulares","Malas"]}
+  {id:"gusto",        type:"scale", general:false, q:"1. ¿Qué tan bien te pareció la última charla de seguridad?", lo:"1 · Nada bien", hi:"10 · Excelente"},
+  {id:"entendio",     type:"scale", general:false, q:"2. ¿Qué tan claro te quedó lo que explicaron en la charla?", lo:"1 · Nada claro", hi:"10 · Totalmente claro"},
+  {id:"ayuda",        type:"scale", general:false, q:"3. ¿Qué tanto crees que lo aprendido te ayuda a trabajar más seguro?", lo:"1 · Nada", hi:"10 · Muchísimo"},
+  {id:"interes",      type:"scale", general:false, q:"4. ¿Qué tan interesante fue el tema para tu trabajo?", lo:"1 · Nada interesante", hi:"10 · Muy interesante"},
+  {id:"duracion",     type:"chips", general:false, q:"5. ¿Las charlas son muy largas o cortas?", opciones:["Están bien","Muy largas","Muy cortas"]},
+  {id:"multimedia",   type:"chips", general:false, q:"6. ¿Te gustaría que usen imágenes o videos en las charlas?", opciones:["Sí","No"]},
+  {id:"comodidad",    type:"scale", general:false, q:"7. ¿Qué tan cómodo te sientes preguntando o comentando en la charla?", lo:"1 · Nada cómodo", hi:"10 · Totalmente cómodo"},
+  {id:"calificacion", type:"scale", general:true,  q:"8. En general, ¿cómo calificarías las charlas de seguridad?", lo:"1 · Muy malas", hi:"10 · Excelentes"}
 ];
 
 let respuestas = {};
@@ -214,21 +227,30 @@ function renderPreguntas(){
     <div class="card">
       ${CHARLA_PREGUNTAS.map(p => `
         <div class="pregunta-row">
+          <div class="pregunta-eyebrow ${p.general ? "general" : ""}">${p.general ? "Pregunta general" : (p.type === "scale" ? "Escala 1–10" : "Opción única")}</div>
           <div class="pregunta-q">${p.q}</div>
-          <div class="opt-group" data-id="${p.id}">
-            ${p.opciones.map(o => `<div class="opt-btn" data-val="${o}">${o}</div>`).join("")}
-          </div>
+          ${p.type === "scale" ? `
+            <div class="scale-group" data-id="${p.id}">
+              ${Array.from({length:10}, (_, i) => i+1).map(n => `<div class="scale-btn" data-val="${n}">${n}</div>`).join("")}
+            </div>
+            <div class="scale-anchors"><span>${p.lo}</span><span>${p.hi}</span></div>
+          ` : `
+            <div class="opt-group" data-id="${p.id}">
+              ${p.opciones.map(o => `<div class="opt-btn" data-val="${o}">${o}</div>`).join("")}
+            </div>
+          `}
         </div>
       `).join("")}
     </div>
   `;
 
-  container.querySelectorAll(".opt-group").forEach(group=>{
-    group.querySelectorAll(".opt-btn").forEach(btn=>{
+  container.querySelectorAll(".opt-group, .scale-group").forEach(group=>{
+    const isScale = group.classList.contains("scale-group");
+    group.querySelectorAll(".opt-btn, .scale-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{
-        group.querySelectorAll(".opt-btn").forEach(b=>b.classList.remove("active"));
+        group.querySelectorAll(".opt-btn, .scale-btn").forEach(b=>b.classList.remove("active"));
         btn.classList.add("active");
-        respuestas[group.dataset.id] = btn.dataset.val;
+        respuestas[group.dataset.id] = isScale ? Number(btn.dataset.val) : btn.dataset.val;
       });
     });
   });

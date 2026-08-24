@@ -1052,9 +1052,9 @@
           <div class="stat-sub">encuestas recibidas</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Calificación positiva</div>
+          <div class="stat-label">Calificación promedio</div>
           <div class="stat-value" id="charla-stat-buenas" style="color:#16A34A;">—</div>
-          <div class="stat-sub">"Muy buenas" + "Buenas"</div>
+          <div class="stat-sub">pregunta 8, escala 1–10</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Última respuesta</div>
@@ -1224,16 +1224,15 @@ const COMP_PREGUNTAS = [
 
 /* ---- Análisis de la encuesta de charla de seguridad ---- */
 const CHARLA_PREGUNTAS = [
-  {id:"gusto",        q:"1. ¿Te gustó la última charla de seguridad?", opciones:["Sí","Más o menos","No"]},
-  {id:"entendio",      q:"2. ¿Entendiste bien lo que explicaron en la charla?", opciones:["Sí","Más o menos","No"]},
-  {id:"ayuda",         q:"3. ¿Crees que lo aprendido en la charla te ayuda a trabajar más seguro?", opciones:["Sí, mucho","Un poco","No"]},
-  {id:"interes",       q:"4. ¿El tema de la charla fue interesante para tu trabajo?", opciones:["Sí","Mas o menos","No"]},
-  {id:"duracion",      q:"5. ¿Las charlas son muy largas o cortas?", opciones:["Están bien","Muy largas","Muy cortas"]},
-  {id:"multimedia",    q:"6. ¿Te gustaría que usen imágenes o videos en las charlas?", opciones:["SI","NO"]},
-  {id:"comodidad",     q:"7. ¿Te sientes cómodo preguntando o comentando durante la charla?", opciones:["Sí","A veces","No"]},
-  {id:"calificacion",  q:"8. ¿Cómo calificarías las charlas de seguridad?", opciones:["Muy buenas","Buenas","Regulares","Malas"]}
+  {id:"gusto",        type:"scale", q:"1. ¿Qué tan bien te pareció la última charla de seguridad?"},
+  {id:"entendio",     type:"scale", q:"2. ¿Qué tan claro te quedó lo que explicaron en la charla?"},
+  {id:"ayuda",        type:"scale", q:"3. ¿Qué tanto crees que lo aprendido te ayuda a trabajar más seguro?"},
+  {id:"interes",      type:"scale", q:"4. ¿Qué tan interesante fue el tema para tu trabajo?"},
+  {id:"duracion",     type:"chips", q:"5. ¿Las charlas son muy largas o cortas?", opciones:["Están bien","Muy largas","Muy cortas"]},
+  {id:"multimedia",   type:"chips", q:"6. ¿Te gustaría que usen imágenes o videos en las charlas?", opciones:["Sí","No"]},
+  {id:"comodidad",    type:"scale", q:"7. ¿Qué tan cómodo te sientes preguntando o comentando en la charla?"},
+  {id:"calificacion", type:"scale", q:"8. En general, ¿cómo calificarías las charlas de seguridad?"}
 ];
-const CHARLA_CALIF_SCORE = {"Muy buenas":4, "Buenas":3, "Regulares":2, "Malas":1};
 const SUPERVISOR_MIN_N = 5; // no mostrar un supervisor individual con menos respuestas que esto
 
 function supervisorNombre(id){
@@ -1287,11 +1286,21 @@ function renderEncuestaCharla(rows){
     return;
   }
 
-  const buenas = rows.filter(r => r.respuestas.calificacion === "Muy buenas" || r.respuestas.calificacion === "Buenas").length;
-  document.getElementById("charla-stat-buenas").textContent = Math.round(100*buenas/rows.length) + "%";
+  const califAvg = rows.reduce((s,r) => s + r.respuestas.calificacion, 0) / rows.length;
+  document.getElementById("charla-stat-buenas").textContent = califAvg.toFixed(1) + "/10";
   document.getElementById("charla-stat-ultima").textContent = new Date(rows[0].created_at).toLocaleDateString("es-PE");
 
   document.getElementById("charla-preguntas").innerHTML = CHARLA_PREGUNTAS.map(p => {
+    if(p.type === "scale"){
+      const avg = rows.reduce((s,r) => s + r.respuestas[p.id], 0) / rows.length;
+      const pct = Math.max(0, Math.min(100, Math.round(avg*10)));
+      const cls = pct >= 80 ? "good" : pct >= 60 ? "mid" : "bad";
+      return `
+        <div class="bar-row">
+          <div class="bar-row-head"><span class="bar-label">${escapeHtml(p.q)}</span><span class="bar-value">${avg.toFixed(1)}/10</span></div>
+          <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+        </div>`;
+    }
     const counts = {};
     p.opciones.forEach(o => counts[o] = 0);
     rows.forEach(r => { const v = r.respuestas[p.id]; if(v in counts) counts[v]++; });
@@ -1309,10 +1318,10 @@ function renderEncuestaCharla(rows){
   const perSupervisor = {};
   rows.forEach(r => {
     if(!perSupervisor[r.supervisor_id]) perSupervisor[r.supervisor_id] = {sum:0, n:0};
-    perSupervisor[r.supervisor_id].sum += CHARLA_CALIF_SCORE[r.respuestas.calificacion] || 0;
+    perSupervisor[r.supervisor_id].sum += r.respuestas.calificacion;
     perSupervisor[r.supervisor_id].n++;
   });
-  renderSupervisorTable("charla-supervisores", perSupervisor, 4);
+  renderSupervisorTable("charla-supervisores", perSupervisor, 10);
 }
 
 function initEncuestasNav(){
