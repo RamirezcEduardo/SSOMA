@@ -747,6 +747,39 @@
     font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--red);
     margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);
   }
+
+  #help-modal .modal-box{max-width:760px;}
+  .help-intro{
+    font-size:13.5px;color:var(--text-soft);line-height:1.65;margin:0 0 18px;
+  }
+  .help-block{margin-bottom:22px;}
+  .help-block:last-child{margin-bottom:0;}
+  .help-block h4{
+    display:flex;align-items:center;gap:9px;
+    font-size:14.5px;font-weight:800;color:var(--text);
+    margin:0 0 8px;
+  }
+  .help-block h4 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .help-block p{margin:0 0 8px;color:var(--text-soft);font-size:13px;line-height:1.6;}
+  .help-steps{margin:0;padding-left:20px;color:var(--text);font-size:13px;line-height:1.75;}
+  .help-steps li{margin-bottom:3px;}
+  .help-steps b{color:var(--text);}
+  .help-role-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:8px;margin-top:4px;
+  }
+  .help-role-item{
+    display:flex;align-items:center;gap:8px;
+    background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;
+    padding:8px 10px;font-size:12px;color:var(--text-soft);
+  }
+  .help-role-item b{color:var(--text);font-size:12.5px;}
+  .help-tip{
+    display:flex;gap:9px;align-items:flex-start;
+    background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;font-size:12.5px;color:var(--text-soft);line-height:1.55;margin-top:6px;
+  }
+  .help-tip span.ic{flex-shrink:0;font-size:15px;line-height:1.4;}
   .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
   .modal-body .img-row{margin-top:8px;}
   .modal-body .img-thumb-sm{width:76px;height:76px;}
@@ -817,6 +850,7 @@
     background:var(--green);
     flex-shrink:0;
   }
+  .help-btn-full,
   .theme-toggle-btn,
   .logout-btn-full{
     display:flex;align-items:center;justify-content:center;gap:8px;
@@ -828,11 +862,13 @@
     cursor:pointer;
     margin-top:2px;
   }
+  .help-btn-full,
   .theme-toggle-btn{
     background:var(--panel-alt);
     border:1px solid var(--border);
     color:var(--text);
   }
+  .help-btn-full:hover,
   .theme-toggle-btn:hover{background:var(--panel);border-color:var(--border-strong);}
   .theme-toggle-icon{font-size:14px;line-height:1;}
   .logout-btn-full{
@@ -906,6 +942,7 @@
       <div class="account-row">Usuario: <strong id="account-nombre"></strong></div>
       <div class="account-row">Rol: <span class="role-badge" id="account-rol"></span></div>
       <div class="account-row">Status: <span class="status-dot"></span> Conectado</div>
+      <button type="button" class="help-btn-full" id="help-btn">❓ Ayuda / Manual de Uso</button>
       <button type="button" class="theme-toggle-btn" id="theme-toggle-app" title="Cambiar tema" aria-label="Cambiar tema"><span class="theme-toggle-icon">🌙</span>Cambiar Tema</button>
       <button type="button" class="logout-btn-full" id="logout-btn">🚪 Cerrar Sesión</button>
     </div>
@@ -1311,6 +1348,92 @@
   <img id="img-lightbox-img" src="" alt="Evidencia" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);">
 </div>
 
+<div class="modal-overlay" id="help-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>❓ Ayuda / Manual de Uso</h3>
+      <button class="modal-close" id="help-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="help-intro">Guía rápida del <strong>Centro de Reportes SSOMA</strong>: qué es cada módulo, quién puede usarlo y cómo registrar la información paso a paso.</p>
+
+      <div class="help-block">
+        <h4>👤 Roles y accesos</h4>
+        <p>Lo que ves en el menú lateral depende del rol asignado a tu usuario. Tu rol actual aparece en la tarjeta de cuenta, abajo en la barra lateral.</p>
+        <div class="help-role-grid">
+          <div class="help-role-item"><b>Administrador</b> — acceso total a los 4 módulos y configuración.</div>
+          <div class="help-role-item"><b>Gerencia</b> — visualización y reportería general.</div>
+          <div class="help-role-item"><b>Coordinador</b> — registro y seguimiento de reportes de su área.</div>
+          <div class="help-role-item"><b>Supervisor</b> — registro de campo (RACS, comportamental, accidentes).</div>
+          <div class="help-role-item"><b>Operador</b> — registro básico de reportes.</div>
+          <div class="help-role-item"><b>Gestión Humana</b> — evaluaciones comportamentales y clima laboral.</div>
+          <div class="help-role-item"><b>Invitado</b> — acceso de solo lectura.</div>
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h4><span class="dot" style="background:#E31E24;"></span>RACS — Reporte de Actos y Condiciones Subestándar</h4>
+        <p>Sirve para reportar un acto inseguro de una persona o una condición insegura del entorno de trabajo.</p>
+        <ol class="help-steps">
+          <li>Entra al módulo <b>RACS</b> desde el menú lateral.</li>
+          <li>Elige el tipo de ocurrencia: <b>Acto subestándar</b> o <b>Condición subestándar</b> (si no aparece en la lista, usa "Otro" y detállalo).</li>
+          <li>Escribe el nombre del trabajador involucrado (si aplica).</li>
+          <li>Describe qué observaste: qué pasó o qué podría pasar si no se corrige.</li>
+          <li>Pulsa <b>Guardar reporte</b> para registrarlo.</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h4><span class="dot" style="background:#2563EB;"></span>Evaluación Comportamental — SST</h4>
+        <p>Registra observaciones planeadas de seguridad sobre el comportamiento de un colaborador en su puesto de trabajo.</p>
+        <ol class="help-steps">
+          <li>Entra al módulo <b>Evaluación comportamental</b>.</li>
+          <li>Completa el nombre del colaborador y el área o proceso evaluado (ej. Despacho B2C).</li>
+          <li>Marca los criterios observados y agrega observaciones si es necesario.</li>
+          <li>Pulsa <b>Guardar evaluación</b>.</li>
+          <li>Usa <b>Exportar CSV</b> para descargar el historial de evaluaciones.</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h4><span class="dot" style="background:#16A34A;"></span>Informes · Levantamiento de Observaciones</h4>
+        <p>Aquí se hace seguimiento a los RACS ya reportados: se cierra el ciclo indicando cómo se corrigió el acto o condición.</p>
+        <ol class="help-steps">
+          <li>Entra al módulo <b>Levantamiento</b> y busca el reporte pendiente en la lista.</li>
+          <li>Pulsa <b>Registrar levantamiento</b> sobre el reporte que quieres cerrar.</li>
+          <li>Describe la acción correctiva tomada y el responsable de ejecutarla.</li>
+          <li>Pulsa <b>Guardar levantamiento</b> — el reporte pasa a estado resuelto.</li>
+          <li>Usa <b>Exportar CSV</b> para descargar el detalle de todos los levantamientos.</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h4><span class="dot" style="background:#F59E0B;"></span>Accidentes / Incidentes</h4>
+        <p>Registra accidentes e incidentes ocurridos, con causas y evidencias, para su análisis y plan de acción.</p>
+        <ol class="help-steps">
+          <li>Entra al módulo <b>Accidentes / Incidentes</b> y ubícate en la pestaña <b>Registrar reporte</b>.</li>
+          <li>Indica el cliente/operación y busca al colaborador involucrado.</li>
+          <li>Describe qué pasó, cuándo ocurrió y cómo se detectó.</li>
+          <li>Selecciona el acto o condición causante (o detállalo si eliges "Otro").</li>
+          <li>Adjunta evidencia fotográfica si está disponible y pulsa <b>Registrar reporte</b>.</li>
+          <li>Desde las otras pestañas puedes revisar el historial y las acciones correctivas de cada caso.</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h4>⚙️ Funciones generales</h4>
+        <ul class="help-steps">
+          <li><b>Cambiar Tema</b>: alterna entre modo claro y oscuro desde la tarjeta de cuenta.</li>
+          <li><b>Ver evidencias</b>: haz clic en cualquier imagen adjunta a un reporte para verla en tamaño completo.</li>
+          <li><b>Exportar CSV</b>: disponible en los módulos con listado, para descargar la información a Excel.</li>
+          <li><b>Cerrar Sesión</b>: cierra tu sesión de forma segura desde la tarjeta de cuenta.</li>
+        </ul>
+        <div class="help-tip"><span class="ic">💡</span>Todos los formularios replican la estructura de los Google Forms oficiales del equipo SSOMA, así que la información que ya conoces de esos formularios aplica igual aquí.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app-root -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1607,8 +1730,21 @@ document.getElementById("modal-close").addEventListener("click", closeReportModa
 document.getElementById("report-modal").addEventListener("click", (e)=>{
   if(e.target.id === "report-modal") closeReportModal();
 });
+
+function openHelpModal(){
+  document.getElementById("help-modal").classList.add("show");
+}
+function closeHelpModal(){
+  document.getElementById("help-modal").classList.remove("show");
+}
+document.getElementById("help-btn").addEventListener("click", openHelpModal);
+document.getElementById("help-modal-close").addEventListener("click", closeHelpModal);
+document.getElementById("help-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "help-modal") closeHelpModal();
+});
+
 document.addEventListener("keydown", (e)=>{
-  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); }
+  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); closeHelpModal(); }
 });
 
 function downloadReport(id){
