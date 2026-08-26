@@ -362,6 +362,33 @@
   table.data-table tbody tr:last-child td{border-bottom:none;}
   table.data-table tbody tr:hover td{background:var(--panel-alt);}
   table.data-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+
+  .import-card{
+    background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;margin:16px 0 22px;
+  }
+  .import-card-head{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .import-card-title{font-size:14px;font-weight:800;color:var(--text);}
+  .import-card-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .import-drop-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:640px){.import-drop-row{grid-template-columns:1fr;}}
+  .import-drop{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;
+    background:var(--panel);border:1.5px dashed var(--border-strong);border-radius:10px;
+    padding:20px 14px;cursor:pointer;transition:border-color .15s ease, background .15s ease;
+  }
+  .import-drop:hover{border-color:var(--red);background:var(--red-tint);}
+  .import-drop.filled{border-style:solid;border-color:var(--green);background:var(--panel);}
+  .import-drop-icon{font-size:22px;line-height:1;margin-bottom:2px;}
+  .import-drop-title{font-size:12.5px;font-weight:700;color:var(--text);}
+  .import-drop-hint{font-size:11px;color:var(--muted);}
+  .import-drop.filled .import-drop-hint{color:var(--green);font-weight:600;}
+  .import-status{
+    margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;
+    background:var(--green-tint,rgba(22,163,74,.1));color:var(--green);border:1px solid var(--green);
+  }
   .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 16px 14px;box-shadow:var(--shadow);}
   .stat-label{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:700;}
   .stat-value{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:600;margin:6px 0 2px;}
@@ -1426,6 +1453,31 @@
       </div>
       <p class="section-desc">Seguimiento de faltantes de picking (Short Pick) a partir de la data del WMS. Filtra por semana y sub área para ver el resumen por turno, supervisor y proceso — igual que tu plantilla SP_DIARIO.</p>
 
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Importar reportes del día</div>
+            <div class="import-card-sub">Sube los 2 exports crudos del WMS — la app cruza todo y calcula el resumen sola.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="sp-import-btn" disabled>Importar y calcular</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="sp-file-adjust" id="sp-drop-adjust">
+            <input type="file" id="sp-file-adjust" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Ajustes de inventario (Short Pick)</span>
+            <span class="import-drop-hint" id="sp-file-adjust-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+          <label class="import-drop" for="sp-file-orders" id="sp-drop-orders">
+            <input type="file" id="sp-file-orders" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">🧾</span>
+            <span class="import-drop-title">Estado de pedidos</span>
+            <span class="import-drop-hint" id="sp-file-orders-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="sp-import-status" style="display:none;"></div>
+      </div>
+
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
         <div class="field" style="min-width:170px;margin-bottom:0;">
           <label>Semana</label>
@@ -2211,6 +2263,36 @@ document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
   const expanded = btn.getAttribute("aria-expanded") === "true";
   btn.setAttribute("aria-expanded", String(!expanded));
+});
+
+/* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
+function spUpdateImportState(){
+  const f1 = document.getElementById("sp-file-adjust").files[0];
+  const f2 = document.getElementById("sp-file-orders").files[0];
+  document.getElementById("sp-file-adjust-name").textContent = f1 ? f1.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sp-file-orders-name").textContent = f2 ? f2.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sp-drop-adjust").classList.toggle("filled", !!f1);
+  document.getElementById("sp-drop-orders").classList.toggle("filled", !!f2);
+  document.getElementById("sp-import-btn").disabled = !(f1 && f2);
+}
+document.getElementById("sp-file-adjust").addEventListener("change", spUpdateImportState);
+document.getElementById("sp-file-orders").addEventListener("change", spUpdateImportState);
+
+document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Importando y calculando…";
+  const statusEl = document.getElementById("sp-import-status");
+  statusEl.style.display = "none";
+
+  await new Promise(res => setTimeout(res, 700));
+
+  spRender();
+  statusEl.textContent = `✅ Importado: ${spData.length} registros de Short Pick cruzados con Estado de pedidos. Resumen actualizado abajo.`;
+  statusEl.style.display = "block";
+  btn.textContent = originalLabel;
+  btn.disabled = false;
 });
 
 // toggle acto/condicion
