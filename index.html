@@ -986,11 +986,13 @@
       <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="true" style="margin-top:10px;">
         <span class="navgroup-icon">📦</span>
         <span class="navgroup-title">Inventario</span>
-        <span class="navgroup-count" id="navgroup-inventario-count">1</span>
+        <span class="navgroup-count" id="navgroup-inventario-count">3</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-inventario-body">
-        <button class="navitem" data-view="inventario-epps"><span class="dot" style="background:#7C3AED;"></span><span class="label">Control de EPPs</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
       </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
@@ -1380,17 +1382,45 @@
       </div>
     </section>
 
-    <!-- INVENTARIO · CONTROL DE EPPS (placeholder) -->
-    <section class="panel" id="panel-inventario-epps">
+    <!-- INVENTARIO · AUDITORÍA SHORTPICK (placeholder) -->
+    <section class="panel" id="panel-inventario-shortpick">
       <div class="section-head">
-        <h2 class="section-title">Inventario — Control de EPPs</h2>
+        <h2 class="section-title">Inventario — Auditoría Shortpick</h2>
         <span class="count-pill">Próximamente</span>
       </div>
-      <p class="section-desc">Entrega, renovación y seguimiento de equipos de protección personal. Este módulo está en construcción.</p>
+      <p class="section-desc">Registro y seguimiento de faltantes detectados en el picking. Este módulo está en construcción.</p>
       <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
         <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
         <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
-        <div style="font-size:12.5px;color:var(--muted);">Aquí vas a poder registrar entregas, tallas, vencimientos y stock de EPPs, igual que en Adecco-KPI.</div>
+        <div style="font-size:12.5px;color:var(--muted);">Cuéntame qué datos necesitas registrar (SKU, pedido, cantidad faltante, responsable, etc.) y armo el formulario.</div>
+      </div>
+    </section>
+
+    <!-- INVENTARIO · AUDITORÍA BULTOS PERDIDOS (placeholder) -->
+    <section class="panel" id="panel-inventario-bultos-perdidos">
+      <div class="section-head">
+        <h2 class="section-title">Inventario — Auditoría Bultos Perdidos</h2>
+        <span class="count-pill">Próximamente</span>
+      </div>
+      <p class="section-desc">Registro y seguimiento de bultos extraviados en el flujo de despacho. Este módulo está en construcción.</p>
+      <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
+        <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
+        <div style="font-size:12.5px;color:var(--muted);">Cuéntame qué datos necesitas registrar (guía/bulto, cliente, fecha, estado, etc.) y armo el formulario.</div>
+      </div>
+    </section>
+
+    <!-- INVENTARIO · AUDITORÍA SIN UBICACIÓN (placeholder) -->
+    <section class="panel" id="panel-inventario-sin-ubicacion">
+      <div class="section-head">
+        <h2 class="section-title">Inventario — Auditoría Sin Ubicación</h2>
+        <span class="count-pill">Próximamente</span>
+      </div>
+      <p class="section-desc">Registro de mercadería detectada sin ubicación asignada en el almacén. Este módulo está en construcción.</p>
+      <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
+        <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
+        <div style="font-size:12.5px;color:var(--muted);">Cuéntame qué datos necesitas registrar (SKU, cantidad, zona encontrada, responsable, etc.) y armo el formulario.</div>
       </div>
     </section>
 
