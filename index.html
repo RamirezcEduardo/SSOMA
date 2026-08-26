@@ -2798,6 +2798,16 @@ spRenderConc();
 const TAREAS_HOY = new Date().toISOString().slice(0, 10);
 let tareasData = [];
 
+function esAdmin(){
+  return !!(currentSession && currentSession.usuario && currentSession.usuario.rol === "admin");
+}
+/* Solo para administradores: a quién están "viendo/actuando como" en cada vista ("" = ver todas). */
+let trAdminActor = { jefatura: "", coordinador: "", supervisor: "" };
+function trCurrentActorId(view){
+  if(esAdmin()) return trAdminActor[view] ? Number(trAdminActor[view]) : null;
+  return miPersonal ? miPersonal.id : null;
+}
+
 function tareaEstado(t){
   if(t.finalizado_at) return "finalizada";
   if(t.fecha_limite < TAREAS_HOY) return "vencida";
@@ -2832,27 +2842,53 @@ function trPopulateSelectors(){
 }
 
 /* Muestra quién está actuando en la sesión (o el motivo por el que no puede) y controla
-   la visibilidad del contenido de cada vista de Designación de Tareas. */
-function trActorBox(boxEl, contentEl, requiredFlag, label){
+   la visibilidad del contenido de cada vista de Designación de Tareas.
+   Los administradores tienen acceso total: pueden ver todas las tareas de la vista o
+   elegir actuar/ver como cualquier persona habilitada, sin quedar bloqueados. */
+function trActorBox(view, boxEl, contentEl, requiredFlag, label, opciones){
+  if(esAdmin()){
+    const current = trAdminActor[view];
+    const opts = ['<option value="">— Ver todas —</option>']
+      .concat((opciones||[]).map(p=> `<option value="${p.id}"${String(p.id)===String(current)?" selected":""}>${escapeHtml(p.nombre_completo)}</option>`))
+      .join("");
+    boxEl.innerHTML = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <span class="hint" style="font-size:13px;">🛡️ Acceso de administrador: acceso total a ${escapeHtml(label)}.</span>
+      <div class="field" style="max-width:320px;margin:0;">
+        <label style="font-size:11px;">Actuar / ver como</label>
+        <select class="tr-admin-select" data-view="${view}">${opts}</select>
+      </div>
+    </div>`;
+    if(contentEl) contentEl.style.display = "";
+    return { autorizado: true, actorId: current ? Number(current) : null };
+  }
   if(!miPersonal){
     boxEl.innerHTML = `<div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
       <strong>Tu usuario no está vinculado a un perfil de personal SSOMA.</strong><br>
       Pide al administrador que vincule tu cuenta${currentSession && currentSession.usuario ? ` (<code>${escapeHtml(currentSession.usuario.username)}</code>)` : ""} a un registro de personal para poder ver tus tareas de ${label}.
     </div>`;
     if(contentEl) contentEl.style.display = "none";
-    return false;
+    return { autorizado: false, actorId: null };
   }
   if(!miPersonal[requiredFlag]){
     boxEl.innerHTML = `<div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
       <strong>${escapeHtml(miPersonal.nombre_completo)}</strong> no tiene el permiso de ${label} habilitado en su perfil SSOMA.
     </div>`;
     if(contentEl) contentEl.style.display = "none";
-    return false;
+    return { autorizado: false, actorId: null };
   }
   boxEl.innerHTML = `<div class="hint" style="font-size:13px;">Sesión activa: <strong style="color:var(--text);">${escapeHtml(miPersonal.nombre_completo)}</strong> · ${label}</div>`;
   if(contentEl) contentEl.style.display = "";
-  return true;
+  return { autorizado: true, actorId: miPersonal.id };
 }
+
+document.addEventListener("change", (e)=>{
+  const sel = e.target.closest(".tr-admin-select");
+  if(!sel) return;
+  trAdminActor[sel.dataset.view] = sel.value;
+  if(sel.dataset.view === "jefatura") trRenderJefatura();
+  else if(sel.dataset.view === "coordinador") trRenderCoordinador();
+  else if(sel.dataset.view === "supervisor") trRenderSupervisor();
+});
 
 async function trLoadTareas(){
   const { data, error } = await sb.from("ssoma_tareas").select(`
@@ -2888,10 +2924,12 @@ function renderCumplimientoTable(tbodyEl, tareas, incluirRol){
 }
 
 function trRenderCoordinador(){
-  const autorizado = trActorBox(document.getElementById("tc-actor-box"), document.getElementById("tc-content"), "puede_ser_jefe_coordinador", "Coordinador");
-  if(!autorizado){ document.getElementById("tareas-coord-count").textContent = "—"; return; }
-  const actorId = miPersonal.id;
-  const misAsignadas = tareasData.filter(t=> t.asignado_por.id === actorId && t.destinatario_rol === "supervisor");
+  const r = trActorBox("coordinador", document.getElementById("tc-actor-box"), document.getElementById("tc-content"), "puede_ser_jefe_coordinador", "Coordinador", personalJefeCoordinador);
+  if(!r.autorizado){ document.getElementById("tareas-coord-count").textContent = "—"; return; }
+  const actorId = r.actorId;
+  const misAsignadas = actorId != null
+    ? tareasData.filter(t=> t.asignado_por.id === actorId && t.destinatario_rol === "supervisor")
+    : tareasData.filter(t=> t.destinatario_rol === "supervisor");
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
   const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
@@ -2924,9 +2962,11 @@ function trRenderCoordinador(){
   }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
 
   // Bandeja: tareas que la jefatura (u otro jefe/coordinador) le asignó a este actor
-  const misPendientes = tareasData.filter(t=> t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador");
+  const misPendientes = actorId != null
+    ? tareasData.filter(t=> t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador")
+    : tareasData.filter(t=> t.destinatario_rol === "jefe_coordinador");
   const inbox = document.getElementById("tc-inbox-list");
-  inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCard(t)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
+  inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCard(t, actorId == null)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
   inbox.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
   });
@@ -2940,9 +2980,9 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
   const descripcion = document.getElementById("tarea-descripcion").value.trim();
   const fechaLimite = document.getElementById("tarea-fecha-limite").value;
   const prioridad = document.getElementById("tarea-prioridad").value;
-  const actorId = miPersonal ? miPersonal.id : null;
+  const actorId = trCurrentActorId("coordinador");
   if(!titulo || !destinatarioId || !descripcion || !fechaLimite || !actorId){
-    errorEl.textContent = "Completa título, supervisor, descripción y fecha límite.";
+    errorEl.textContent = actorId ? "Completa título, supervisor, descripción y fecha límite." : "Elige a quién representas antes de asignar (no puedes asignar en modo 'Ver todas').";
     return;
   }
   const { error } = await sb.from("ssoma_tareas").insert({
@@ -2967,10 +3007,10 @@ document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
 });
 
 function trRenderJefatura(){
-  const autorizado = trActorBox(document.getElementById("tj-actor-box"), document.getElementById("tj-content"), "puede_ser_jefe_coordinador", "Jefatura/Coordinador");
-  if(!autorizado){ document.getElementById("tareas-jefe-count").textContent = "—"; return; }
-  const actorId = miPersonal.id;
-  const misAsignadas = tareasData.filter(t=> t.asignado_por.id === actorId);
+  const r = trActorBox("jefatura", document.getElementById("tj-actor-box"), document.getElementById("tj-content"), "puede_ser_jefe_coordinador", "Jefatura/Coordinador", personalJefeCoordinador);
+  if(!r.autorizado){ document.getElementById("tareas-jefe-count").textContent = "—"; return; }
+  const actorId = r.actorId;
+  const misAsignadas = actorId != null ? tareasData.filter(t=> t.asignado_por.id === actorId) : tareasData;
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
   const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
@@ -3011,9 +3051,9 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
   const descripcion = document.getElementById("tj-descripcion").value.trim();
   const fechaLimite = document.getElementById("tj-fecha-limite").value;
   const prioridad = document.getElementById("tj-prioridad").value;
-  const actorId = miPersonal ? miPersonal.id : null;
+  const actorId = trCurrentActorId("jefatura");
   if(!titulo || !destinoRaw || !descripcion || !fechaLimite || !actorId){
-    errorEl.textContent = "Completa título, destinatario, descripción y fecha límite.";
+    errorEl.textContent = actorId ? "Completa título, destinatario, descripción y fecha límite." : "Elige a quién representas antes de asignar (no puedes asignar en modo 'Ver todas').";
     return;
   }
   const [destinatarioRol, destinatarioId] = destinoRaw.split("|");
@@ -3040,7 +3080,7 @@ document.getElementById("tj-summary-toggle").addEventListener("click", (e)=>{
 
 let tfCurrentId = null;
 
-function renderTareaCard(t){
+function renderTareaCard(t, mostrarDestinatario){
   const e = tareaEstado(t);
   const footer = e === "finalizada"
     ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
@@ -3048,12 +3088,13 @@ function renderTareaCard(t){
          <span style="color:var(--muted);">Finalizada el ${formatDate(t.finalizado_at.slice(0,10))}</span>
        </div>`
     : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
+  const destLine = mostrarDestinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
   return `
   <div class="stat-card" style="padding:16px 18px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignado_por.nombre_completo)} (${tareaRolLabel(t.asignado_por_rol)}) · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignado_por.nombre_completo)} (${tareaRolLabel(t.asignado_por_rol)})${destLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3063,10 +3104,12 @@ function renderTareaCard(t){
 }
 
 function trRenderSupervisor(){
-  const autorizado = trActorBox(document.getElementById("ts-actor-box"), document.getElementById("ts-content"), "puede_supervisar", "Supervisor");
-  if(!autorizado){ document.getElementById("ts-count").textContent = "—"; return; }
-  const supSel = miPersonal.id;
-  const mis = tareasData.filter(t=> t.destinatario.id === supSel && t.destinatario_rol === "supervisor");
+  const r = trActorBox("supervisor", document.getElementById("ts-actor-box"), document.getElementById("ts-content"), "puede_supervisar", "Supervisor", personalSupervisores);
+  if(!r.autorizado){ document.getElementById("ts-count").textContent = "—"; return; }
+  const supSel = r.actorId;
+  const mis = supSel != null
+    ? tareasData.filter(t=> t.destinatario.id === supSel && t.destinatario_rol === "supervisor")
+    : tareasData.filter(t=> t.destinatario_rol === "supervisor");
   const pendientes = mis.filter(t=>tareaEstado(t)==="pendiente");
   const vencidas = mis.filter(t=>tareaEstado(t)==="vencida");
   const finalizadas = mis.filter(t=>tareaEstado(t)==="finalizada");
@@ -3078,7 +3121,7 @@ function trRenderSupervisor(){
 
   const list = document.getElementById("ts-list");
   const rowsSorted = [...mis].sort((a,b)=> a.fecha_limite.localeCompare(b.fecha_limite));
-  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t)).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
+  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t, supSel == null)).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
 
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
