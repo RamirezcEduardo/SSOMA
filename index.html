@@ -1072,10 +1072,11 @@
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="true" style="margin-top:10px;">
         <span class="navgroup-icon">📋</span>
         <span class="navgroup-title">Designación de Tareas</span>
-        <span class="navgroup-count" id="navgroup-tareas-count">2</span>
+        <span class="navgroup-count" id="navgroup-tareas-count">3</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-tareas-body">
+        <button class="navitem" data-view="tareas-jefatura"><span class="dot" style="background:#B91C1C;"></span><span class="label">Jefatura · Asignar Tareas</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="tareas-coordinador"><span class="dot" style="background:#2563EB;"></span><span class="label">Coordinador · Asignar Tareas</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="tareas-supervisor"><span class="dot" style="background:#16A34A;"></span><span class="label">Supervisor · Mis Tareas</span><span class="tag pending">Próximamente</span></button>
       </div>
@@ -1629,6 +1630,100 @@
       </div>
     </section>
 
+    <!-- DESIGNACIÓN DE TAREAS · VISTA JEFATURA -->
+    <section class="panel" id="panel-tareas-jefatura">
+      <div class="section-head">
+        <h2 class="section-title">Designación de Tareas — Vista Jefatura</h2>
+        <span class="count-pill" id="tareas-jefe-count">0 tareas activas</span>
+      </div>
+      <p class="section-desc">La jefatura puede asignar tareas tanto a coordinadores como a supervisores, darles seguimiento y medir su cumplimiento.</p>
+
+      <div class="import-card" style="margin-top:16px;">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">➕ Nueva tarea</div>
+            <div class="import-card-sub">Arma la solicitud y asígnala a un coordinador o supervisor.</div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field" style="margin-bottom:0;">
+            <label>Título de la tarea<span class="req">*</span></label>
+            <input type="text" id="tj-titulo" placeholder="Ej. Consolidar plan de auditorías del mes">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Destinatario<span class="req">*</span></label>
+            <select id="tj-destinatario">
+              <option value="">Selecciona…</option>
+              <optgroup label="Coordinadores" id="tj-optgroup-coord"></optgroup>
+              <optgroup label="Supervisores" id="tj-optgroup-sup"></optgroup>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px;margin-bottom:0;">
+          <label>Descripción<span class="req">*</span></label>
+          <textarea id="tj-descripcion" placeholder="Detalla qué se espera del destinatario"></textarea>
+        </div>
+        <div class="grid2" style="margin-top:16px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Fecha límite<span class="req">*</span></label>
+            <input type="date" id="tj-fecha-limite">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Prioridad</label>
+            <select id="tj-prioridad">
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+        </div>
+        <span class="login-error" id="tj-form-error"></span>
+        <button type="button" class="btn btn-primary" id="tj-asignar-btn" style="margin-top:8px;">Asignar tarea</button>
+      </div>
+
+      <div class="stats-row" style="margin-top:22px;">
+        <div class="stat-card">
+          <div class="stat-label">Tareas asignadas</div>
+          <div class="stat-value" id="tj-stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Finalizadas</div>
+          <div class="stat-value" id="tj-stat-finalizadas" style="color:#16A34A;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pendientes</div>
+          <div class="stat-value" id="tj-stat-pendientes" style="color:#B45309;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Vencidas</div>
+          <div class="stat-value" id="tj-stat-vencidas" style="color:#DC2626;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cumplimiento</div>
+          <div class="stat-value" id="tj-stat-cumplimiento">0%</div>
+        </div>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="tj-summary-toggle" aria-expanded="false">
+        Cumplimiento por destinatario
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="tj-summary-wrap">
+        <table class="data-table" id="tj-summary-table">
+          <thead><tr><th>Destinatario</th><th>Rol</th><th>Asignadas</th><th>Finalizadas</th><th>Vencidas</th><th>% Cumplimiento</th><th>Tiempo prom. (días)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-subhead">Tareas asignadas por Jefatura</div>
+      <div class="table-wrap">
+        <table class="data-table" id="tj-table">
+          <thead><tr><th>Título</th><th>Destinatario</th><th>Rol</th><th>Asignada</th><th>Límite</th><th>Prioridad</th><th>Estado</th><th>Evidencia</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- DESIGNACIÓN DE TAREAS · VISTA COORDINADOR -->
     <section class="panel" id="panel-tareas-coordinador">
       <div class="section-head">
@@ -1637,7 +1732,11 @@
       </div>
       <p class="section-desc">Asigna tareas a los supervisores, dales seguimiento y mide su cumplimiento. Cada supervisor debe subir el archivo correspondiente (Excel, Word o PDF) para dar por finalizada su tarea.</p>
 
-      <div class="import-card" style="margin-top:16px;">
+      <div class="section-subhead">Mis tareas (asignadas por Jefatura)</div>
+      <div id="tc-inbox-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px;"></div>
+
+      <div class="section-subhead">Asignar a supervisores</div>
+      <div class="import-card" style="margin-top:0;">
         <div class="import-card-head">
           <div>
             <div class="import-card-title">➕ Nueva tarea</div>
@@ -1730,6 +1829,7 @@
       <div class="field" style="max-width:280px;margin-top:16px;">
         <label>Viendo bandeja de</label>
         <select id="ts-supervisor-select"></select>
+        <div class="hint">Este selector es solo para la vista previa. En producción cada supervisor entra con su sesión y solo ve su propia bandeja — nunca la de otros supervisores.</div>
       </div>
 
       <div class="stats-row stats-row-3" style="margin-top:6px;">
@@ -2684,20 +2784,28 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
 spRenderConc();
 
 /* ---- Designación de Tareas ---- */
+const JEFE_ACTUAL = "Roberto Chávez";
+const TAREAS_COORDINADORES = ["Miguel Torres", "Patricia Vega"];
 const TAREAS_SUPERVISORES = ["Clinton Huere", "José Lavado", "Elizabet Salinas", "Nancy Elena Bautista"];
 const TAREAS_HOY = "2026-08-26";
-const TAREAS_COORDINADOR_ACTUAL = "Miguel Torres";
+const TAREAS_COORDINADOR_ACTUAL = "Miguel Torres"; // coordinador "logueado" en esta maqueta
 
-let tareaAutoId = 9;
+let tareaAutoId = 11;
 const tareasData = [
-  {id:1, titulo:"Actualizar checklist de EPP", descripcion:"Revisar y actualizar el checklist de entrega de EPP del área EB.", supervisor:"Clinton Huere", coordinador:"Miguel Torres", prioridad:"Alta", fechaAsignacion:"2026-08-18", fechaLimite:"2026-08-22", archivo:null, fechaFinalizacion:null},
-  {id:2, titulo:"Enviar reporte semanal de accidentabilidad", descripcion:"Consolidar los RACS de la semana y enviar el reporte a Gerencia.", supervisor:"José Lavado", coordinador:"Miguel Torres", prioridad:"Media", fechaAsignacion:"2026-08-22", fechaLimite:"2026-08-28", archivo:null, fechaFinalizacion:null},
-  {id:3, titulo:"Auditoría de extintores zona B", descripcion:"Verificar vigencia y estado de los extintores de la zona B.", supervisor:"Elizabet Salinas", coordinador:"Patricia Vega", prioridad:"Alta", fechaAsignacion:"2026-08-15", fechaLimite:"2026-08-19", archivo:"auditoria_extintores_zonaB.pdf", fechaFinalizacion:"2026-08-18"},
-  {id:4, titulo:"Capacitación de nuevos ingresos - evidencia", descripcion:"Subir la lista de asistencia firmada de la capacitación SSOMA a nuevos ingresos.", supervisor:"Nancy Elena Bautista", coordinador:"Patricia Vega", prioridad:"Media", fechaAsignacion:"2026-08-19", fechaLimite:"2026-08-23", archivo:"asistencia_induccion_ago.pdf", fechaFinalizacion:"2026-08-21"},
-  {id:5, titulo:"Revisar cierre de RACS pendientes", descripcion:"Cerrar los levantamientos de RACS que llevan más de 5 días abiertos en su turno.", supervisor:"Clinton Huere", coordinador:"Patricia Vega", prioridad:"Alta", fechaAsignacion:"2026-08-12", fechaLimite:"2026-08-16", archivo:null, fechaFinalizacion:null},
-  {id:6, titulo:"Reporte de clima laboral — EB", descripcion:"Enviar el consolidado de la encuesta de clima laboral del área EB.", supervisor:"José Lavado", coordinador:"Miguel Torres", prioridad:"Baja", fechaAsignacion:"2026-08-21", fechaLimite:"2026-08-25", archivo:"clima_laboral_EB.xlsx", fechaFinalizacion:"2026-08-24"},
-  {id:7, titulo:"Verificación de señalización — pasillos EA", descripcion:"Revisar que la señalización de seguridad esté completa en los pasillos del área EA.", supervisor:"Elizabet Salinas", coordinador:"Patricia Vega", prioridad:"Media", fechaAsignacion:"2026-08-23", fechaLimite:"2026-08-29", archivo:null, fechaFinalizacion:null},
-  {id:8, titulo:"Plan de acción — índice de accidentabilidad", descripcion:"Elaborar plan de acción para reducir el índice de accidentabilidad del turno noche.", supervisor:"Nancy Elena Bautista", coordinador:"Miguel Torres", prioridad:"Alta", fechaAsignacion:"2026-08-10", fechaLimite:"2026-08-14", archivo:null, fechaFinalizacion:null},
+  // Jefatura -> Coordinador
+  {id:9,  titulo:"Consolidar plan de auditorías del mes", descripcion:"Armar el cronograma de auditorías SSOMA e Inventario para setiembre.", destinatario:"Miguel Torres", destinatarioRol:"coordinador", asignadoPor:"Roberto Chávez", asignadoPorRol:"jefatura", prioridad:"Alta", fechaAsignacion:"2026-08-20", fechaLimite:"2026-08-27", archivo:null, fechaFinalizacion:null},
+  {id:10, titulo:"Revisar indicadores de cumplimiento del equipo", descripcion:"Presentar el avance de cumplimiento de tareas de los supervisores a cargo.", destinatario:"Patricia Vega", destinatarioRol:"coordinador", asignadoPor:"Roberto Chávez", asignadoPorRol:"jefatura", prioridad:"Media", fechaAsignacion:"2026-08-14", fechaLimite:"2026-08-18", archivo:"indicadores_cumplimiento.xlsx", fechaFinalizacion:"2026-08-17"},
+  // Jefatura -> Supervisor (directo)
+  {id:11, titulo:"Inspección sorpresa — zona de carga", descripcion:"Realizar inspección sorpresa de seguridad en la zona de carga y descarga.", destinatario:"José Lavado", destinatarioRol:"supervisor", asignadoPor:"Roberto Chávez", asignadoPorRol:"jefatura", prioridad:"Alta", fechaAsignacion:"2026-08-24", fechaLimite:"2026-08-30", archivo:null, fechaFinalizacion:null},
+  // Coordinador -> Supervisor
+  {id:1, titulo:"Actualizar checklist de EPP", descripcion:"Revisar y actualizar el checklist de entrega de EPP del área EB.", destinatario:"Clinton Huere", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-18", fechaLimite:"2026-08-22", archivo:null, fechaFinalizacion:null},
+  {id:2, titulo:"Enviar reporte semanal de accidentabilidad", descripcion:"Consolidar los RACS de la semana y enviar el reporte a Gerencia.", destinatario:"José Lavado", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Media", fechaAsignacion:"2026-08-22", fechaLimite:"2026-08-28", archivo:null, fechaFinalizacion:null},
+  {id:3, titulo:"Auditoría de extintores zona B", descripcion:"Verificar vigencia y estado de los extintores de la zona B.", destinatario:"Elizabet Salinas", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-15", fechaLimite:"2026-08-19", archivo:"auditoria_extintores_zonaB.pdf", fechaFinalizacion:"2026-08-18"},
+  {id:4, titulo:"Capacitación de nuevos ingresos - evidencia", descripcion:"Subir la lista de asistencia firmada de la capacitación SSOMA a nuevos ingresos.", destinatario:"Nancy Elena Bautista", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Media", fechaAsignacion:"2026-08-19", fechaLimite:"2026-08-23", archivo:"asistencia_induccion_ago.pdf", fechaFinalizacion:"2026-08-21"},
+  {id:5, titulo:"Revisar cierre de RACS pendientes", descripcion:"Cerrar los levantamientos de RACS que llevan más de 5 días abiertos en su turno.", destinatario:"Clinton Huere", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-12", fechaLimite:"2026-08-16", archivo:null, fechaFinalizacion:null},
+  {id:6, titulo:"Reporte de clima laboral — EB", descripcion:"Enviar el consolidado de la encuesta de clima laboral del área EB.", destinatario:"José Lavado", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Baja", fechaAsignacion:"2026-08-21", fechaLimite:"2026-08-25", archivo:"clima_laboral_EB.xlsx", fechaFinalizacion:"2026-08-24"},
+  {id:7, titulo:"Verificación de señalización — pasillos EA", descripcion:"Revisar que la señalización de seguridad esté completa en los pasillos del área EA.", destinatario:"Elizabet Salinas", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Media", fechaAsignacion:"2026-08-23", fechaLimite:"2026-08-29", archivo:null, fechaFinalizacion:null},
+  {id:8, titulo:"Plan de acción — índice de accidentabilidad", descripcion:"Elaborar plan de acción para reducir el índice de accidentabilidad del turno noche.", destinatario:"Nancy Elena Bautista", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-10", fechaLimite:"2026-08-14", archivo:null, fechaFinalizacion:null},
 ];
 
 function tareaEstado(t){
@@ -2713,21 +2821,54 @@ function tareaEstadoBadge(estado){
 function tareaDiasEntre(a,b){
   return Math.round((new Date(b) - new Date(a)) / 86400000);
 }
+function tareaRolLabel(rol){
+  return rol === "coordinador" ? "Coordinador" : rol === "jefatura" ? "Jefatura" : "Supervisor";
+}
 
 function trRenderFilters(){
-  const sel1 = document.getElementById("tarea-supervisor");
-  const sel2 = document.getElementById("ts-supervisor-select");
+  const selCoordDest = document.getElementById("tarea-supervisor");
+  const selSup = document.getElementById("ts-supervisor-select");
   TAREAS_SUPERVISORES.forEach(s=>{
-    const o1 = document.createElement("option"); o1.value = s; o1.textContent = s; sel1.appendChild(o1);
-    const o2 = document.createElement("option"); o2.value = s; o2.textContent = s; sel2.appendChild(o2);
+    const o1 = document.createElement("option"); o1.value = s; o1.textContent = s; selCoordDest.appendChild(o1);
+    const o2 = document.createElement("option"); o2.value = s; o2.textContent = s; selSup.appendChild(o2);
+  });
+
+  const grpCoord = document.getElementById("tj-optgroup-coord");
+  const grpSup = document.getElementById("tj-optgroup-sup");
+  TAREAS_COORDINADORES.forEach(c=>{
+    const o = document.createElement("option"); o.value = "coordinador|" + c; o.textContent = c; grpCoord.appendChild(o);
+  });
+  TAREAS_SUPERVISORES.forEach(s=>{
+    const o = document.createElement("option"); o.value = "supervisor|" + s; o.textContent = s; grpSup.appendChild(o);
   });
 }
 
+/* Tabla de cumplimiento reutilizable para Jefatura (incluye columna Rol) y Coordinador (sin ella) */
+function renderCumplimientoTable(tbodyEl, tareas, incluirRol){
+  const byDest = {};
+  tareas.forEach(t=>{
+    const key = t.destinatario;
+    if(!byDest[key]) byDest[key] = {rol:t.destinatarioRol, asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
+    const e = tareaEstado(t);
+    byDest[key].asignadas++;
+    if(e === "finalizada"){ byDest[key].finalizadas++; byDest[key].tiempos.push(tareaDiasEntre(t.fechaAsignacion, t.fechaFinalizacion)); }
+    if(e === "vencida") byDest[key].vencidas++;
+  });
+  const entries = Object.entries(byDest);
+  const cols = incluirRol ? 7 : 6;
+  tbodyEl.innerHTML = entries.length ? entries.map(([dest,d])=>{
+    const pct = d.asignadas>0 ? Math.round((d.finalizadas/d.asignadas)*100) : 0;
+    const prom = d.tiempos.length ? (d.tiempos.reduce((a,b)=>a+b,0)/d.tiempos.length).toFixed(1) : "—";
+    return `<tr><td>${escapeHtml(dest)}</td>${incluirRol ? `<td>${tareaRolLabel(d.rol)}</td>` : ""}<td class="num">${d.asignadas}</td><td class="num">${d.finalizadas}</td><td class="num">${d.vencidas}</td><td class="num">${pct}%</td><td class="num">${prom}</td></tr>`;
+  }).join("") : `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);">Sin tareas todavía.</td></tr>`;
+}
+
 function trRenderCoordinador(){
-  const total = tareasData.length;
-  const finalizadas = tareasData.filter(t=>tareaEstado(t)==="finalizada");
-  const vencidas = tareasData.filter(t=>tareaEstado(t)==="vencida");
-  const pendientes = tareasData.filter(t=>tareaEstado(t)==="pendiente");
+  const misAsignadas = tareasData.filter(t=> t.asignadoPorRol === "coordinador" && t.asignadoPor === TAREAS_COORDINADOR_ACTUAL);
+  const total = misAsignadas.length;
+  const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
+  const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
+  const pendientes = misAsignadas.filter(t=>tareaEstado(t)==="pendiente");
 
   document.getElementById("tareas-coord-count").textContent = (total - finalizadas.length) + " tareas activas";
   document.getElementById("tc-stat-total").textContent = total;
@@ -2736,31 +2877,17 @@ function trRenderCoordinador(){
   document.getElementById("tc-stat-vencidas").textContent = vencidas.length;
   document.getElementById("tc-stat-cumplimiento").textContent = (total>0 ? Math.round((finalizadas.length/total)*100) : 0) + "%";
 
-  const bySup = {};
-  tareasData.forEach(t=>{
-    if(!bySup[t.supervisor]) bySup[t.supervisor] = {asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
-    const e = tareaEstado(t);
-    bySup[t.supervisor].asignadas++;
-    if(e === "finalizada"){ bySup[t.supervisor].finalizadas++; bySup[t.supervisor].tiempos.push(tareaDiasEntre(t.fechaAsignacion, t.fechaFinalizacion)); }
-    if(e === "vencida") bySup[t.supervisor].vencidas++;
-  });
-  const summaryBody = document.querySelector("#tc-summary-table tbody");
-  const entries = Object.entries(bySup);
-  summaryBody.innerHTML = entries.length ? entries.map(([sup,d])=>{
-    const pct = d.asignadas>0 ? Math.round((d.finalizadas/d.asignadas)*100) : 0;
-    const prom = d.tiempos.length ? (d.tiempos.reduce((a,b)=>a+b,0)/d.tiempos.length).toFixed(1) : "—";
-    return `<tr><td>${escapeHtml(sup)}</td><td class="num">${d.asignadas}</td><td class="num">${d.finalizadas}</td><td class="num">${d.vencidas}</td><td class="num">${pct}%</td><td class="num">${prom}</td></tr>`;
-  }).join("") : `<tr><td colspan="6" style="text-align:center;color:var(--muted);">Sin tareas todavía.</td></tr>`;
+  renderCumplimientoTable(document.querySelector("#tc-summary-table tbody"), misAsignadas, false);
 
-  const rowsSorted = [...tareasData].sort((a,b)=> b.fechaAsignacion.localeCompare(a.fechaAsignacion));
+  const rowsSorted = [...misAsignadas].sort((a,b)=> b.fechaAsignacion.localeCompare(a.fechaAsignacion));
   const tbody = document.querySelector("#tc-table tbody");
   tbody.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
     const e = tareaEstado(t);
     return `
     <tr>
       <td>${escapeHtml(t.titulo)}</td>
-      <td>${escapeHtml(t.supervisor)}</td>
-      <td>${escapeHtml(t.coordinador)}</td>
+      <td>${escapeHtml(t.destinatario)}</td>
+      <td>${escapeHtml(t.asignadoPor)}</td>
       <td>${escapeHtml(t.fechaAsignacion)}</td>
       <td>${escapeHtml(t.fechaLimite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
@@ -2768,24 +2895,32 @@ function trRenderCoordinador(){
       <td>${t.archivo ? "📎 " + escapeHtml(t.archivo) : "—"}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+
+  // Bandeja: tareas que la jefatura le asignó a este coordinador
+  const misPendientes = tareasData.filter(t=> t.destinatario === TAREAS_COORDINADOR_ACTUAL && t.destinatarioRol === "coordinador");
+  const inbox = document.getElementById("tc-inbox-list");
+  inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCard(t)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
+  inbox.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
+  });
 }
 
 document.getElementById("tarea-asignar-btn").addEventListener("click", ()=>{
   const errorEl = document.getElementById("tarea-form-error");
   errorEl.textContent = "";
   const titulo = document.getElementById("tarea-titulo").value.trim();
-  const supervisor = document.getElementById("tarea-supervisor").value;
+  const destinatario = document.getElementById("tarea-supervisor").value;
   const descripcion = document.getElementById("tarea-descripcion").value.trim();
   const fechaLimite = document.getElementById("tarea-fecha-limite").value;
   const prioridad = document.getElementById("tarea-prioridad").value;
-  if(!titulo || !supervisor || !descripcion || !fechaLimite){
+  if(!titulo || !destinatario || !descripcion || !fechaLimite){
     errorEl.textContent = "Completa título, supervisor, descripción y fecha límite.";
     return;
   }
   tareasData.push({
     id: tareaAutoId++,
-    titulo, descripcion, supervisor,
-    coordinador: TAREAS_COORDINADOR_ACTUAL,
+    titulo, descripcion, destinatario, destinatarioRol: "supervisor",
+    asignadoPor: TAREAS_COORDINADOR_ACTUAL, asignadoPorRol: "coordinador",
     prioridad, fechaAsignacion: TAREAS_HOY, fechaLimite,
     archivo: null, fechaFinalizacion: null,
   });
@@ -2804,11 +2939,103 @@ document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
   btn.setAttribute("aria-expanded", String(!expanded));
 });
 
+function trRenderJefatura(){
+  const misAsignadas = tareasData.filter(t=> t.asignadoPorRol === "jefatura");
+  const total = misAsignadas.length;
+  const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
+  const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
+  const pendientes = misAsignadas.filter(t=>tareaEstado(t)==="pendiente");
+
+  document.getElementById("tareas-jefe-count").textContent = (total - finalizadas.length) + " tareas activas";
+  document.getElementById("tj-stat-total").textContent = total;
+  document.getElementById("tj-stat-finalizadas").textContent = finalizadas.length;
+  document.getElementById("tj-stat-pendientes").textContent = pendientes.length;
+  document.getElementById("tj-stat-vencidas").textContent = vencidas.length;
+  document.getElementById("tj-stat-cumplimiento").textContent = (total>0 ? Math.round((finalizadas.length/total)*100) : 0) + "%";
+
+  renderCumplimientoTable(document.querySelector("#tj-summary-table tbody"), misAsignadas, true);
+
+  const rowsSorted = [...misAsignadas].sort((a,b)=> b.fechaAsignacion.localeCompare(a.fechaAsignacion));
+  const tbody = document.querySelector("#tj-table tbody");
+  tbody.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
+    const e = tareaEstado(t);
+    return `
+    <tr>
+      <td>${escapeHtml(t.titulo)}</td>
+      <td>${escapeHtml(t.destinatario)}</td>
+      <td>${tareaRolLabel(t.destinatarioRol)}</td>
+      <td>${escapeHtml(t.fechaAsignacion)}</td>
+      <td>${escapeHtml(t.fechaLimite)}</td>
+      <td>${escapeHtml(t.prioridad)}</td>
+      <td>${tareaEstadoBadge(e)}</td>
+      <td>${t.archivo ? "📎 " + escapeHtml(t.archivo) : "—"}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+}
+
+document.getElementById("tj-asignar-btn").addEventListener("click", ()=>{
+  const errorEl = document.getElementById("tj-form-error");
+  errorEl.textContent = "";
+  const titulo = document.getElementById("tj-titulo").value.trim();
+  const destinoRaw = document.getElementById("tj-destinatario").value;
+  const descripcion = document.getElementById("tj-descripcion").value.trim();
+  const fechaLimite = document.getElementById("tj-fecha-limite").value;
+  const prioridad = document.getElementById("tj-prioridad").value;
+  if(!titulo || !destinoRaw || !descripcion || !fechaLimite){
+    errorEl.textContent = "Completa título, destinatario, descripción y fecha límite.";
+    return;
+  }
+  const [destinatarioRol, destinatario] = destinoRaw.split("|");
+  tareasData.push({
+    id: tareaAutoId++,
+    titulo, descripcion, destinatario, destinatarioRol,
+    asignadoPor: JEFE_ACTUAL, asignadoPorRol: "jefatura",
+    prioridad, fechaAsignacion: TAREAS_HOY, fechaLimite,
+    archivo: null, fechaFinalizacion: null,
+  });
+  document.getElementById("tj-titulo").value = "";
+  document.getElementById("tj-destinatario").value = "";
+  document.getElementById("tj-descripcion").value = "";
+  document.getElementById("tj-fecha-limite").value = "";
+  document.getElementById("tj-prioridad").value = "Media";
+  trRenderJefatura();
+  trRenderCoordinador();
+  trRenderSupervisor();
+});
+
+document.getElementById("tj-summary-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+
 let tfCurrentId = null;
+
+function renderTareaCard(t){
+  const e = tareaEstado(t);
+  const footer = e === "finalizada"
+    ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
+         <span class="evidencia-chip">📎 ${escapeHtml(t.archivo)}</span>
+         <span style="color:var(--muted);">Finalizada el ${escapeHtml(t.fechaFinalizacion)}</span>
+       </div>`
+    : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
+  return `
+  <div class="stat-card" style="padding:16px 18px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignadoPor)} (${tareaRolLabel(t.asignadoPorRol)}) · Límite ${escapeHtml(t.fechaLimite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+      </div>
+      ${tareaEstadoBadge(e)}
+    </div>
+    <div style="font-size:12.5px;color:var(--text-soft);margin-top:10px;">${escapeHtml(t.descripcion)}</div>
+    ${footer}
+  </div>`;
+}
 
 function trRenderSupervisor(){
   const supSel = document.getElementById("ts-supervisor-select").value || TAREAS_SUPERVISORES[0];
-  const mis = tareasData.filter(t=>t.supervisor === supSel);
+  const mis = tareasData.filter(t=> t.destinatario === supSel && t.destinatarioRol === "supervisor");
   const pendientes = mis.filter(t=>tareaEstado(t)==="pendiente");
   const vencidas = mis.filter(t=>tareaEstado(t)==="vencida");
   const finalizadas = mis.filter(t=>tareaEstado(t)==="finalizada");
@@ -2820,27 +3047,7 @@ function trRenderSupervisor(){
 
   const list = document.getElementById("ts-list");
   const rowsSorted = [...mis].sort((a,b)=> a.fechaLimite.localeCompare(b.fechaLimite));
-  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
-    const e = tareaEstado(t);
-    const footer = e === "finalizada"
-      ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
-           <span class="evidencia-chip">📎 ${escapeHtml(t.archivo)}</span>
-           <span style="color:var(--muted);">Finalizada el ${escapeHtml(t.fechaFinalizacion)}</span>
-         </div>`
-      : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
-    return `
-    <div class="stat-card" style="padding:16px 18px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
-        <div>
-          <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.coordinador)} · Límite ${escapeHtml(t.fechaLimite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
-        </div>
-        ${tareaEstadoBadge(e)}
-      </div>
-      <div style="font-size:12.5px;color:var(--text-soft);margin-top:10px;">${escapeHtml(t.descripcion)}</div>
-      ${footer}
-    </div>`;
-  }).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
+  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t)).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
 
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
@@ -2885,11 +3092,13 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
   tfCloseModal();
   trRenderSupervisor();
   trRenderCoordinador();
+  trRenderJefatura();
 });
 
 document.getElementById("ts-supervisor-select").addEventListener("change", trRenderSupervisor);
 
 trRenderFilters();
+trRenderJefatura();
 trRenderCoordinador();
 trRenderSupervisor();
 
