@@ -324,8 +324,34 @@
 
   .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
   .stats-row-3{grid-template-columns:repeat(3,1fr);}
+  .stats-row-4{grid-template-columns:repeat(4,1fr);}
   @media (max-width:980px){.stats-row{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:520px){.stats-row{grid-template-columns:1fr;}}
+
+  .section-subhead{
+    font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;
+    color:var(--muted);margin:26px 0 10px;
+  }
+  .table-wrap{
+    overflow-x:auto;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--panel);
+  }
+  table.data-table{
+    width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap;
+  }
+  table.data-table th{
+    text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:800;
+    color:var(--muted);background:var(--panel-alt);padding:10px 12px;border-bottom:1px solid var(--border);
+    position:sticky;top:0;
+  }
+  table.data-table td{
+    padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);
+  }
+  table.data-table tbody tr:last-child td{border-bottom:none;}
+  table.data-table tbody tr:hover td{background:var(--panel-alt);}
+  table.data-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
   .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 16px 14px;box-shadow:var(--shadow);}
   .stat-label{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:700;}
   .stat-value{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:600;margin:6px 0 2px;}
@@ -1382,17 +1408,63 @@
       </div>
     </section>
 
-    <!-- INVENTARIO · AUDITORÍA SHORTPICK (placeholder) -->
+    <!-- INVENTARIO · AUDITORÍA SHORTPICK (maqueta) -->
     <section class="panel" id="panel-inventario-shortpick">
       <div class="section-head">
         <h2 class="section-title">Inventario — Auditoría Shortpick</h2>
-        <span class="count-pill">Próximamente</span>
+        <span class="count-pill" id="sp-count">0 registros</span>
       </div>
-      <p class="section-desc">Registro y seguimiento de faltantes detectados en el picking. Este módulo está en construcción.</p>
-      <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
-        <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
-        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
-        <div style="font-size:12.5px;color:var(--muted);">Cuéntame qué datos necesitas registrar (SKU, pedido, cantidad faltante, responsable, etc.) y armo el formulario.</div>
+      <p class="section-desc">Seguimiento de faltantes de picking (Short Pick) a partir de la data del WMS. Filtra por semana y sub área para ver el resumen por turno, supervisor y proceso — igual que tu plantilla SP_DIARIO.</p>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="sp-f-semana"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Sub Área</label>
+          <select id="sp-f-subarea"><option value="">Todas</option></select>
+        </div>
+      </div>
+
+      <div class="stats-row stats-row-4" style="margin-top:18px;">
+        <div class="stat-card">
+          <div class="stat-label">Registros</div>
+          <div class="stat-value" id="sp-stat-registros">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Unidades ajustadas</div>
+          <div class="stat-value" id="sp-stat-unidades">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valor estimado</div>
+          <div class="stat-value" id="sp-stat-valor">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Sub área con más SP</div>
+          <div class="stat-value" id="sp-stat-subarea" style="font-size:20px;">—</div>
+        </div>
+      </div>
+
+      <div class="section-subhead">Resumen por Turno · Supervisor · Sub Área</div>
+      <div class="table-wrap">
+        <table class="data-table" id="sp-summary-table">
+          <thead><tr><th>Turno</th><th>Supervisor</th><th>Sub Área</th><th>Proceso</th><th>Registros</th><th>Un. Ajust</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-subhead">Detalle</div>
+      <div class="table-wrap">
+        <table class="data-table" id="sp-detail-table">
+          <thead><tr><th>Fe y Hr Crea</th><th>Producto</th><th>Descripción</th><th>Ubicación</th><th>Sub Área</th><th>Turno</th><th>Responsable</th><th>Supervisor</th><th>Proceso</th><th>Un Ajust</th><th>Semana</th><th>Estado</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="help-tip" style="margin-top:18px;max-width:640px;">
+        <span class="ic">📌</span>
+        Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
       </div>
     </section>
 
@@ -2020,6 +2092,95 @@ document.querySelectorAll(".navgroup-header").forEach(navgroupToggle=>{
     navgroupToggle.setAttribute("aria-expanded", String(!expanded));
   });
 });
+
+/* ---- Inventario · Auditoría Shortpick (maqueta con datos de ejemplo) ---- */
+const spData = [
+  {fecha:"2026-05-21 21:44:19", producto:"7509546000985", desc:"COLG TRIP ACC CR DEN", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         proceso:"B2B", unajust:-10, valor:44.90,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 21:03:08", producto:"8850769011975", desc:"LIVOLIN FORTE CAP BL",  ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           proceso:"B2B", unajust:-2,  valor:69.14,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-20 09:12:41", producto:"7702425540897", desc:"HUGG RN TLLA HUM EXT A", ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      proceso:"B2C", unajust:-14, valor:161.48, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-20 10:47:03", producto:"7702031291565", desc:"JOHN BABY NF SH ORIGIN", ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      proceso:"B2C", unajust:-2,  valor:25.95,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 14:30:55", producto:"7756969000034", desc:"GUANTES EXAMEN LATEX A", ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  proceso:"B2B", unajust:-1,  valor:12.00,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 19:05:12", producto:"7501234567890", desc:"DETERG LIQ ROPA 900ML",  ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           proceso:"B2B", unajust:-6,  valor:39.60,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-19 16:22:37", producto:"7789456123789", desc:"SHAMP ANTICASPA 400ML",  ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      proceso:"B2B", unajust:-3,  valor:70.56,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-19 08:50:19", producto:"7845123698741", desc:"CREMA DENTAL 90G",       ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         proceso:"B2C", unajust:-8,  valor:31.20,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 22:18:44", producto:"7123456789012", desc:"PAÑAL ADULTO TALLA M",   ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           proceso:"B2C", unajust:-5,  valor:58.30,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-20 13:04:27", producto:"7998877665544", desc:"JABON LIQ MANOS 250ML",  ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      proceso:"B2B", unajust:-4,  valor:22.80,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+];
+
+function spRenderFilters(){
+  const selSem = document.getElementById("sp-f-semana");
+  const selSub = document.getElementById("sp-f-subarea");
+  if(!selSem || !selSub) return;
+  const semanas = [...new Set(spData.map(r=>r.semana))].sort();
+  const subareas = [...new Set(spData.map(r=>r.subarea))].sort();
+  semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSem.appendChild(o); });
+  subareas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSub.appendChild(o); });
+}
+
+function spFilteredData(){
+  const sem = document.getElementById("sp-f-semana").value;
+  const sub = document.getElementById("sp-f-subarea").value;
+  return spData.filter(r => (!sem || r.semana === sem) && (!sub || r.subarea === sub));
+}
+
+function spRender(){
+  const rows = spFilteredData();
+  document.getElementById("sp-count").textContent = rows.length + (rows.length===1 ? " registro" : " registros");
+  document.getElementById("sp-stat-registros").textContent = rows.length;
+
+  const totalUnidades = rows.reduce((s,r)=>s+Math.abs(r.unajust),0);
+  document.getElementById("sp-stat-unidades").textContent = totalUnidades;
+
+  const totalValor = rows.reduce((s,r)=>s+r.valor,0);
+  document.getElementById("sp-stat-valor").textContent = "S/ " + totalValor.toFixed(2);
+
+  const porSubarea = {};
+  rows.forEach(r=>{ porSubarea[r.subarea] = (porSubarea[r.subarea]||0) + 1; });
+  const topSubarea = Object.entries(porSubarea).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById("sp-stat-subarea").textContent = topSubarea ? `${topSubarea[0]} (${topSubarea[1]})` : "—";
+
+  const grupos = {};
+  rows.forEach(r=>{
+    const key = [r.turno, r.supervisor, r.subarea, r.proceso].join("|");
+    if(!grupos[key]) grupos[key] = {turno:r.turno, supervisor:r.supervisor, subarea:r.subarea, proceso:r.proceso, registros:0, unidades:0};
+    grupos[key].registros += 1;
+    grupos[key].unidades += Math.abs(r.unajust);
+  });
+  const summaryBody = document.querySelector("#sp-summary-table tbody");
+  const gruposArr = Object.values(grupos).sort((a,b)=>b.registros-a.registros);
+  summaryBody.innerHTML = gruposArr.length ? gruposArr.map(g => `
+    <tr>
+      <td>${escapeHtml(g.turno)}</td>
+      <td>${escapeHtml(g.supervisor)}</td>
+      <td>${escapeHtml(g.subarea)}</td>
+      <td>${escapeHtml(g.proceso)}</td>
+      <td class="num">${g.registros}</td>
+      <td class="num">${g.unidades}</td>
+    </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
+
+  const detailBody = document.querySelector("#sp-detail-table tbody");
+  const rowsSorted = [...rows].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  detailBody.innerHTML = rowsSorted.length ? rowsSorted.map(r => `
+    <tr>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.producto)}</td>
+      <td>${escapeHtml(r.desc)}</td>
+      <td>${escapeHtml(r.ubicacion)}</td>
+      <td>${escapeHtml(r.subarea)}</td>
+      <td>${escapeHtml(r.turno)}</td>
+      <td>${escapeHtml(r.responsable)}</td>
+      <td>${escapeHtml(r.supervisor)}</td>
+      <td>${escapeHtml(r.proceso)}</td>
+      <td class="num">${r.unajust}</td>
+      <td>${escapeHtml(r.semana)}</td>
+      <td>${escapeHtml(r.estado)}</td>
+    </tr>`).join("") : `<tr><td colspan="12" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
+}
+
+spRenderFilters();
+spRender();
+document.getElementById("sp-f-semana").addEventListener("change", spRender);
+document.getElementById("sp-f-subarea").addEventListener("change", spRender);
 
 // toggle acto/condicion
 document.querySelectorAll("#racs-form .toggle-btn").forEach(btn=>{
