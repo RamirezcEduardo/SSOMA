@@ -1072,9 +1072,9 @@
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-tareas-body">
-        <button class="navitem" data-view="tareas-jefatura"><span class="dot" style="background:#B91C1C;"></span><span class="label">Jefatura · Asignar Tareas</span><span class="tag pending">Próximamente</span></button>
-        <button class="navitem" data-view="tareas-coordinador"><span class="dot" style="background:#2563EB;"></span><span class="label">Coordinador · Asignar Tareas</span><span class="tag pending">Próximamente</span></button>
-        <button class="navitem" data-view="tareas-supervisor"><span class="dot" style="background:#16A34A;"></span><span class="label">Supervisor · Mis Tareas</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="tareas-jefatura"><span class="dot" style="background:#B91C1C;"></span><span class="label">Jefatura · Asignar Tareas</span></button>
+        <button class="navitem" data-view="tareas-coordinador"><span class="dot" style="background:#2563EB;"></span><span class="label">Coordinador · Asignar Tareas</span></button>
+        <button class="navitem" data-view="tareas-supervisor"><span class="dot" style="background:#16A34A;"></span><span class="label">Supervisor · Mis Tareas</span></button>
       </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
@@ -1634,6 +1634,9 @@
       </div>
       <p class="section-desc">La jefatura puede asignar tareas tanto a coordinadores como a supervisores, darles seguimiento y medir su cumplimiento.</p>
 
+      <div id="tj-actor-box" style="margin-top:12px;"></div>
+
+      <div id="tj-content">
       <div class="import-card" style="margin-top:16px;">
         <div class="import-card-head">
           <div>
@@ -1718,6 +1721,7 @@
           <tbody></tbody>
         </table>
       </div>
+      </div>
     </section>
 
     <!-- DESIGNACIÓN DE TAREAS · VISTA COORDINADOR -->
@@ -1728,6 +1732,9 @@
       </div>
       <p class="section-desc">Asigna tareas a los supervisores, dales seguimiento y mide su cumplimiento. Cada supervisor debe subir el archivo correspondiente (Excel, Word o PDF) para dar por finalizada su tarea.</p>
 
+      <div id="tc-actor-box" style="margin-top:12px;"></div>
+
+      <div id="tc-content">
       <div class="section-subhead">Mis tareas (asignadas por Jefatura)</div>
       <div id="tc-inbox-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px;"></div>
 
@@ -1812,6 +1819,7 @@
           <tbody></tbody>
         </table>
       </div>
+      </div>
     </section>
 
     <!-- DESIGNACIÓN DE TAREAS · VISTA SUPERVISOR -->
@@ -1822,12 +1830,9 @@
       </div>
       <p class="section-desc">Revisa las tareas que te asignó tu coordinador. Para darlas por finalizadas, sube el archivo correspondiente (Excel, Word o PDF).</p>
 
-      <div class="field" style="max-width:280px;margin-top:16px;">
-        <label>Viendo bandeja de</label>
-        <select id="ts-supervisor-select"></select>
-        <div class="hint">Este selector es solo para la vista previa. En producción cada supervisor entra con su sesión y solo ve su propia bandeja — nunca la de otros supervisores.</div>
-      </div>
+      <div id="ts-actor-box" style="margin-top:16px;"></div>
 
+      <div id="ts-content">
       <div class="stats-row stats-row-3" style="margin-top:6px;">
         <div class="stat-card">
           <div class="stat-label">Pendientes</div>
@@ -1844,6 +1849,7 @@
       </div>
 
       <div id="ts-list" style="margin-top:18px;display:flex;flex-direction:column;gap:12px;"></div>
+      </div>
     </section>
 
   </main>
@@ -2126,7 +2132,9 @@ document.getElementById("login-encuesta-charla-btn").addEventListener("click", (
 
 let personalObservadores = [];
 let personalSupervisores = [];
+let personalJefeCoordinador = [];
 let personalTodos = [];
+let miPersonal = null;
 let ubicacionesCat = [];
 let ocurrenciasCat = [];
 let condicionesCat = [];
@@ -2425,7 +2433,7 @@ function fillSelect(el, items, placeholder, valueKey, labelKey){
 
 async function loadCatalogos(){
   const [personalRes, ubicRes, ocuRes, condRes, equipoRes] = await Promise.all([
-    sb.from("ssoma_personal").select("id, nombre_completo, puede_observar, puede_supervisar").eq("activo", true).order("id"),
+    sb.from("ssoma_personal").select("id, nombre_completo, puede_observar, puede_supervisar, puede_ser_jefe_coordinador, usuario_id").eq("activo", true).order("id"),
     sb.from("ssoma_ubicaciones").select("id, nombre").eq("activo", true).order("id"),
     sb.from("ssoma_ocurrencias").select("id, descripcion").eq("activo", true).order("id"),
     sb.from("ssoma_condiciones").select("id, descripcion").eq("activo", true).order("id"),
@@ -2434,7 +2442,11 @@ async function loadCatalogos(){
   const personal = personalRes.data || [];
   personalObservadores = personal.filter(p => p.puede_observar);
   personalSupervisores = personal.filter(p => p.puede_supervisar);
+  personalJefeCoordinador = personal.filter(p => p.puede_ser_jefe_coordinador);
   personalTodos = personal;
+  miPersonal = (currentSession && currentSession.usuario)
+    ? (personal.find(p => p.usuario_id === currentSession.usuario.id) || null)
+    : null;
   ubicacionesCat = ubicRes.data || [];
   ocurrenciasCat = ocuRes.data || [];
   condicionesCat = condRes.data || [];
@@ -2448,6 +2460,7 @@ async function loadCatalogos(){
   fillSelect(document.getElementById("acc-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("acc-reportante"), equipoSsomaCat, "Selecciona quién reporta", "id", "nombre_completo");
   accSetCausaTipo("ACTO SUB ESTANDAR");
+  trPopulateSelectors();
 }
 
 document.getElementById("f-fecha").valueAsDate = new Date();
@@ -2781,34 +2794,13 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
 
 spRenderConc();
 
-/* ---- Designación de Tareas ---- */
-const JEFE_ACTUAL = "Roberto Chávez";
-const TAREAS_COORDINADORES = ["Miguel Torres", "Patricia Vega"];
-const TAREAS_SUPERVISORES = ["Clinton Huere", "José Lavado", "Elizabet Salinas", "Nancy Elena Bautista"];
-const TAREAS_HOY = "2026-08-26";
-const TAREAS_COORDINADOR_ACTUAL = "Miguel Torres"; // coordinador "logueado" en esta maqueta
-
-let tareaAutoId = 11;
-const tareasData = [
-  // Jefatura -> Coordinador
-  {id:9,  titulo:"Consolidar plan de auditorías del mes", descripcion:"Armar el cronograma de auditorías SSOMA e Inventario para setiembre.", destinatario:"Miguel Torres", destinatarioRol:"coordinador", asignadoPor:"Roberto Chávez", asignadoPorRol:"jefatura", prioridad:"Alta", fechaAsignacion:"2026-08-20", fechaLimite:"2026-08-27", archivo:null, fechaFinalizacion:null},
-  {id:10, titulo:"Revisar indicadores de cumplimiento del equipo", descripcion:"Presentar el avance de cumplimiento de tareas de los supervisores a cargo.", destinatario:"Patricia Vega", destinatarioRol:"coordinador", asignadoPor:"Roberto Chávez", asignadoPorRol:"jefatura", prioridad:"Media", fechaAsignacion:"2026-08-14", fechaLimite:"2026-08-18", archivo:"indicadores_cumplimiento.xlsx", fechaFinalizacion:"2026-08-17"},
-  // Jefatura -> Supervisor (directo)
-  {id:11, titulo:"Inspección sorpresa — zona de carga", descripcion:"Realizar inspección sorpresa de seguridad en la zona de carga y descarga.", destinatario:"José Lavado", destinatarioRol:"supervisor", asignadoPor:"Roberto Chávez", asignadoPorRol:"jefatura", prioridad:"Alta", fechaAsignacion:"2026-08-24", fechaLimite:"2026-08-30", archivo:null, fechaFinalizacion:null},
-  // Coordinador -> Supervisor
-  {id:1, titulo:"Actualizar checklist de EPP", descripcion:"Revisar y actualizar el checklist de entrega de EPP del área EB.", destinatario:"Clinton Huere", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-18", fechaLimite:"2026-08-22", archivo:null, fechaFinalizacion:null},
-  {id:2, titulo:"Enviar reporte semanal de accidentabilidad", descripcion:"Consolidar los RACS de la semana y enviar el reporte a Gerencia.", destinatario:"José Lavado", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Media", fechaAsignacion:"2026-08-22", fechaLimite:"2026-08-28", archivo:null, fechaFinalizacion:null},
-  {id:3, titulo:"Auditoría de extintores zona B", descripcion:"Verificar vigencia y estado de los extintores de la zona B.", destinatario:"Elizabet Salinas", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-15", fechaLimite:"2026-08-19", archivo:"auditoria_extintores_zonaB.pdf", fechaFinalizacion:"2026-08-18"},
-  {id:4, titulo:"Capacitación de nuevos ingresos - evidencia", descripcion:"Subir la lista de asistencia firmada de la capacitación SSOMA a nuevos ingresos.", destinatario:"Nancy Elena Bautista", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Media", fechaAsignacion:"2026-08-19", fechaLimite:"2026-08-23", archivo:"asistencia_induccion_ago.pdf", fechaFinalizacion:"2026-08-21"},
-  {id:5, titulo:"Revisar cierre de RACS pendientes", descripcion:"Cerrar los levantamientos de RACS que llevan más de 5 días abiertos en su turno.", destinatario:"Clinton Huere", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-12", fechaLimite:"2026-08-16", archivo:null, fechaFinalizacion:null},
-  {id:6, titulo:"Reporte de clima laboral — EB", descripcion:"Enviar el consolidado de la encuesta de clima laboral del área EB.", destinatario:"José Lavado", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Baja", fechaAsignacion:"2026-08-21", fechaLimite:"2026-08-25", archivo:"clima_laboral_EB.xlsx", fechaFinalizacion:"2026-08-24"},
-  {id:7, titulo:"Verificación de señalización — pasillos EA", descripcion:"Revisar que la señalización de seguridad esté completa en los pasillos del área EA.", destinatario:"Elizabet Salinas", destinatarioRol:"supervisor", asignadoPor:"Patricia Vega", asignadoPorRol:"coordinador", prioridad:"Media", fechaAsignacion:"2026-08-23", fechaLimite:"2026-08-29", archivo:null, fechaFinalizacion:null},
-  {id:8, titulo:"Plan de acción — índice de accidentabilidad", descripcion:"Elaborar plan de acción para reducir el índice de accidentabilidad del turno noche.", destinatario:"Nancy Elena Bautista", destinatarioRol:"supervisor", asignadoPor:"Miguel Torres", asignadoPorRol:"coordinador", prioridad:"Alta", fechaAsignacion:"2026-08-10", fechaLimite:"2026-08-14", archivo:null, fechaFinalizacion:null},
-];
+/* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ---- */
+const TAREAS_HOY = new Date().toISOString().slice(0, 10);
+let tareasData = [];
 
 function tareaEstado(t){
-  if(t.archivo) return "finalizada";
-  if(t.fechaLimite < TAREAS_HOY) return "vencida";
+  if(t.finalizado_at) return "finalizada";
+  if(t.fecha_limite < TAREAS_HOY) return "vencida";
   return "pendiente";
 }
 function tareaEstadoBadge(estado){
@@ -2820,49 +2812,86 @@ function tareaDiasEntre(a,b){
   return Math.round((new Date(b) - new Date(a)) / 86400000);
 }
 function tareaRolLabel(rol){
-  return rol === "coordinador" ? "Coordinador" : rol === "jefatura" ? "Jefatura" : "Supervisor";
+  return rol === "supervisor" ? "Supervisor" : "Jefatura/Coordinador";
 }
 
-function trRenderFilters(){
+function trPopulateSelectors(){
   const selCoordDest = document.getElementById("tarea-supervisor");
-  const selSup = document.getElementById("ts-supervisor-select");
-  TAREAS_SUPERVISORES.forEach(s=>{
-    const o1 = document.createElement("option"); o1.value = s; o1.textContent = s; selCoordDest.appendChild(o1);
-    const o2 = document.createElement("option"); o2.value = s; o2.textContent = s; selSup.appendChild(o2);
-  });
-
   const grpCoord = document.getElementById("tj-optgroup-coord");
   const grpSup = document.getElementById("tj-optgroup-sup");
-  TAREAS_COORDINADORES.forEach(c=>{
-    const o = document.createElement("option"); o.value = "coordinador|" + c; o.textContent = c; grpCoord.appendChild(o);
+  [selCoordDest, grpCoord, grpSup].forEach(el=>{ el.innerHTML = ""; });
+  selCoordDest.appendChild(new Option("Selecciona…", ""));
+
+  personalSupervisores.forEach(p=>{
+    selCoordDest.appendChild(new Option(p.nombre_completo, p.id));
+    grpSup.appendChild(new Option(p.nombre_completo, "supervisor|" + p.id));
   });
-  TAREAS_SUPERVISORES.forEach(s=>{
-    const o = document.createElement("option"); o.value = "supervisor|" + s; o.textContent = s; grpSup.appendChild(o);
+  personalJefeCoordinador.forEach(p=>{
+    grpCoord.appendChild(new Option(p.nombre_completo, "jefe_coordinador|" + p.id));
   });
+}
+
+/* Muestra quién está actuando en la sesión (o el motivo por el que no puede) y controla
+   la visibilidad del contenido de cada vista de Designación de Tareas. */
+function trActorBox(boxEl, contentEl, requiredFlag, label){
+  if(!miPersonal){
+    boxEl.innerHTML = `<div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+      <strong>Tu usuario no está vinculado a un perfil de personal SSOMA.</strong><br>
+      Pide al administrador que vincule tu cuenta${currentSession && currentSession.usuario ? ` (<code>${escapeHtml(currentSession.usuario.username)}</code>)` : ""} a un registro de personal para poder ver tus tareas de ${label}.
+    </div>`;
+    if(contentEl) contentEl.style.display = "none";
+    return false;
+  }
+  if(!miPersonal[requiredFlag]){
+    boxEl.innerHTML = `<div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+      <strong>${escapeHtml(miPersonal.nombre_completo)}</strong> no tiene el permiso de ${label} habilitado en su perfil SSOMA.
+    </div>`;
+    if(contentEl) contentEl.style.display = "none";
+    return false;
+  }
+  boxEl.innerHTML = `<div class="hint" style="font-size:13px;">Sesión activa: <strong style="color:var(--text);">${escapeHtml(miPersonal.nombre_completo)}</strong> · ${label}</div>`;
+  if(contentEl) contentEl.style.display = "";
+  return true;
+}
+
+async function trLoadTareas(){
+  const { data, error } = await sb.from("ssoma_tareas").select(`
+    id, titulo, descripcion, destinatario_rol, asignado_por_rol, prioridad, fecha_limite, archivo_cierre, finalizado_at, created_at,
+    destinatario:ssoma_personal!ssoma_tareas_destinatario_id_fkey(id, nombre_completo),
+    asignado_por:ssoma_personal!ssoma_tareas_asignado_por_id_fkey(id, nombre_completo)
+  `).order("created_at", { ascending: false });
+  if(error){ console.error("No se pudieron cargar las tareas:", error.message); return; }
+  tareasData = data || [];
+  trRenderJefatura();
+  trRenderCoordinador();
+  trRenderSupervisor();
 }
 
 /* Tabla de cumplimiento reutilizable para Jefatura (incluye columna Rol) y Coordinador (sin ella) */
 function renderCumplimientoTable(tbodyEl, tareas, incluirRol){
   const byDest = {};
   tareas.forEach(t=>{
-    const key = t.destinatario;
-    if(!byDest[key]) byDest[key] = {rol:t.destinatarioRol, asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
+    const key = t.destinatario.id;
+    if(!byDest[key]) byDest[key] = {nombre:t.destinatario.nombre_completo, rol:t.destinatario_rol, asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
     const e = tareaEstado(t);
     byDest[key].asignadas++;
-    if(e === "finalizada"){ byDest[key].finalizadas++; byDest[key].tiempos.push(tareaDiasEntre(t.fechaAsignacion, t.fechaFinalizacion)); }
+    if(e === "finalizada"){ byDest[key].finalizadas++; byDest[key].tiempos.push(tareaDiasEntre(t.created_at.slice(0,10), t.finalizado_at.slice(0,10))); }
     if(e === "vencida") byDest[key].vencidas++;
   });
-  const entries = Object.entries(byDest);
+  const entries = Object.values(byDest);
   const cols = incluirRol ? 7 : 6;
-  tbodyEl.innerHTML = entries.length ? entries.map(([dest,d])=>{
+  tbodyEl.innerHTML = entries.length ? entries.map(d=>{
     const pct = d.asignadas>0 ? Math.round((d.finalizadas/d.asignadas)*100) : 0;
     const prom = d.tiempos.length ? (d.tiempos.reduce((a,b)=>a+b,0)/d.tiempos.length).toFixed(1) : "—";
-    return `<tr><td>${escapeHtml(dest)}</td>${incluirRol ? `<td>${tareaRolLabel(d.rol)}</td>` : ""}<td class="num">${d.asignadas}</td><td class="num">${d.finalizadas}</td><td class="num">${d.vencidas}</td><td class="num">${pct}%</td><td class="num">${prom}</td></tr>`;
+    return `<tr><td>${escapeHtml(d.nombre)}</td>${incluirRol ? `<td>${tareaRolLabel(d.rol)}</td>` : ""}<td class="num">${d.asignadas}</td><td class="num">${d.finalizadas}</td><td class="num">${d.vencidas}</td><td class="num">${pct}%</td><td class="num">${prom}</td></tr>`;
   }).join("") : `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);">Sin tareas todavía.</td></tr>`;
 }
 
 function trRenderCoordinador(){
-  const misAsignadas = tareasData.filter(t=> t.asignadoPorRol === "coordinador" && t.asignadoPor === TAREAS_COORDINADOR_ACTUAL);
+  const autorizado = trActorBox(document.getElementById("tc-actor-box"), document.getElementById("tc-content"), "puede_ser_jefe_coordinador", "Coordinador");
+  if(!autorizado){ document.getElementById("tareas-coord-count").textContent = "—"; return; }
+  const actorId = miPersonal.id;
+  const misAsignadas = tareasData.filter(t=> t.asignado_por.id === actorId && t.destinatario_rol === "supervisor");
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
   const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
@@ -2877,25 +2906,25 @@ function trRenderCoordinador(){
 
   renderCumplimientoTable(document.querySelector("#tc-summary-table tbody"), misAsignadas, false);
 
-  const rowsSorted = [...misAsignadas].sort((a,b)=> b.fechaAsignacion.localeCompare(a.fechaAsignacion));
+  const rowsSorted = [...misAsignadas].sort((a,b)=> b.created_at.localeCompare(a.created_at));
   const tbody = document.querySelector("#tc-table tbody");
   tbody.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
     const e = tareaEstado(t);
     return `
     <tr>
       <td>${escapeHtml(t.titulo)}</td>
-      <td>${escapeHtml(t.destinatario)}</td>
-      <td>${escapeHtml(t.asignadoPor)}</td>
-      <td>${escapeHtml(t.fechaAsignacion)}</td>
-      <td>${escapeHtml(t.fechaLimite)}</td>
+      <td>${escapeHtml(t.destinatario.nombre_completo)}</td>
+      <td>${escapeHtml(t.asignado_por.nombre_completo)}</td>
+      <td>${formatDate(t.created_at.slice(0,10))}</td>
+      <td>${formatDate(t.fecha_limite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
       <td>${tareaEstadoBadge(e)}</td>
-      <td>${t.archivo ? "📎 " + escapeHtml(t.archivo) : "—"}</td>
+      <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
 
-  // Bandeja: tareas que la jefatura le asignó a este coordinador
-  const misPendientes = tareasData.filter(t=> t.destinatario === TAREAS_COORDINADOR_ACTUAL && t.destinatarioRol === "coordinador");
+  // Bandeja: tareas que la jefatura (u otro jefe/coordinador) le asignó a este actor
+  const misPendientes = tareasData.filter(t=> t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador");
   const inbox = document.getElementById("tc-inbox-list");
   inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCard(t)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
   inbox.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
@@ -2903,32 +2932,32 @@ function trRenderCoordinador(){
   });
 }
 
-document.getElementById("tarea-asignar-btn").addEventListener("click", ()=>{
+document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("tarea-form-error");
   errorEl.textContent = "";
   const titulo = document.getElementById("tarea-titulo").value.trim();
-  const destinatario = document.getElementById("tarea-supervisor").value;
+  const destinatarioId = document.getElementById("tarea-supervisor").value;
   const descripcion = document.getElementById("tarea-descripcion").value.trim();
   const fechaLimite = document.getElementById("tarea-fecha-limite").value;
   const prioridad = document.getElementById("tarea-prioridad").value;
-  if(!titulo || !destinatario || !descripcion || !fechaLimite){
+  const actorId = miPersonal ? miPersonal.id : null;
+  if(!titulo || !destinatarioId || !descripcion || !fechaLimite || !actorId){
     errorEl.textContent = "Completa título, supervisor, descripción y fecha límite.";
     return;
   }
-  tareasData.push({
-    id: tareaAutoId++,
-    titulo, descripcion, destinatario, destinatarioRol: "supervisor",
-    asignadoPor: TAREAS_COORDINADOR_ACTUAL, asignadoPorRol: "coordinador",
-    prioridad, fechaAsignacion: TAREAS_HOY, fechaLimite,
-    archivo: null, fechaFinalizacion: null,
+  const { error } = await sb.from("ssoma_tareas").insert({
+    titulo, descripcion,
+    destinatario_id: Number(destinatarioId), destinatario_rol: "supervisor",
+    asignado_por_id: actorId, asignado_por_rol: "jefe_coordinador",
+    prioridad, fecha_limite: fechaLimite,
   });
+  if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
   document.getElementById("tarea-titulo").value = "";
   document.getElementById("tarea-supervisor").value = "";
   document.getElementById("tarea-descripcion").value = "";
   document.getElementById("tarea-fecha-limite").value = "";
   document.getElementById("tarea-prioridad").value = "Media";
-  trRenderCoordinador();
-  trRenderSupervisor();
+  await trLoadTareas();
 });
 
 document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
@@ -2938,7 +2967,10 @@ document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
 });
 
 function trRenderJefatura(){
-  const misAsignadas = tareasData.filter(t=> t.asignadoPorRol === "jefatura");
+  const autorizado = trActorBox(document.getElementById("tj-actor-box"), document.getElementById("tj-content"), "puede_ser_jefe_coordinador", "Jefatura/Coordinador");
+  if(!autorizado){ document.getElementById("tareas-jefe-count").textContent = "—"; return; }
+  const actorId = miPersonal.id;
+  const misAsignadas = tareasData.filter(t=> t.asignado_por.id === actorId);
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
   const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
@@ -2953,25 +2985,25 @@ function trRenderJefatura(){
 
   renderCumplimientoTable(document.querySelector("#tj-summary-table tbody"), misAsignadas, true);
 
-  const rowsSorted = [...misAsignadas].sort((a,b)=> b.fechaAsignacion.localeCompare(a.fechaAsignacion));
+  const rowsSorted = [...misAsignadas].sort((a,b)=> b.created_at.localeCompare(a.created_at));
   const tbody = document.querySelector("#tj-table tbody");
   tbody.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
     const e = tareaEstado(t);
     return `
     <tr>
       <td>${escapeHtml(t.titulo)}</td>
-      <td>${escapeHtml(t.destinatario)}</td>
-      <td>${tareaRolLabel(t.destinatarioRol)}</td>
-      <td>${escapeHtml(t.fechaAsignacion)}</td>
-      <td>${escapeHtml(t.fechaLimite)}</td>
+      <td>${escapeHtml(t.destinatario.nombre_completo)}</td>
+      <td>${tareaRolLabel(t.destinatario_rol)}</td>
+      <td>${formatDate(t.created_at.slice(0,10))}</td>
+      <td>${formatDate(t.fecha_limite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
       <td>${tareaEstadoBadge(e)}</td>
-      <td>${t.archivo ? "📎 " + escapeHtml(t.archivo) : "—"}</td>
+      <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
 }
 
-document.getElementById("tj-asignar-btn").addEventListener("click", ()=>{
+document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("tj-form-error");
   errorEl.textContent = "";
   const titulo = document.getElementById("tj-titulo").value.trim();
@@ -2979,26 +3011,25 @@ document.getElementById("tj-asignar-btn").addEventListener("click", ()=>{
   const descripcion = document.getElementById("tj-descripcion").value.trim();
   const fechaLimite = document.getElementById("tj-fecha-limite").value;
   const prioridad = document.getElementById("tj-prioridad").value;
-  if(!titulo || !destinoRaw || !descripcion || !fechaLimite){
+  const actorId = miPersonal ? miPersonal.id : null;
+  if(!titulo || !destinoRaw || !descripcion || !fechaLimite || !actorId){
     errorEl.textContent = "Completa título, destinatario, descripción y fecha límite.";
     return;
   }
-  const [destinatarioRol, destinatario] = destinoRaw.split("|");
-  tareasData.push({
-    id: tareaAutoId++,
-    titulo, descripcion, destinatario, destinatarioRol,
-    asignadoPor: JEFE_ACTUAL, asignadoPorRol: "jefatura",
-    prioridad, fechaAsignacion: TAREAS_HOY, fechaLimite,
-    archivo: null, fechaFinalizacion: null,
+  const [destinatarioRol, destinatarioId] = destinoRaw.split("|");
+  const { error } = await sb.from("ssoma_tareas").insert({
+    titulo, descripcion,
+    destinatario_id: Number(destinatarioId), destinatario_rol: destinatarioRol,
+    asignado_por_id: actorId, asignado_por_rol: "jefe_coordinador",
+    prioridad, fecha_limite: fechaLimite,
   });
+  if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
   document.getElementById("tj-titulo").value = "";
   document.getElementById("tj-destinatario").value = "";
   document.getElementById("tj-descripcion").value = "";
   document.getElementById("tj-fecha-limite").value = "";
   document.getElementById("tj-prioridad").value = "Media";
-  trRenderJefatura();
-  trRenderCoordinador();
-  trRenderSupervisor();
+  await trLoadTareas();
 });
 
 document.getElementById("tj-summary-toggle").addEventListener("click", (e)=>{
@@ -3013,8 +3044,8 @@ function renderTareaCard(t){
   const e = tareaEstado(t);
   const footer = e === "finalizada"
     ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
-         <span class="evidencia-chip">📎 ${escapeHtml(t.archivo)}</span>
-         <span style="color:var(--muted);">Finalizada el ${escapeHtml(t.fechaFinalizacion)}</span>
+         <span class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</span>
+         <span style="color:var(--muted);">Finalizada el ${formatDate(t.finalizado_at.slice(0,10))}</span>
        </div>`
     : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
   return `
@@ -3022,7 +3053,7 @@ function renderTareaCard(t){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignadoPor)} (${tareaRolLabel(t.asignadoPorRol)}) · Límite ${escapeHtml(t.fechaLimite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignado_por.nombre_completo)} (${tareaRolLabel(t.asignado_por_rol)}) · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3032,8 +3063,10 @@ function renderTareaCard(t){
 }
 
 function trRenderSupervisor(){
-  const supSel = document.getElementById("ts-supervisor-select").value || TAREAS_SUPERVISORES[0];
-  const mis = tareasData.filter(t=> t.destinatario === supSel && t.destinatarioRol === "supervisor");
+  const autorizado = trActorBox(document.getElementById("ts-actor-box"), document.getElementById("ts-content"), "puede_supervisar", "Supervisor");
+  if(!autorizado){ document.getElementById("ts-count").textContent = "—"; return; }
+  const supSel = miPersonal.id;
+  const mis = tareasData.filter(t=> t.destinatario.id === supSel && t.destinatario_rol === "supervisor");
   const pendientes = mis.filter(t=>tareaEstado(t)==="pendiente");
   const vencidas = mis.filter(t=>tareaEstado(t)==="vencida");
   const finalizadas = mis.filter(t=>tareaEstado(t)==="finalizada");
@@ -3044,7 +3077,7 @@ function trRenderSupervisor(){
   document.getElementById("ts-stat-finalizadas").textContent = finalizadas.length;
 
   const list = document.getElementById("ts-list");
-  const rowsSorted = [...mis].sort((a,b)=> a.fechaLimite.localeCompare(b.fechaLimite));
+  const rowsSorted = [...mis].sort((a,b)=> a.fecha_limite.localeCompare(b.fecha_limite));
   list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t)).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
 
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
@@ -3084,21 +3117,16 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
     errorEl.textContent = "Formato no válido. Sube un Excel, Word o PDF.";
     return;
   }
-  const t = tareasData.find(x=>x.id === tfCurrentId);
-  t.archivo = file.name;
-  t.fechaFinalizacion = TAREAS_HOY;
-  tfCloseModal();
-  trRenderSupervisor();
-  trRenderCoordinador();
-  trRenderJefatura();
+  accReadFileAsDataUrl(file, async dataUrl => {
+    const { error } = await sb.from("ssoma_tareas").update({
+      archivo_cierre: { nombre: file.name, tipo: file.type, contenido: dataUrl },
+      finalizado_at: new Date().toISOString(),
+    }).eq("id", tfCurrentId);
+    if(error){ errorEl.textContent = "No se pudo finalizar la tarea: " + error.message; return; }
+    tfCloseModal();
+    await trLoadTareas();
+  });
 });
-
-document.getElementById("ts-supervisor-select").addEventListener("change", trRenderSupervisor);
-
-trRenderFilters();
-trRenderJefatura();
-trRenderCoordinador();
-trRenderSupervisor();
 
 /* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
 function spUpdateImportState(){
@@ -3920,7 +3948,7 @@ function renderAccidentesInformes(){
 
 async function init(){
   await loadCatalogos();
-  await Promise.all([loadReports(), loadCompReports(), loadAccidentes()]);
+  await Promise.all([loadReports(), loadCompReports(), loadAccidentes(), trLoadTareas()]);
   initImageWidget("acc");
 }
 
