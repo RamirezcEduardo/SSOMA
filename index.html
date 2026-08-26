@@ -332,6 +332,16 @@
     font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;
     color:var(--muted);margin:26px 0 10px;
   }
+  button.section-subhead.collapsible-toggle{
+    display:flex;align-items:center;gap:6px;
+    background:none;border:none;padding:0;cursor:pointer;
+    font-family:'Inter',sans-serif;width:auto;
+  }
+  button.section-subhead.collapsible-toggle:hover{color:var(--text);}
+  .collapsible-chevron{font-size:12px;transition:transform .18s ease;}
+  button.section-subhead.collapsible-toggle[aria-expanded="false"] .collapsible-chevron{transform:rotate(-90deg);}
+  .collapsible-body{overflow:hidden;max-height:600px;transition:max-height .2s ease;}
+  button.section-subhead.collapsible-toggle[aria-expanded="false"] + .collapsible-body{max-height:0;border-width:0;}
   .table-wrap{
     overflow-x:auto;
     border:1px solid var(--border);
@@ -1446,8 +1456,11 @@
         </div>
       </div>
 
-      <div class="section-subhead">Resumen por Turno · Supervisor · Sub Área</div>
-      <div class="table-wrap">
+      <button type="button" class="section-subhead collapsible-toggle" id="sp-summary-toggle" aria-expanded="false">
+        Resumen por Turno · Supervisor · Sub Área
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="sp-summary-wrap">
         <table class="data-table" id="sp-summary-table">
           <thead><tr><th>Turno</th><th>Supervisor</th><th>Sub Área</th><th>Proceso</th><th>Registros</th><th>Un. Ajust</th></tr></thead>
           <tbody></tbody>
@@ -2181,6 +2194,12 @@ spRenderFilters();
 spRender();
 document.getElementById("sp-f-semana").addEventListener("change", spRender);
 document.getElementById("sp-f-subarea").addEventListener("change", spRender);
+
+document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
 
 // toggle acto/condicion
 document.querySelectorAll("#racs-form .toggle-btn").forEach(btn=>{
