@@ -1056,7 +1056,7 @@
         <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
       </div>
 
-      <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="true" style="margin-top:10px;">
+      <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="false" style="margin-top:10px;">
         <span class="navgroup-icon">📦</span>
         <span class="navgroup-title">Inventario</span>
         <span class="navgroup-count" id="navgroup-inventario-count">4</span>
@@ -1069,7 +1069,7 @@
         <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
       </div>
 
-      <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="true" style="margin-top:10px;">
+      <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
         <span class="navgroup-icon">📋</span>
         <span class="navgroup-title">Designación de Tareas</span>
         <span class="navgroup-count" id="navgroup-tareas-count">3</span>
@@ -2494,9 +2494,11 @@ document.querySelectorAll(".navitem").forEach(btn=>{
   });
 });
 
-document.querySelectorAll(".navgroup-header").forEach(navgroupToggle=>{
+const allNavgroupToggles = document.querySelectorAll(".navgroup-header");
+allNavgroupToggles.forEach(navgroupToggle=>{
   navgroupToggle.addEventListener("click", ()=>{
     const expanded = navgroupToggle.getAttribute("aria-expanded") === "true";
+    allNavgroupToggles.forEach(btn=> btn.setAttribute("aria-expanded", "false"));
     navgroupToggle.setAttribute("aria-expanded", String(!expanded));
   });
 });
