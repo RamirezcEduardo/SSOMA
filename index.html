@@ -982,6 +982,16 @@
         <button class="navitem" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
       </div>
+
+      <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="true" style="margin-top:10px;">
+        <span class="navgroup-icon">📦</span>
+        <span class="navgroup-title">Inventario</span>
+        <span class="navgroup-count" id="navgroup-inventario-count">1</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-inventario-body">
+        <button class="navitem" data-view="inventario-epps"><span class="dot" style="background:#7C3AED;"></span><span class="label">Control de EPPs</span><span class="tag pending">Próximamente</span></button>
+      </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
       <div class="account-row">Usuario: <strong id="account-nombre"></strong></div>
@@ -1367,6 +1377,20 @@
 
       <div class="acc-view" id="acc-view-informes">
         <div id="acc-informes-list"></div>
+      </div>
+    </section>
+
+    <!-- INVENTARIO · CONTROL DE EPPS (placeholder) -->
+    <section class="panel" id="panel-inventario-epps">
+      <div class="section-head">
+        <h2 class="section-title">Inventario — Control de EPPs</h2>
+        <span class="count-pill">Próximamente</span>
+      </div>
+      <p class="section-desc">Entrega, renovación y seguimiento de equipos de protección personal. Este módulo está en construcción.</p>
+      <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
+        <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
+        <div style="font-size:12.5px;color:var(--muted);">Aquí vas a poder registrar entregas, tallas, vencimientos y stock de EPPs, igual que en Adecco-KPI.</div>
       </div>
     </section>
 
@@ -1960,10 +1984,11 @@ document.querySelectorAll(".navitem").forEach(btn=>{
   });
 });
 
-const navgroupToggle = document.getElementById("navgroup-ssoma-toggle");
-navgroupToggle.addEventListener("click", ()=>{
-  const expanded = navgroupToggle.getAttribute("aria-expanded") === "true";
-  navgroupToggle.setAttribute("aria-expanded", String(!expanded));
+document.querySelectorAll(".navgroup-header").forEach(navgroupToggle=>{
+  navgroupToggle.addEventListener("click", ()=>{
+    const expanded = navgroupToggle.getAttribute("aria-expanded") === "true";
+    navgroupToggle.setAttribute("aria-expanded", String(!expanded));
+  });
 });
 
 // toggle acto/condicion
