@@ -660,6 +660,8 @@
   .estado-badge.en-proceso::before{background:var(--orange);}
   .estado-badge.finalizado{background:var(--green-tint);color:var(--green);}
   .estado-badge.finalizado::before{background:var(--green);}
+  .estado-badge.parcial{background:var(--blue-tint);color:var(--blue);}
+  .estado-badge.parcial::before{background:var(--blue);}
 
   .lev-tab{background:var(--panel);}
   .lev-tab.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
@@ -1057,11 +1059,12 @@
       <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="true" style="margin-top:10px;">
         <span class="navgroup-icon">📦</span>
         <span class="navgroup-title">Inventario</span>
-        <span class="navgroup-count" id="navgroup-inventario-count">3</span>
+        <span class="navgroup-count" id="navgroup-inventario-count">4</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-inventario-body">
         <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="inventario-conciliacion-shortpick"><span class="dot" style="background:#16A34A;"></span><span class="label">Conciliación Shortpick</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
       </div>
@@ -1544,9 +1547,46 @@
         <span class="ic">📌</span>
         <div>
           Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
-          <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO). Cuando no hay match (como la última fila), no se puede conciliar y su valor sale del "Valorizado total" pero no del "Valor conciliado".</div>
+          <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
           <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (tabla VALOR) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
+          <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en <b>Conciliación Shortpick</b> — solo cuenta la cantidad realmente encontrada.</div>
         </div>
+      </div>
+    </section>
+
+    <!-- INVENTARIO · CONCILIACIÓN SHORTPICK -->
+    <section class="panel" id="panel-inventario-conciliacion-shortpick">
+      <div class="section-head">
+        <h2 class="section-title">Inventario — Conciliación Shortpick</h2>
+        <span class="count-pill" id="conc-count">0 pendientes</span>
+      </div>
+      <p class="section-desc">Verifica físicamente cada faltante reportado por el WMS: sube una foto del producto encontrado e indica si recuperaste la cantidad completa o solo una parte. Solo lo encontrado se resta del valorizado como "conciliado".</p>
+
+      <div class="stats-row stats-row-3" style="margin-top:18px;">
+        <div class="stat-card">
+          <div class="stat-label">Pendientes de verificar</div>
+          <div class="stat-value" id="conc-stat-pendientes" style="color:#B45309;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Verificados</div>
+          <div class="stat-value" id="conc-stat-verificados" style="color:#16A34A;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valor conciliado</div>
+          <div class="stat-value" id="conc-stat-valor">S/ 0</div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:18px;">
+        <table class="data-table" id="conc-table">
+          <thead><tr><th>Fe y Hr Crea</th><th>Cod Alternat</th><th>Descripción</th><th>Ubicación</th><th>Cant. WMS</th><th>Estado</th><th>Cant. encontrada</th><th>Evidencia</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="help-tip" style="margin-top:18px;max-width:640px;">
+        <span class="ic">📌</span>
+        <div>Este resumen es dinámico: toma los mismos registros de <b>Auditoría Shortpick</b>. Lo que conciles aquí es lo que alimenta el KPI "Valor conciliado" de ese módulo.</div>
       </div>
     </section>
 
@@ -1683,6 +1723,42 @@
         </ul>
         <div class="help-tip"><span class="ic">💡</span>Todos los formularios replican la estructura de los Google Forms oficiales del equipo SSOMA, así que la información que ya conoces de esos formularios aplica igual aquí.</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="conc-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>Verificar producto</h3>
+      <button class="modal-close" id="conc-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mrow"><b>Producto</b><span id="conc-modal-producto"></span></div>
+      <div class="mrow"><b>Ubicación</b><span id="conc-modal-ubicacion"></span></div>
+      <div class="mrow"><b>Cantidad faltante (WMS)</b><span id="conc-modal-cantidad"></span></div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Foto del producto encontrado</label>
+        <input type="file" accept="image/*" id="conc-foto">
+      </div>
+
+      <div class="field">
+        <label>¿Encontró la totalidad del producto?</label>
+        <div class="toggle-group">
+          <button type="button" class="toggle-btn" id="conc-btn-completo" data-val="completo">Sí, completo</button>
+          <button type="button" class="toggle-btn" id="conc-btn-parcial" data-val="parcial">No, fue parcial</button>
+        </div>
+      </div>
+
+      <div class="field" id="conc-cantidad-wrap" style="display:none;">
+        <label>Cantidad encontrada</label>
+        <input type="number" id="conc-cantidad-encontrada" min="0" step="1">
+        <div class="hint" id="conc-cantidad-hint"></div>
+      </div>
+
+      <span class="login-error" id="conc-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="conc-guardar-btn" style="width:100%;margin-top:6px;">Guardar verificación</button>
     </div>
   </div>
 </div>
@@ -1997,7 +2073,7 @@ document.getElementById("help-modal").addEventListener("click", (e)=>{
 });
 
 document.addEventListener("keydown", (e)=>{
-  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); closeHelpModal(); }
+  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); closeHelpModal(); concCloseModal(); }
 });
 
 function downloadReport(id){
@@ -2205,6 +2281,16 @@ function spValorizado(row){
 }
 const spOverrides = {};
 
+/* ---- Conciliación Shortpick: verificación física por fila ----
+   verificaciones[id] = { estado: "completo"|"parcial", cantidadEncontrada, fotoNombre, fecha }
+   Solo la cantidad realmente encontrada se resta del valorizado como "conciliado". */
+const verificaciones = {};
+function concValorConciliadoRow(row){
+  const v = verificaciones[row.id];
+  if(!v) return 0;
+  return spCosto(row.codAlternat) * v.cantidadEncontrada;
+}
+
 const spData = [
   {id:1,  fecha:"2026-05-21 21:44:19", codAlternat:"137684", desc:"CICATRICURE CR ACQUA DEFENS NOCH PTEX50G", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
   {id:2,  fecha:"2026-05-21 21:03:08", codAlternat:"101825", desc:"CLARITROMICINA PTG. 500MG TAB CJAX100UND", ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
@@ -2245,7 +2331,7 @@ function spRender(){
   const valorizadoTotal = rows.reduce((s,r)=>s+spValorizado(r),0);
   document.getElementById("sp-stat-valorizado").textContent = "S/ " + valorizadoTotal.toFixed(2);
 
-  const valorConciliado = rows.reduce((s,r)=> s + (spProceso(r.orden) !== "—" ? spValorizado(r) : 0), 0);
+  const valorConciliado = rows.reduce((s,r)=> s + concValorConciliadoRow(r), 0);
   document.getElementById("sp-stat-conciliado").textContent = "S/ " + valorConciliado.toFixed(2);
 
   const reduccionPct = valorizadoTotal > 0 ? ((valorizadoTotal - valorConciliado) / valorizadoTotal) * 100 : 0;
@@ -2316,6 +2402,136 @@ document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const expanded = btn.getAttribute("aria-expanded") === "true";
   btn.setAttribute("aria-expanded", String(!expanded));
 });
+
+/* ---- Conciliación Shortpick ---- */
+function concEstadoBadge(v){
+  if(!v) return '<span class="estado-badge pendiente">Pendiente</span>';
+  if(v.estado === "completo") return '<span class="estado-badge finalizado">Completo</span>';
+  return '<span class="estado-badge parcial">Parcial</span>';
+}
+
+function spRenderConc(){
+  const rowsSorted = [...spData].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+
+  let pendientes = 0, verificados = 0, valorConciliado = 0;
+  spData.forEach(r=>{
+    if(verificaciones[r.id]) verificados++; else pendientes++;
+    valorConciliado += concValorConciliadoRow(r);
+  });
+  document.getElementById("conc-count").textContent = pendientes + (pendientes===1 ? " pendiente" : " pendientes");
+  document.getElementById("conc-stat-pendientes").textContent = pendientes;
+  document.getElementById("conc-stat-verificados").textContent = verificados;
+  document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
+
+  const tbody = document.querySelector("#conc-table tbody");
+  tbody.innerHTML = rowsSorted.map(r=>{
+    const v = verificaciones[r.id];
+    const cantWms = Math.abs(r.unajust);
+    return `
+    <tr>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.codAlternat)}</td>
+      <td>${escapeHtml(r.desc)}</td>
+      <td>${escapeHtml(r.ubicacion)}</td>
+      <td class="num">${cantWms}</td>
+      <td>${concEstadoBadge(v)}</td>
+      <td class="num">${v ? v.cantidadEncontrada : "—"}</td>
+      <td>${v && v.fotoNombre ? "📎 " + escapeHtml(v.fotoNombre) : "—"}</td>
+      <td><button type="button" class="btn btn-ghost conc-verificar-btn" data-id="${r.id}" style="padding:6px 12px;font-size:11.5px;">${v ? "Editar" : "Verificar"}</button></td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll(".conc-verificar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> concOpenModal(Number(btn.dataset.id)));
+  });
+}
+
+let concCurrentRowId = null;
+
+function concOpenModal(rowId){
+  const row = spData.find(r=>r.id === rowId);
+  if(!row) return;
+  concCurrentRowId = rowId;
+  const cantWms = Math.abs(row.unajust);
+
+  document.getElementById("conc-modal-producto").textContent = row.codAlternat + " — " + row.desc;
+  document.getElementById("conc-modal-ubicacion").textContent = row.ubicacion;
+  document.getElementById("conc-modal-cantidad").textContent = cantWms + (cantWms===1 ? " unidad" : " unidades");
+  document.getElementById("conc-cantidad-hint").textContent = "Máximo " + cantWms + " unidades";
+  document.getElementById("conc-cantidad-encontrada").max = cantWms;
+  document.getElementById("conc-modal-error").textContent = "";
+  document.getElementById("conc-foto").value = "";
+
+  document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("conc-cantidad-wrap").style.display = "none";
+  document.getElementById("conc-cantidad-encontrada").value = "";
+
+  const existing = verificaciones[rowId];
+  if(existing){
+    if(existing.estado === "completo"){
+      document.getElementById("conc-btn-completo").classList.add("active");
+    }else{
+      document.getElementById("conc-btn-parcial").classList.add("active");
+      document.getElementById("conc-cantidad-wrap").style.display = "block";
+      document.getElementById("conc-cantidad-encontrada").value = existing.cantidadEncontrada;
+    }
+  }
+  document.getElementById("conc-modal").classList.add("show");
+}
+function concCloseModal(){
+  document.getElementById("conc-modal").classList.remove("show");
+  concCurrentRowId = null;
+}
+document.getElementById("conc-modal-close").addEventListener("click", concCloseModal);
+document.getElementById("conc-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "conc-modal") concCloseModal();
+});
+
+document.querySelectorAll("#conc-modal .toggle-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("conc-cantidad-wrap").style.display = btn.dataset.val === "parcial" ? "block" : "none";
+  });
+});
+
+document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
+  const errorEl = document.getElementById("conc-modal-error");
+  errorEl.textContent = "";
+  if(concCurrentRowId == null) return;
+  const row = spData.find(r=>r.id === concCurrentRowId);
+  const cantWms = Math.abs(row.unajust);
+
+  const activeBtn = document.querySelector("#conc-modal .toggle-btn.active");
+  if(!activeBtn){
+    errorEl.textContent = "Indica si encontró la totalidad del producto o fue parcial.";
+    return;
+  }
+  const estado = activeBtn.dataset.val;
+  let cantidadEncontrada = cantWms;
+  if(estado === "parcial"){
+    cantidadEncontrada = parseInt(document.getElementById("conc-cantidad-encontrada").value, 10);
+    if(isNaN(cantidadEncontrada) || cantidadEncontrada < 0 || cantidadEncontrada > cantWms){
+      errorEl.textContent = `Ingresa una cantidad encontrada válida (entre 0 y ${cantWms}).`;
+      return;
+    }
+  }
+
+  const fotoInput = document.getElementById("conc-foto");
+  const previa = verificaciones[concCurrentRowId];
+  const fotoNombre = fotoInput.files[0] ? fotoInput.files[0].name : (previa ? previa.fotoNombre : "");
+  if(!fotoNombre){
+    errorEl.textContent = "Sube una foto del producto encontrado.";
+    return;
+  }
+
+  verificaciones[concCurrentRowId] = { estado, cantidadEncontrada, fotoNombre, fecha: new Date().toISOString() };
+  concCloseModal();
+  spRenderConc();
+  spRender();
+});
+
+spRenderConc();
 
 /* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
 function spUpdateImportState(){
