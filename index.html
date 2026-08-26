@@ -362,6 +362,13 @@
   table.data-table tbody tr:last-child td{border-bottom:none;}
   table.data-table tbody tr:hover td{background:var(--panel-alt);}
   table.data-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  input.sp-valor-input{
+    width:88px;padding:4px 6px;font-size:12.5px;text-align:right;
+    border:1px solid transparent;background:transparent;border-radius:6px;
+    font-family:'IBM Plex Mono',monospace;color:var(--text);
+  }
+  input.sp-valor-input:hover{border-color:var(--border);background:var(--panel-alt);}
+  input.sp-valor-input:focus{border-color:var(--red);background:var(--panel);box-shadow:0 0 0 3px rgba(227,30,36,.12);}
 
   .import-card{
     background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;
@@ -392,6 +399,7 @@
   .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 16px 14px;box-shadow:var(--shadow);}
   .stat-label{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:700;}
   .stat-value{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:600;margin:6px 0 2px;}
+  .stat-sublabel{font-size:11px;color:var(--red);font-weight:700;}
   .stat-sub{font-size:12px;color:var(--muted);}
 
   .section-head{
@@ -1489,7 +1497,7 @@
         </div>
       </div>
 
-      <div class="stats-row stats-row-4" style="margin-top:18px;">
+      <div class="stats-row" style="margin-top:18px;">
         <div class="stat-card">
           <div class="stat-label">Registros</div>
           <div class="stat-value" id="sp-stat-registros">0</div>
@@ -1499,8 +1507,13 @@
           <div class="stat-value" id="sp-stat-unidades">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Valor estimado</div>
-          <div class="stat-value" id="sp-stat-valor">S/ 0</div>
+          <div class="stat-label">Valorizado total</div>
+          <div class="stat-value" id="sp-stat-valorizado">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valor conciliado</div>
+          <div class="stat-value" id="sp-stat-conciliado">S/ 0</div>
+          <div class="stat-sublabel" id="sp-stat-reduccion">-0% vs. valorizado total</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Sub área con más SP</div>
@@ -1522,7 +1535,7 @@
       <div class="section-subhead">Detalle</div>
       <div class="table-wrap">
         <table class="data-table" id="sp-detail-table">
-          <thead><tr><th>Fe y Hr Crea</th><th>Producto</th><th>Descripción</th><th>Ubicación</th><th>Sub Área</th><th>Turno</th><th>Responsable</th><th>Supervisor</th><th>Nro Orden</th><th>Proceso*</th><th>Un Ajust</th><th>Semana</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Fe y Hr Crea</th><th>Cod Alternat</th><th>Descripción</th><th>Ubicación</th><th>Sub Área</th><th>Turno</th><th>Responsable</th><th>Supervisor</th><th>Nro Orden</th><th>Proceso*</th><th>Un Ajust</th><th>Valorizado (S/)**</th><th>Semana</th><th>Estado</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -1531,7 +1544,8 @@
         <span class="ic">📌</span>
         <div>
           Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
-          <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
+          <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO). Cuando no hay match (como la última fila), no se puede conciliar y su valor sale del "Valorizado total" pero no del "Valor conciliado".</div>
+          <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (tabla VALOR) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
         </div>
       </div>
     </section>
@@ -2169,17 +2183,39 @@ const TB_PROCESO = {QRE:"B2B", P15:"B2C", TXF:"B2C", TXD:"B2C", Q69:"B2B", P21:"
 function spSubProceso(orden){ return (orden || "").slice(0, 3); }
 function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
 
+/* Costos reales tomados de tu hoja VALOR (Cod Alternat -> Costo unitario).
+   Valorizado = Costo(Cod Alternat) x |Un Ajust| — igual que tu fórmula BUSCARV(...VALOR...)*Un Ajust */
+const VALOR_COSTOS = {
+  "137684": 38.07,    // CICATRICURE CR ACQUA DEFENS NOCH PTEX50G
+  "101825": 55.08,    // CLARITROMICINA PTG. 500MG TAB CJAX100UND
+  "131851": 9.33,     // SKALA CR TRAT KERATINA PTE 1 KG
+  "130233": 24.83,    // CHICCO TIJERA ,PROTECTOR 0, UNIDAD
+  "139175": 2.52,     // CLUNY BODY LOT FCOX200ML, KISS ME
+  "140524": 28.65,    // LIFE F. MEN TINT 35ML CX2U, #03 DARK BRO
+  "136222": 13.21,    // CEFALOGEN 1 GR IM FCO VIAL (D)
+  "106210": 36.76,    // NOVACILINA 500MG COP REC CJAX7UND
+  "103759": 13.47,    // GILL.MACH3 REP.AFEI CJAX2UND
+  "138154": 9.61,     // BABARIA LECHE LIMP ROSA MOSQ FCO 300ML
+};
+function spCosto(codAlternat){ return VALOR_COSTOS[codAlternat] || 0; }
+function spValorizado(row){
+  const override = spOverrides[row.id];
+  if(override !== undefined) return override;
+  return spCosto(row.codAlternat) * Math.abs(row.unajust);
+}
+const spOverrides = {};
+
 const spData = [
-  {fecha:"2026-05-21 21:44:19", producto:"7509546000985", desc:"COLG TRIP ACC CR DEN", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, valor:44.90,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 21:03:08", producto:"8850769011975", desc:"LIVOLIN FORTE CAP BL",  ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  valor:69.14,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-20 09:12:41", producto:"7702425540897", desc:"HUGG RN TLLA HUM EXT A", ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"P150198765432", unajust:-14, valor:161.48, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-20 10:47:03", producto:"7702031291565", desc:"JOHN BABY NF SH ORIGIN", ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      orden:"TXF0201122334", unajust:-2,  valor:25.95,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 14:30:55", producto:"7756969000034", desc:"GUANTES EXAMEN LATEX A", ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  orden:"Q020345566778", unajust:-1,  valor:12.00,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 19:05:12", producto:"7501234567890", desc:"DETERG LIQ ROPA 900ML",  ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           orden:"Q240456677889", unajust:-6,  valor:39.60,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-19 16:22:37", producto:"7789456123789", desc:"SHAMP ANTICASPA 400ML",  ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      orden:"Q210567788990", unajust:-3,  valor:70.56,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-19 08:50:19", producto:"7845123698741", desc:"CREMA DENTAL 90G",       ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         orden:"TXD0678899001", unajust:-8,  valor:31.20,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 22:18:44", producto:"7123456789012", desc:"PAÑAL ADULTO TALLA M",   ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"P210789900112", unajust:-5,  valor:58.30,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-20 13:04:27", producto:"7998877665544", desc:"JABON LIQ MANOS 250ML",  ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"QRE0890011223", unajust:-4,  valor:22.80,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:1,  fecha:"2026-05-21 21:44:19", codAlternat:"137684", desc:"CICATRICURE CR ACQUA DEFENS NOCH PTEX50G", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:2,  fecha:"2026-05-21 21:03:08", codAlternat:"101825", desc:"CLARITROMICINA PTG. 500MG TAB CJAX100UND", ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:3,  fecha:"2026-05-20 09:12:41", codAlternat:"131851", desc:"SKALA CR TRAT KERATINA PTE 1 KG",          ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"P150198765432", unajust:-14, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:4,  fecha:"2026-05-20 10:47:03", codAlternat:"130233", desc:"CHICCO TIJERA ,PROTECTOR 0, UNIDAD",       ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      orden:"TXF0201122334", unajust:-2,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:5,  fecha:"2026-05-21 14:30:55", codAlternat:"139175", desc:"CLUNY BODY LOT FCOX200ML, KISS ME",        ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  orden:"Q020345566778", unajust:-1,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:6,  fecha:"2026-05-21 19:05:12", codAlternat:"140524", desc:"LIFE F. MEN TINT 35ML CX2U, #03 DARK BRO", ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           orden:"Q240456677889", unajust:-6,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:7,  fecha:"2026-05-19 16:22:37", codAlternat:"136222", desc:"CEFALOGEN 1 GR IM FCO VIAL (D)",           ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      orden:"Q210567788990", unajust:-3,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:8,  fecha:"2026-05-19 08:50:19", codAlternat:"106210", desc:"NOVACILINA 500MG COP REC CJAX7UND",        ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         orden:"TXD0678899001", unajust:-8,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:9,  fecha:"2026-05-21 22:18:44", codAlternat:"103759", desc:"GILL.MACH3 REP.AFEI CJAX2UND",             ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"P210789900112", unajust:-5,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:10, fecha:"2026-05-20 13:04:27", codAlternat:"138154", desc:"BABARIA LECHE LIMP ROSA MOSQ FCO 300ML",   ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"ZZZ0890011223", unajust:-4,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
 ];
 
 function spRenderFilters(){
@@ -2206,8 +2242,14 @@ function spRender(){
   const totalUnidades = rows.reduce((s,r)=>s+Math.abs(r.unajust),0);
   document.getElementById("sp-stat-unidades").textContent = totalUnidades;
 
-  const totalValor = rows.reduce((s,r)=>s+r.valor,0);
-  document.getElementById("sp-stat-valor").textContent = "S/ " + totalValor.toFixed(2);
+  const valorizadoTotal = rows.reduce((s,r)=>s+spValorizado(r),0);
+  document.getElementById("sp-stat-valorizado").textContent = "S/ " + valorizadoTotal.toFixed(2);
+
+  const valorConciliado = rows.reduce((s,r)=> s + (spProceso(r.orden) !== "—" ? spValorizado(r) : 0), 0);
+  document.getElementById("sp-stat-conciliado").textContent = "S/ " + valorConciliado.toFixed(2);
+
+  const reduccionPct = valorizadoTotal > 0 ? ((valorizadoTotal - valorConciliado) / valorizadoTotal) * 100 : 0;
+  document.getElementById("sp-stat-reduccion").textContent = `-${reduccionPct.toFixed(1)}% vs. valorizado total`;
 
   const porSubarea = {};
   rows.forEach(r=>{ porSubarea[r.subarea] = (porSubarea[r.subarea]||0) + 1; });
@@ -2239,7 +2281,7 @@ function spRender(){
   detailBody.innerHTML = rowsSorted.length ? rowsSorted.map(r => `
     <tr>
       <td>${escapeHtml(r.fecha)}</td>
-      <td>${escapeHtml(r.producto)}</td>
+      <td>${escapeHtml(r.codAlternat)}</td>
       <td>${escapeHtml(r.desc)}</td>
       <td>${escapeHtml(r.ubicacion)}</td>
       <td>${escapeHtml(r.subarea)}</td>
@@ -2249,9 +2291,19 @@ function spRender(){
       <td>${escapeHtml(r.orden)}</td>
       <td title="Calculado: BUSCARV(primeros 3 caracteres de Nro Orden, TB_PROCESO)">${escapeHtml(spProceso(r.orden))}</td>
       <td class="num">${r.unajust}</td>
+      <td class="num"><input type="number" step="0.01" class="sp-valor-input" data-id="${r.id}" value="${spValorizado(r).toFixed(2)}" title="Editable: ajusta si hay una variación frente al costo de la tabla VALOR"></td>
       <td>${escapeHtml(r.semana)}</td>
       <td>${escapeHtml(r.estado)}</td>
-    </tr>`).join("") : `<tr><td colspan="13" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
+    </tr>`).join("") : `<tr><td colspan="14" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
+
+  detailBody.querySelectorAll(".sp-valor-input").forEach(input=>{
+    input.addEventListener("change", (e)=>{
+      const id = Number(e.target.dataset.id);
+      const val = parseFloat(e.target.value);
+      spOverrides[id] = isNaN(val) ? undefined : val;
+      spRender();
+    });
+  });
 }
 
 spRenderFilters();
