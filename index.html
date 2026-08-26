@@ -1068,6 +1068,17 @@
         <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
       </div>
+
+      <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="true" style="margin-top:10px;">
+        <span class="navgroup-icon">📋</span>
+        <span class="navgroup-title">Designación de Tareas</span>
+        <span class="navgroup-count" id="navgroup-tareas-count">2</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-tareas-body">
+        <button class="navitem" data-view="tareas-coordinador"><span class="dot" style="background:#2563EB;"></span><span class="label">Coordinador · Asignar Tareas</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="tareas-supervisor"><span class="dot" style="background:#16A34A;"></span><span class="label">Supervisor · Mis Tareas</span><span class="tag pending">Próximamente</span></button>
+      </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
       <div class="account-row">Usuario: <strong id="account-nombre"></strong></div>
@@ -1618,6 +1629,127 @@
       </div>
     </section>
 
+    <!-- DESIGNACIÓN DE TAREAS · VISTA COORDINADOR -->
+    <section class="panel" id="panel-tareas-coordinador">
+      <div class="section-head">
+        <h2 class="section-title">Designación de Tareas — Vista Coordinador</h2>
+        <span class="count-pill" id="tareas-coord-count">0 tareas activas</span>
+      </div>
+      <p class="section-desc">Asigna tareas a los supervisores, dales seguimiento y mide su cumplimiento. Cada supervisor debe subir el archivo correspondiente (Excel, Word o PDF) para dar por finalizada su tarea.</p>
+
+      <div class="import-card" style="margin-top:16px;">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">➕ Nueva tarea</div>
+            <div class="import-card-sub">Arma la solicitud y asígnala a un supervisor.</div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field" style="margin-bottom:0;">
+            <label>Título de la tarea<span class="req">*</span></label>
+            <input type="text" id="tarea-titulo" placeholder="Ej. Actualizar checklist de EPP">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Supervisor<span class="req">*</span></label>
+            <select id="tarea-supervisor"><option value="">Selecciona…</option></select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px;margin-bottom:0;">
+          <label>Descripción<span class="req">*</span></label>
+          <textarea id="tarea-descripcion" placeholder="Detalla qué se espera del supervisor"></textarea>
+        </div>
+        <div class="grid2" style="margin-top:16px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Fecha límite<span class="req">*</span></label>
+            <input type="date" id="tarea-fecha-limite">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Prioridad</label>
+            <select id="tarea-prioridad">
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+        </div>
+        <span class="login-error" id="tarea-form-error"></span>
+        <button type="button" class="btn btn-primary" id="tarea-asignar-btn" style="margin-top:8px;">Asignar tarea</button>
+      </div>
+
+      <div class="stats-row" style="margin-top:22px;">
+        <div class="stat-card">
+          <div class="stat-label">Tareas asignadas</div>
+          <div class="stat-value" id="tc-stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Finalizadas</div>
+          <div class="stat-value" id="tc-stat-finalizadas" style="color:#16A34A;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pendientes</div>
+          <div class="stat-value" id="tc-stat-pendientes" style="color:#B45309;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Vencidas</div>
+          <div class="stat-value" id="tc-stat-vencidas" style="color:#DC2626;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cumplimiento</div>
+          <div class="stat-value" id="tc-stat-cumplimiento">0%</div>
+        </div>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="tc-summary-toggle" aria-expanded="false">
+        Cumplimiento por supervisor
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="tc-summary-wrap">
+        <table class="data-table" id="tc-summary-table">
+          <thead><tr><th>Supervisor</th><th>Asignadas</th><th>Finalizadas</th><th>Vencidas</th><th>% Cumplimiento</th><th>Tiempo prom. (días)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-subhead">Todas las tareas</div>
+      <div class="table-wrap">
+        <table class="data-table" id="tc-table">
+          <thead><tr><th>Título</th><th>Supervisor</th><th>Coordinador</th><th>Asignada</th><th>Límite</th><th>Prioridad</th><th>Estado</th><th>Evidencia</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DESIGNACIÓN DE TAREAS · VISTA SUPERVISOR -->
+    <section class="panel" id="panel-tareas-supervisor">
+      <div class="section-head">
+        <h2 class="section-title">Designación de Tareas — Bandeja del Supervisor</h2>
+        <span class="count-pill" id="ts-count">0 pendientes</span>
+      </div>
+      <p class="section-desc">Revisa las tareas que te asignó tu coordinador. Para darlas por finalizadas, sube el archivo correspondiente (Excel, Word o PDF).</p>
+
+      <div class="field" style="max-width:280px;margin-top:16px;">
+        <label>Viendo bandeja de</label>
+        <select id="ts-supervisor-select"></select>
+      </div>
+
+      <div class="stats-row stats-row-3" style="margin-top:6px;">
+        <div class="stat-card">
+          <div class="stat-label">Pendientes</div>
+          <div class="stat-value" id="ts-stat-pendientes" style="color:#B45309;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Vencidas</div>
+          <div class="stat-value" id="ts-stat-vencidas" style="color:#DC2626;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Finalizadas</div>
+          <div class="stat-value" id="ts-stat-finalizadas" style="color:#16A34A;">0</div>
+        </div>
+      </div>
+
+      <div id="ts-list" style="margin-top:18px;display:flex;flex-direction:column;gap:12px;"></div>
+    </section>
+
   </main>
 </div>
 
@@ -1759,6 +1891,24 @@
 
       <span class="login-error" id="conc-modal-error"></span>
       <button type="button" class="btn btn-primary" id="conc-guardar-btn" style="width:100%;margin-top:6px;">Guardar verificación</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tarea-finalizar-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-head">
+      <h3>Finalizar tarea</h3>
+      <button class="modal-close" id="tarea-finalizar-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mrow"><b>Tarea</b><span id="tf-modal-titulo"></span></div>
+      <div class="field" style="margin-top:16px;">
+        <label>Archivo de sustento (Excel, Word o PDF)<span class="req">*</span></label>
+        <input type="file" id="tf-archivo" accept=".xlsx,.xls,.docx,.doc,.pdf">
+      </div>
+      <span class="login-error" id="tf-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="tf-guardar-btn" style="width:100%;margin-top:6px;">Marcar como finalizada</button>
     </div>
   </div>
 </div>
@@ -2073,7 +2223,7 @@ document.getElementById("help-modal").addEventListener("click", (e)=>{
 });
 
 document.addEventListener("keydown", (e)=>{
-  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); closeHelpModal(); concCloseModal(); }
+  if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); closeHelpModal(); concCloseModal(); tfCloseModal(); }
 });
 
 function downloadReport(id){
@@ -2532,6 +2682,216 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
 });
 
 spRenderConc();
+
+/* ---- Designación de Tareas ---- */
+const TAREAS_SUPERVISORES = ["Clinton Huere", "José Lavado", "Elizabet Salinas", "Nancy Elena Bautista"];
+const TAREAS_HOY = "2026-08-26";
+const TAREAS_COORDINADOR_ACTUAL = "Miguel Torres";
+
+let tareaAutoId = 9;
+const tareasData = [
+  {id:1, titulo:"Actualizar checklist de EPP", descripcion:"Revisar y actualizar el checklist de entrega de EPP del área EB.", supervisor:"Clinton Huere", coordinador:"Miguel Torres", prioridad:"Alta", fechaAsignacion:"2026-08-18", fechaLimite:"2026-08-22", archivo:null, fechaFinalizacion:null},
+  {id:2, titulo:"Enviar reporte semanal de accidentabilidad", descripcion:"Consolidar los RACS de la semana y enviar el reporte a Gerencia.", supervisor:"José Lavado", coordinador:"Miguel Torres", prioridad:"Media", fechaAsignacion:"2026-08-22", fechaLimite:"2026-08-28", archivo:null, fechaFinalizacion:null},
+  {id:3, titulo:"Auditoría de extintores zona B", descripcion:"Verificar vigencia y estado de los extintores de la zona B.", supervisor:"Elizabet Salinas", coordinador:"Patricia Vega", prioridad:"Alta", fechaAsignacion:"2026-08-15", fechaLimite:"2026-08-19", archivo:"auditoria_extintores_zonaB.pdf", fechaFinalizacion:"2026-08-18"},
+  {id:4, titulo:"Capacitación de nuevos ingresos - evidencia", descripcion:"Subir la lista de asistencia firmada de la capacitación SSOMA a nuevos ingresos.", supervisor:"Nancy Elena Bautista", coordinador:"Patricia Vega", prioridad:"Media", fechaAsignacion:"2026-08-19", fechaLimite:"2026-08-23", archivo:"asistencia_induccion_ago.pdf", fechaFinalizacion:"2026-08-21"},
+  {id:5, titulo:"Revisar cierre de RACS pendientes", descripcion:"Cerrar los levantamientos de RACS que llevan más de 5 días abiertos en su turno.", supervisor:"Clinton Huere", coordinador:"Patricia Vega", prioridad:"Alta", fechaAsignacion:"2026-08-12", fechaLimite:"2026-08-16", archivo:null, fechaFinalizacion:null},
+  {id:6, titulo:"Reporte de clima laboral — EB", descripcion:"Enviar el consolidado de la encuesta de clima laboral del área EB.", supervisor:"José Lavado", coordinador:"Miguel Torres", prioridad:"Baja", fechaAsignacion:"2026-08-21", fechaLimite:"2026-08-25", archivo:"clima_laboral_EB.xlsx", fechaFinalizacion:"2026-08-24"},
+  {id:7, titulo:"Verificación de señalización — pasillos EA", descripcion:"Revisar que la señalización de seguridad esté completa en los pasillos del área EA.", supervisor:"Elizabet Salinas", coordinador:"Patricia Vega", prioridad:"Media", fechaAsignacion:"2026-08-23", fechaLimite:"2026-08-29", archivo:null, fechaFinalizacion:null},
+  {id:8, titulo:"Plan de acción — índice de accidentabilidad", descripcion:"Elaborar plan de acción para reducir el índice de accidentabilidad del turno noche.", supervisor:"Nancy Elena Bautista", coordinador:"Miguel Torres", prioridad:"Alta", fechaAsignacion:"2026-08-10", fechaLimite:"2026-08-14", archivo:null, fechaFinalizacion:null},
+];
+
+function tareaEstado(t){
+  if(t.archivo) return "finalizada";
+  if(t.fechaLimite < TAREAS_HOY) return "vencida";
+  return "pendiente";
+}
+function tareaEstadoBadge(estado){
+  if(estado === "finalizada") return '<span class="estado-badge finalizado">Finalizada</span>';
+  if(estado === "vencida") return '<span class="estado-badge tipo-accidente">Vencida</span>';
+  return '<span class="estado-badge pendiente">Pendiente</span>';
+}
+function tareaDiasEntre(a,b){
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+function trRenderFilters(){
+  const sel1 = document.getElementById("tarea-supervisor");
+  const sel2 = document.getElementById("ts-supervisor-select");
+  TAREAS_SUPERVISORES.forEach(s=>{
+    const o1 = document.createElement("option"); o1.value = s; o1.textContent = s; sel1.appendChild(o1);
+    const o2 = document.createElement("option"); o2.value = s; o2.textContent = s; sel2.appendChild(o2);
+  });
+}
+
+function trRenderCoordinador(){
+  const total = tareasData.length;
+  const finalizadas = tareasData.filter(t=>tareaEstado(t)==="finalizada");
+  const vencidas = tareasData.filter(t=>tareaEstado(t)==="vencida");
+  const pendientes = tareasData.filter(t=>tareaEstado(t)==="pendiente");
+
+  document.getElementById("tareas-coord-count").textContent = (total - finalizadas.length) + " tareas activas";
+  document.getElementById("tc-stat-total").textContent = total;
+  document.getElementById("tc-stat-finalizadas").textContent = finalizadas.length;
+  document.getElementById("tc-stat-pendientes").textContent = pendientes.length;
+  document.getElementById("tc-stat-vencidas").textContent = vencidas.length;
+  document.getElementById("tc-stat-cumplimiento").textContent = (total>0 ? Math.round((finalizadas.length/total)*100) : 0) + "%";
+
+  const bySup = {};
+  tareasData.forEach(t=>{
+    if(!bySup[t.supervisor]) bySup[t.supervisor] = {asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
+    const e = tareaEstado(t);
+    bySup[t.supervisor].asignadas++;
+    if(e === "finalizada"){ bySup[t.supervisor].finalizadas++; bySup[t.supervisor].tiempos.push(tareaDiasEntre(t.fechaAsignacion, t.fechaFinalizacion)); }
+    if(e === "vencida") bySup[t.supervisor].vencidas++;
+  });
+  const summaryBody = document.querySelector("#tc-summary-table tbody");
+  const entries = Object.entries(bySup);
+  summaryBody.innerHTML = entries.length ? entries.map(([sup,d])=>{
+    const pct = d.asignadas>0 ? Math.round((d.finalizadas/d.asignadas)*100) : 0;
+    const prom = d.tiempos.length ? (d.tiempos.reduce((a,b)=>a+b,0)/d.tiempos.length).toFixed(1) : "—";
+    return `<tr><td>${escapeHtml(sup)}</td><td class="num">${d.asignadas}</td><td class="num">${d.finalizadas}</td><td class="num">${d.vencidas}</td><td class="num">${pct}%</td><td class="num">${prom}</td></tr>`;
+  }).join("") : `<tr><td colspan="6" style="text-align:center;color:var(--muted);">Sin tareas todavía.</td></tr>`;
+
+  const rowsSorted = [...tareasData].sort((a,b)=> b.fechaAsignacion.localeCompare(a.fechaAsignacion));
+  const tbody = document.querySelector("#tc-table tbody");
+  tbody.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
+    const e = tareaEstado(t);
+    return `
+    <tr>
+      <td>${escapeHtml(t.titulo)}</td>
+      <td>${escapeHtml(t.supervisor)}</td>
+      <td>${escapeHtml(t.coordinador)}</td>
+      <td>${escapeHtml(t.fechaAsignacion)}</td>
+      <td>${escapeHtml(t.fechaLimite)}</td>
+      <td>${escapeHtml(t.prioridad)}</td>
+      <td>${tareaEstadoBadge(e)}</td>
+      <td>${t.archivo ? "📎 " + escapeHtml(t.archivo) : "—"}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+}
+
+document.getElementById("tarea-asignar-btn").addEventListener("click", ()=>{
+  const errorEl = document.getElementById("tarea-form-error");
+  errorEl.textContent = "";
+  const titulo = document.getElementById("tarea-titulo").value.trim();
+  const supervisor = document.getElementById("tarea-supervisor").value;
+  const descripcion = document.getElementById("tarea-descripcion").value.trim();
+  const fechaLimite = document.getElementById("tarea-fecha-limite").value;
+  const prioridad = document.getElementById("tarea-prioridad").value;
+  if(!titulo || !supervisor || !descripcion || !fechaLimite){
+    errorEl.textContent = "Completa título, supervisor, descripción y fecha límite.";
+    return;
+  }
+  tareasData.push({
+    id: tareaAutoId++,
+    titulo, descripcion, supervisor,
+    coordinador: TAREAS_COORDINADOR_ACTUAL,
+    prioridad, fechaAsignacion: TAREAS_HOY, fechaLimite,
+    archivo: null, fechaFinalizacion: null,
+  });
+  document.getElementById("tarea-titulo").value = "";
+  document.getElementById("tarea-supervisor").value = "";
+  document.getElementById("tarea-descripcion").value = "";
+  document.getElementById("tarea-fecha-limite").value = "";
+  document.getElementById("tarea-prioridad").value = "Media";
+  trRenderCoordinador();
+  trRenderSupervisor();
+});
+
+document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+
+let tfCurrentId = null;
+
+function trRenderSupervisor(){
+  const supSel = document.getElementById("ts-supervisor-select").value || TAREAS_SUPERVISORES[0];
+  const mis = tareasData.filter(t=>t.supervisor === supSel);
+  const pendientes = mis.filter(t=>tareaEstado(t)==="pendiente");
+  const vencidas = mis.filter(t=>tareaEstado(t)==="vencida");
+  const finalizadas = mis.filter(t=>tareaEstado(t)==="finalizada");
+
+  document.getElementById("ts-count").textContent = (pendientes.length + vencidas.length) + " pendientes";
+  document.getElementById("ts-stat-pendientes").textContent = pendientes.length;
+  document.getElementById("ts-stat-vencidas").textContent = vencidas.length;
+  document.getElementById("ts-stat-finalizadas").textContent = finalizadas.length;
+
+  const list = document.getElementById("ts-list");
+  const rowsSorted = [...mis].sort((a,b)=> a.fechaLimite.localeCompare(b.fechaLimite));
+  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=>{
+    const e = tareaEstado(t);
+    const footer = e === "finalizada"
+      ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
+           <span class="evidencia-chip">📎 ${escapeHtml(t.archivo)}</span>
+           <span style="color:var(--muted);">Finalizada el ${escapeHtml(t.fechaFinalizacion)}</span>
+         </div>`
+      : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
+    return `
+    <div class="stat-card" style="padding:16px 18px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.coordinador)} · Límite ${escapeHtml(t.fechaLimite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        </div>
+        ${tareaEstadoBadge(e)}
+      </div>
+      <div style="font-size:12.5px;color:var(--text-soft);margin-top:10px;">${escapeHtml(t.descripcion)}</div>
+      ${footer}
+    </div>`;
+  }).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
+
+  list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
+  });
+}
+
+function tfOpenModal(id){
+  const t = tareasData.find(x=>x.id === id);
+  if(!t) return;
+  tfCurrentId = id;
+  document.getElementById("tf-modal-titulo").textContent = t.titulo;
+  document.getElementById("tf-archivo").value = "";
+  document.getElementById("tf-modal-error").textContent = "";
+  document.getElementById("tarea-finalizar-modal").classList.add("show");
+}
+function tfCloseModal(){
+  document.getElementById("tarea-finalizar-modal").classList.remove("show");
+  tfCurrentId = null;
+}
+document.getElementById("tarea-finalizar-close").addEventListener("click", tfCloseModal);
+document.getElementById("tarea-finalizar-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "tarea-finalizar-modal") tfCloseModal();
+});
+
+document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
+  const errorEl = document.getElementById("tf-modal-error");
+  errorEl.textContent = "";
+  if(tfCurrentId == null) return;
+  const fileInput = document.getElementById("tf-archivo");
+  const file = fileInput.files[0];
+  if(!file){
+    errorEl.textContent = "Sube el archivo de sustento (Excel, Word o PDF).";
+    return;
+  }
+  if(!/\.(xlsx|xls|docx|doc|pdf)$/i.test(file.name)){
+    errorEl.textContent = "Formato no válido. Sube un Excel, Word o PDF.";
+    return;
+  }
+  const t = tareasData.find(x=>x.id === tfCurrentId);
+  t.archivo = file.name;
+  t.fechaFinalizacion = TAREAS_HOY;
+  tfCloseModal();
+  trRenderSupervisor();
+  trRenderCoordinador();
+});
+
+document.getElementById("ts-supervisor-select").addEventListener("change", trRenderSupervisor);
+
+trRenderFilters();
+trRenderCoordinador();
+trRenderSupervisor();
 
 /* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
 function spUpdateImportState(){
