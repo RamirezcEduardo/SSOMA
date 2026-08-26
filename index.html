@@ -1470,14 +1470,17 @@
       <div class="section-subhead">Detalle</div>
       <div class="table-wrap">
         <table class="data-table" id="sp-detail-table">
-          <thead><tr><th>Fe y Hr Crea</th><th>Producto</th><th>Descripción</th><th>Ubicación</th><th>Sub Área</th><th>Turno</th><th>Responsable</th><th>Supervisor</th><th>Proceso</th><th>Un Ajust</th><th>Semana</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Fe y Hr Crea</th><th>Producto</th><th>Descripción</th><th>Ubicación</th><th>Sub Área</th><th>Turno</th><th>Responsable</th><th>Supervisor</th><th>Nro Orden</th><th>Proceso*</th><th>Un Ajust</th><th>Semana</th><th>Estado</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
 
       <div class="help-tip" style="margin-top:18px;max-width:640px;">
         <span class="ic">📌</span>
-        Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
+        <div>
+          Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
+          <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
+        </div>
       </div>
     </section>
 
@@ -2107,17 +2110,24 @@ document.querySelectorAll(".navgroup-header").forEach(navgroupToggle=>{
 });
 
 /* ---- Inventario · Auditoría Shortpick (maqueta con datos de ejemplo) ---- */
+/* "Proceso" no viene directo del WMS: se calcula igual que en la hoja Filtro
+   -> Sub Proceso = primeros 3 caracteres de Nro Orden
+   -> Proceso = BUSCARV(Sub Proceso, TB_PROCESO)  (tabla TB_PROCESO de la hoja Areas) */
+const TB_PROCESO = {QRE:"B2B", P15:"B2C", TXF:"B2C", TXD:"B2C", Q69:"B2B", P21:"B2C", Q02:"B2B", Q24:"B2B", Q21:"B2B"};
+function spSubProceso(orden){ return (orden || "").slice(0, 3); }
+function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
+
 const spData = [
-  {fecha:"2026-05-21 21:44:19", producto:"7509546000985", desc:"COLG TRIP ACC CR DEN", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         proceso:"B2B", unajust:-10, valor:44.90,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 21:03:08", producto:"8850769011975", desc:"LIVOLIN FORTE CAP BL",  ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           proceso:"B2B", unajust:-2,  valor:69.14,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-20 09:12:41", producto:"7702425540897", desc:"HUGG RN TLLA HUM EXT A", ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      proceso:"B2C", unajust:-14, valor:161.48, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-20 10:47:03", producto:"7702031291565", desc:"JOHN BABY NF SH ORIGIN", ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      proceso:"B2C", unajust:-2,  valor:25.95,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 14:30:55", producto:"7756969000034", desc:"GUANTES EXAMEN LATEX A", ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  proceso:"B2B", unajust:-1,  valor:12.00,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 19:05:12", producto:"7501234567890", desc:"DETERG LIQ ROPA 900ML",  ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           proceso:"B2B", unajust:-6,  valor:39.60,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-19 16:22:37", producto:"7789456123789", desc:"SHAMP ANTICASPA 400ML",  ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      proceso:"B2B", unajust:-3,  valor:70.56,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-19 08:50:19", producto:"7845123698741", desc:"CREMA DENTAL 90G",       ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         proceso:"B2C", unajust:-8,  valor:31.20,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-21 22:18:44", producto:"7123456789012", desc:"PAÑAL ADULTO TALLA M",   ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           proceso:"B2C", unajust:-5,  valor:58.30,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {fecha:"2026-05-20 13:04:27", producto:"7998877665544", desc:"JABON LIQ MANOS 250ML",  ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      proceso:"B2B", unajust:-4,  valor:22.80,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 21:44:19", producto:"7509546000985", desc:"COLG TRIP ACC CR DEN", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, valor:44.90,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 21:03:08", producto:"8850769011975", desc:"LIVOLIN FORTE CAP BL",  ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  valor:69.14,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-20 09:12:41", producto:"7702425540897", desc:"HUGG RN TLLA HUM EXT A", ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"P150198765432", unajust:-14, valor:161.48, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-20 10:47:03", producto:"7702031291565", desc:"JOHN BABY NF SH ORIGIN", ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      orden:"TXF0201122334", unajust:-2,  valor:25.95,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 14:30:55", producto:"7756969000034", desc:"GUANTES EXAMEN LATEX A", ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  orden:"Q020345566778", unajust:-1,  valor:12.00,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 19:05:12", producto:"7501234567890", desc:"DETERG LIQ ROPA 900ML",  ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           orden:"Q240456677889", unajust:-6,  valor:39.60,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-19 16:22:37", producto:"7789456123789", desc:"SHAMP ANTICASPA 400ML",  ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      orden:"Q210567788990", unajust:-3,  valor:70.56,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-19 08:50:19", producto:"7845123698741", desc:"CREMA DENTAL 90G",       ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         orden:"TXD0678899001", unajust:-8,  valor:31.20,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-21 22:18:44", producto:"7123456789012", desc:"PAÑAL ADULTO TALLA M",   ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"P210789900112", unajust:-5,  valor:58.30,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {fecha:"2026-05-20 13:04:27", producto:"7998877665544", desc:"JABON LIQ MANOS 250ML",  ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"QRE0890011223", unajust:-4,  valor:22.80,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
 ];
 
 function spRenderFilters(){
@@ -2154,8 +2164,9 @@ function spRender(){
 
   const grupos = {};
   rows.forEach(r=>{
-    const key = [r.turno, r.supervisor, r.subarea, r.proceso].join("|");
-    if(!grupos[key]) grupos[key] = {turno:r.turno, supervisor:r.supervisor, subarea:r.subarea, proceso:r.proceso, registros:0, unidades:0};
+    const proceso = spProceso(r.orden);
+    const key = [r.turno, r.supervisor, r.subarea, proceso].join("|");
+    if(!grupos[key]) grupos[key] = {turno:r.turno, supervisor:r.supervisor, subarea:r.subarea, proceso, registros:0, unidades:0};
     grupos[key].registros += 1;
     grupos[key].unidades += Math.abs(r.unajust);
   });
@@ -2183,11 +2194,12 @@ function spRender(){
       <td>${escapeHtml(r.turno)}</td>
       <td>${escapeHtml(r.responsable)}</td>
       <td>${escapeHtml(r.supervisor)}</td>
-      <td>${escapeHtml(r.proceso)}</td>
+      <td>${escapeHtml(r.orden)}</td>
+      <td title="Calculado: BUSCARV(primeros 3 caracteres de Nro Orden, TB_PROCESO)">${escapeHtml(spProceso(r.orden))}</td>
       <td class="num">${r.unajust}</td>
       <td>${escapeHtml(r.semana)}</td>
       <td>${escapeHtml(r.estado)}</td>
-    </tr>`).join("") : `<tr><td colspan="12" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
+    </tr>`).join("") : `<tr><td colspan="13" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
 }
 
 spRenderFilters();
