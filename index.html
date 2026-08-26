@@ -195,16 +195,54 @@
       overflow-y:visible;
       gap:8px;
     }
+    .navgroup-body{
+      display:contents;
+      max-height:none;
+      overflow:visible;
+    }
   }
-  .navlabel{
+  .navgroup-header{
+    display:flex;align-items:center;gap:8px;
+    width:100%;
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    padding:6px 10px 10px;
+    margin:0;
+    font-family:'Inter',sans-serif;
+  }
+  .navgroup-icon{font-size:13px;line-height:1;flex-shrink:0;}
+  .navgroup-title{
     font-size:10.5px;
     letter-spacing:.1em;
     color:var(--muted);
     text-transform:uppercase;
     font-weight:700;
-    margin:6px 10px 10px;
   }
-  @media (max-width:820px){ .navlabel{display:none;} }
+  .navgroup-count{
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;font-weight:700;
+    color:var(--red);
+    background:var(--red-tint);
+    border-radius:20px;
+    padding:1px 7px;
+    line-height:1.5;
+  }
+  .navgroup-chevron{
+    margin-left:auto;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1;
+    transition:transform .18s ease;
+  }
+  .navgroup-header[aria-expanded="false"] .navgroup-chevron{transform:rotate(-90deg);}
+  .navgroup-body{
+    overflow:hidden;
+    max-height:400px;
+    transition:max-height .2s ease;
+  }
+  .navgroup-header[aria-expanded="false"] + .navgroup-body{max-height:0;}
+  @media (max-width:820px){ .navgroup-header{display:none;} }
 
   button.navitem{
     display:flex;
@@ -932,11 +970,18 @@
 <div class="layout" id="layout">
   <nav class="side" id="sidebar">
     <div class="side-nav">
-      <div class="navlabel">Reportes</div>
-      <button class="navitem active" data-view="racs"><span class="dot" style="background:#E31E24;"></span><span class="label">RACS</span><span class="tag">Activo</span></button>
-      <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
-      <button class="navitem" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
-      <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
+      <button type="button" class="navgroup-header" id="navgroup-ssoma-toggle" aria-expanded="true">
+        <span class="navgroup-icon">🛡️</span>
+        <span class="navgroup-title">SSOMA</span>
+        <span class="navgroup-count" id="navgroup-ssoma-count">4</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-ssoma-body">
+        <button class="navitem active" data-view="racs"><span class="dot" style="background:#E31E24;"></span><span class="label">RACS</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
+      </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
       <div class="account-row">Usuario: <strong id="account-nombre"></strong></div>
@@ -1913,6 +1958,12 @@ document.querySelectorAll(".navitem").forEach(btn=>{
     btn.classList.add("active");
     document.getElementById("panel-"+btn.dataset.view).classList.add("active");
   });
+});
+
+const navgroupToggle = document.getElementById("navgroup-ssoma-toggle");
+navgroupToggle.addEventListener("click", ()=>{
+  const expanded = navgroupToggle.getAttribute("aria-expanded") === "true";
+  navgroupToggle.setAttribute("aria-expanded", String(!expanded));
 });
 
 // toggle acto/condicion
