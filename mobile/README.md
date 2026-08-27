@@ -24,24 +24,20 @@ cd android && ./gradlew assembleDebug
 
 ## Notificaciones push (Firebase)
 
-Falta un proyecto de Firebase para que las notificaciones realmente lleguen
-al celular. Pasos:
+Proyecto Firebase: `ssoma-adecco`. `mobile/android/app/google-services.json`
+ya está en el repo (identifica la app ante Firebase; no es un secreto — Google
+la protege por Security Rules y restricción de package/firma, no por
+ocultarla — así que se commitea como cualquier otro archivo de configuración).
 
-1. Crear un proyecto en [console.firebase.google.com](https://console.firebase.google.com)
-   (o usar uno existente de Adecco).
-2. Agregar una app Android con el package name `com.adecco.ssoma` y descargar
-   `google-services.json`.
-3. Colocar ese archivo en `mobile/android/app/google-services.json` (no se
-   commitea, está en `.gitignore` por ser una credencial).
-4. Para que GitHub Actions también lo tenga: `base64 -w0 google-services.json`
-   y guardar el resultado como secreto del repo `GOOGLE_SERVICES_JSON_BASE64`.
-5. En **Project Settings → Cuentas de servicio → Generar nueva clave privada**
-   descargar el JSON de la cuenta de servicio y configurarlo como secreto de
-   Supabase (usado por la función que realmente envía las notificaciones):
-   ```
-   supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(cat service-account.json)" --project-ref zlukrktpjffiycarpduc
-   ```
+Falta un solo paso para que las notificaciones realmente se envíen:
 
-Sin estos pasos el APK compila y funciona igual, solo que las notificaciones
+- En Firebase, **Project Settings → Cuentas de servicio → Generar nueva clave
+  privada**, descargar el JSON de la cuenta de servicio y configurarlo como
+  secreto de Supabase (usado por la función que envía las notificaciones):
+  ```
+  supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(cat service-account.json)" --project-ref zlukrktpjffiycarpduc
+  ```
+
+Sin ese paso el APK compila y funciona igual, solo que las notificaciones
 push no se envían (la función `ssoma-fcm-send` responde sin error, pero no
 hace nada, hasta que el secreto `FCM_SERVICE_ACCOUNT_JSON` exista).

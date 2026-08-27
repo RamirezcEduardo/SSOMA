@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "398808162598",
+    "project_id": "ssoma-adecco",
+    "storage_bucket": "ssoma-adecco.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:398808162598:android:050c0cd90f63c9470721e7",
+        "android_client_info": {
+          "package_name": "com.adecco.ssoma"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLcHO-C0jbr-4hDglMdvxyA-A1icxy4b0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

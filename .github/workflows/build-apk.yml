@@ -45,14 +45,6 @@ jobs:
           cp -r ../icons www/icons
           npx cap sync android
 
-      # Firebase (google-services.json) es opcional: si el secreto no está configurado
-      # todavía, el APK se compila igual pero sin notificaciones push funcionales.
-      - name: Configurar Firebase (si está disponible)
-        env:
-          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        if: env.GOOGLE_SERVICES_JSON_BASE64 != ''
-        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
-
       - name: Compilar APK (debug)
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon
