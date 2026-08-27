@@ -1,2 +1,11 @@
 .DS_Store
 Thumbs.db
+
+# App móvil (Capacitor / Android)
+mobile/node_modules/
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/google-services.json
+mobile/android/*.keystore

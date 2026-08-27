@@ -3294,7 +3294,6 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
     prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
-  ssomaNotificarPush(Number(destinatarioId), "Nueva tarea asignada", titulo, { tipo: "tarea_asignada" });
   document.getElementById("tarea-titulo").value = "";
   document.getElementById("tarea-supervisor").value = "";
   document.getElementById("tarea-descripcion").value = "";
@@ -3379,7 +3378,6 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
     prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
-  ssomaNotificarPush(Number(destinatarioId), "Nueva tarea asignada", titulo, { tipo: "tarea_asignada" });
   document.getElementById("tj-titulo").value = "";
   document.getElementById("tj-destinatario").value = "";
   document.getElementById("tj-descripcion").value = "";
@@ -3536,8 +3534,6 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
       finalizado_at: new Date().toISOString(),
     }).eq("id", tfCurrentId);
     if(error){ errorEl.textContent = "No se pudo finalizar la tarea: " + error.message; return; }
-    const tFinalizada = tareasData.find(x=> x.id === tfCurrentId);
-    if(tFinalizada) ssomaNotificarPush(tfNotificarIdsFinalizacion(tFinalizada), "Tarea finalizada", tFinalizada.titulo, { tipo: "tarea_finalizada" });
     tfCloseModal();
     await trLoadTareas();
   });
@@ -4502,63 +4498,6 @@ async function init(){
   await loadCatalogos();
   await Promise.all([loadReports(), loadCompReports(), loadAccidentes(), trLoadTareas()]);
   initImageWidget("acc");
-  ssomaInicializarPush();
-}
-
-/* ---- Notificaciones push (app móvil vía Capacitor + Firebase) ----
-   En el navegador de escritorio window.Capacitor no existe y todo esto queda inactivo. */
-let ssomaPushRegistrado = false;
-async function ssomaInicializarPush(){
-  if(ssomaPushRegistrado) return;
-  const Capacitor = window.Capacitor;
-  if(!Capacitor || !Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) return;
-  const PushNotifications = Capacitor.Plugins && Capacitor.Plugins.PushNotifications;
-  if(!PushNotifications) return;
-  ssomaPushRegistrado = true;
-
-  let permiso;
-  try{ permiso = await PushNotifications.requestPermissions(); }catch(e){ return; }
-  if(permiso.receive !== "granted") return;
-  await PushNotifications.register();
-
-  PushNotifications.addListener("registration", async (token)=>{
-    if(!currentSession || !token || !token.value) return;
-    try{
-      await sb.from("ssoma_push_tokens").upsert(
-        { usuario_id: currentSession.usuario.id, token: token.value, plataforma: "android" },
-        { onConflict: "token" }
-      );
-    }catch(e){ console.warn("No se pudo registrar el token push:", e && e.message); }
-  });
-  PushNotifications.addListener("registrationError", (err)=>{
-    console.warn("Error de registro push:", err);
-  });
-  PushNotifications.addListener("pushNotificationActionPerformed", ()=>{
-    const item = document.querySelector('.navitem[data-view="tareas-supervisor"]')
-      || document.querySelector('.navitem[data-view="tareas-coordinador"]')
-      || document.querySelector('.navitem[data-view="tareas-jefatura"]');
-    if(item) item.click();
-  });
-}
-
-/* Al asignar solo se notifica al destinatario directo. Al finalizar se notifica a quien
-   asignó la tarea y, si aplica, se sube un nivel más en la jerarquía real (organigrama
-   de b2c_users vía rol_tarea/manager_id) para que jefatura vea el cierre de sus coordinadores. */
-function tfNotificarIdsFinalizacion(t){
-  const ids = new Set();
-  if(t.asignado_por_id) ids.add(t.asignado_por_id);
-  if(t.delegado_a_id && t.destinatario_id) ids.add(t.destinatario_id);
-  const asignadoPor = t.asignado_por;
-  if(asignadoPor && asignadoPor.rol_tarea === "coordinador" && asignadoPor.manager_id) ids.add(asignadoPor.manager_id);
-  return Array.from(ids);
-}
-
-async function ssomaNotificarPush(usuarioIds, titulo, cuerpo, datos){
-  try{
-    const ids = (Array.isArray(usuarioIds) ? usuarioIds : [usuarioIds]).filter(v => v != null);
-    if(!ids.length) return;
-    await sb.functions.invoke("ssoma-fcm-send", { body: { usuario_ids: ids, titulo, cuerpo, datos: datos || {} } });
-  }catch(e){ console.warn("No se pudo enviar la notificación push:", e && e.message); }
 }
 
 checkSession();

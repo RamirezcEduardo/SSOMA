@@ -1,0 +1,14 @@
+{
+  "appId": "com.adecco.ssoma",
+  "appName": "SSOMA Adecco",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}
