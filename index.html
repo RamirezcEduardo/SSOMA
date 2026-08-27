@@ -2806,14 +2806,18 @@ let tareasData = [];
 function esAdmin(){
   return !!(currentSession && currentSession.usuario && currentSession.usuario.rol === "admin");
 }
-function esJefaturaU(u){ return !!(u && /jefe/i.test(u.puesto || "")); }
-function esCoordinadorU(u){ return !!(u && /coordinador/i.test(u.puesto || "")); }
-function esSupervisorU(u){ return !!(u && /supervisor/i.test(u.puesto || "")); }
+/* El rol (jefatura/coordinador/supervisor) ya viene resuelto desde la base de datos
+   (tabla ssoma_tareas_puesto_rol, mapeada contra b2c_users.puesto). Si un puesto nuevo
+   todavía no está mapeado, esa persona simplemente no tiene rol de tareas hasta que
+   el administrador agregue la fila correspondiente — no hace falta tocar este código. */
+function esJefaturaU(u){ return !!(u && u.rol_tarea === "jefatura"); }
+function esCoordinadorU(u){ return !!(u && u.rol_tarea === "coordinador"); }
+function esSupervisorU(u){ return !!(u && u.rol_tarea === "supervisor"); }
 
 async function trLoadUsuarios(){
   const { data, error } = await sb.rpc("ssoma_tareas_personal");
   if(error){ console.error("No se pudo cargar el organigrama:", error.message); return; }
-  usuariosTareas = (data || []).map(u => ({ id: u.id, nombre_completo: u.nombre, puesto: u.puesto, manager_id: u.manager_id }));
+  usuariosTareas = (data || []).map(u => ({ id: u.id, nombre_completo: u.nombre, puesto: u.puesto, manager_id: u.manager_id, rol_tarea: u.rol_tarea }));
   usuariosPorId = {};
   usuariosTareas.forEach(u => { usuariosPorId[u.id] = u; });
   usuariosJefatura = usuariosTareas.filter(esJefaturaU);
