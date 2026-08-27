@@ -2132,10 +2132,15 @@ document.getElementById("login-encuesta-charla-btn").addEventListener("click", (
 
 let personalObservadores = [];
 let personalSupervisores = [];
-let personalJefeCoordinador = [];
-let personalJefatura = [];
 let personalTodos = [];
-let miPersonal = null;
+/* Designación de Tareas usa el organigrama real de Adecco KPI (b2c_users.puesto +
+   manager_id) en vez de un roster propio, vía la función ssoma_tareas_personal(). */
+let usuariosTareas = [];
+let usuariosPorId = {};
+let usuariosJefatura = [];
+let usuariosCoordinadores = [];
+let usuariosSupervisores = [];
+let miUsuario = null;
 let ubicacionesCat = [];
 let ocurrenciasCat = [];
 let condicionesCat = [];
@@ -2434,7 +2439,7 @@ function fillSelect(el, items, placeholder, valueKey, labelKey){
 
 async function loadCatalogos(){
   const [personalRes, ubicRes, ocuRes, condRes, equipoRes] = await Promise.all([
-    sb.from("ssoma_personal").select("id, nombre_completo, puede_observar, puede_supervisar, puede_ser_jefe_coordinador, es_jefatura, usuario_id").eq("activo", true).order("id"),
+    sb.from("ssoma_personal").select("id, nombre_completo, puede_observar, puede_supervisar").eq("activo", true).order("id"),
     sb.from("ssoma_ubicaciones").select("id, nombre").eq("activo", true).order("id"),
     sb.from("ssoma_ocurrencias").select("id, descripcion").eq("activo", true).order("id"),
     sb.from("ssoma_condiciones").select("id, descripcion").eq("activo", true).order("id"),
@@ -2443,12 +2448,7 @@ async function loadCatalogos(){
   const personal = personalRes.data || [];
   personalObservadores = personal.filter(p => p.puede_observar);
   personalSupervisores = personal.filter(p => p.puede_supervisar);
-  personalJefeCoordinador = personal.filter(p => p.puede_ser_jefe_coordinador);
-  personalJefatura = personal.filter(p => p.es_jefatura);
   personalTodos = personal;
-  miPersonal = (currentSession && currentSession.usuario)
-    ? (personal.find(p => p.usuario_id === currentSession.usuario.id) || null)
-    : null;
   ubicacionesCat = ubicRes.data || [];
   ocurrenciasCat = ocuRes.data || [];
   condicionesCat = condRes.data || [];
@@ -2462,7 +2462,7 @@ async function loadCatalogos(){
   fillSelect(document.getElementById("acc-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("acc-reportante"), equipoSsomaCat, "Selecciona quién reporta", "id", "nombre_completo");
   accSetCausaTipo("ACTO SUB ESTANDAR");
-  trPopulateSelectors();
+  await trLoadUsuarios();
 }
 
 document.getElementById("f-fecha").valueAsDate = new Date();
@@ -2796,18 +2796,38 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
 
 spRenderConc();
 
-/* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ---- */
+/* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ----
+   Los roles y el organigrama (Jefatura/Coordinador/Supervisor, quién reporta a quién)
+   se toman directo de Adecco KPI (b2c_users.puesto + manager_id) vía la función
+   ssoma_tareas_personal(), en vez de mantener un permiso aparte por persona en SSOMA. */
 const TAREAS_HOY = new Date().toISOString().slice(0, 10);
 let tareasData = [];
 
 function esAdmin(){
   return !!(currentSession && currentSession.usuario && currentSession.usuario.rol === "admin");
 }
+function esJefaturaU(u){ return !!(u && /jefe/i.test(u.puesto || "")); }
+function esCoordinadorU(u){ return !!(u && /coordinador/i.test(u.puesto || "")); }
+function esSupervisorU(u){ return !!(u && /supervisor/i.test(u.puesto || "")); }
+
+async function trLoadUsuarios(){
+  const { data, error } = await sb.rpc("ssoma_tareas_personal");
+  if(error){ console.error("No se pudo cargar el organigrama:", error.message); return; }
+  usuariosTareas = (data || []).map(u => ({ id: u.id, nombre_completo: u.nombre, puesto: u.puesto, manager_id: u.manager_id }));
+  usuariosPorId = {};
+  usuariosTareas.forEach(u => { usuariosPorId[u.id] = u; });
+  usuariosJefatura = usuariosTareas.filter(esJefaturaU);
+  usuariosCoordinadores = usuariosTareas.filter(esCoordinadorU);
+  usuariosSupervisores = usuariosTareas.filter(esSupervisorU);
+  miUsuario = (currentSession && currentSession.usuario) ? (usuariosPorId[currentSession.usuario.id] || null) : null;
+  trPopulateSelectors();
+}
+
 /* Solo para administradores: a quién están "viendo/actuando como" en cada vista ("" = ver todas). */
 let trAdminActor = { jefatura: "", coordinador: "", supervisor: "" };
 function trCurrentActorId(view){
   if(esAdmin()) return trAdminActor[view] ? Number(trAdminActor[view]) : null;
-  return miPersonal ? miPersonal.id : null;
+  return miUsuario ? miUsuario.id : null;
 }
 
 function tareaEstado(t){
@@ -2828,30 +2848,22 @@ function tareaRolLabel(rol){
 }
 
 function trPopulateSelectors(){
-  const selCoordDest = document.getElementById("tarea-supervisor");
   const grpCoord = document.getElementById("tj-optgroup-coord");
   const grpSup = document.getElementById("tj-optgroup-sup");
-  [selCoordDest, grpCoord, grpSup].forEach(el=>{ el.innerHTML = ""; });
-  selCoordDest.appendChild(new Option("Selecciona…", ""));
-
-  personalSupervisores.forEach(p=>{
-    selCoordDest.appendChild(new Option(p.nombre_completo, p.id));
-    grpSup.appendChild(new Option(p.nombre_completo, "supervisor|" + p.id));
-  });
-  personalJefeCoordinador.forEach(p=>{
-    grpCoord.appendChild(new Option(p.nombre_completo, "jefe_coordinador|" + p.id));
-  });
+  [grpCoord, grpSup].forEach(el=>{ el.innerHTML = ""; });
+  usuariosSupervisores.forEach(u=> grpSup.appendChild(new Option(u.nombre_completo, "supervisor|" + u.id)));
+  usuariosCoordinadores.forEach(u=> grpCoord.appendChild(new Option(u.nombre_completo, "jefe_coordinador|" + u.id)));
 }
 
 /* Muestra quién está actuando en la sesión (o el motivo por el que no puede) y controla
    la visibilidad del contenido de cada vista de Designación de Tareas.
    Los administradores tienen acceso total: pueden ver todas las tareas de la vista o
    elegir actuar/ver como cualquier persona habilitada, sin quedar bloqueados. */
-function trActorBox(view, boxEl, contentEl, requiredFlag, label, opciones){
+function trActorBox(view, boxEl, contentEl, tier, label, opciones){
   if(esAdmin()){
     const current = trAdminActor[view];
     const opts = ['<option value="">— Ver todas —</option>']
-      .concat((opciones||[]).map(p=> `<option value="${p.id}"${String(p.id)===String(current)?" selected":""}>${escapeHtml(p.nombre_completo)}</option>`))
+      .concat((opciones||[]).map(u=> `<option value="${u.id}"${String(u.id)===String(current)?" selected":""}>${escapeHtml(u.nombre_completo)}</option>`))
       .join("");
     boxEl.innerHTML = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
       <span class="hint" style="font-size:13px;">🛡️ Acceso de administrador: acceso total a ${escapeHtml(label)}.</span>
@@ -2863,24 +2875,25 @@ function trActorBox(view, boxEl, contentEl, requiredFlag, label, opciones){
     if(contentEl) contentEl.style.display = "";
     return { autorizado: true, actorId: current ? Number(current) : null };
   }
-  if(!miPersonal){
+  if(!miUsuario){
     boxEl.innerHTML = `<div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-      <strong>Tu usuario no está vinculado a un perfil de personal SSOMA.</strong><br>
-      Pide al administrador que vincule tu cuenta${currentSession && currentSession.usuario ? ` (<code>${escapeHtml(currentSession.usuario.username)}</code>)` : ""} a un registro de personal para poder ver tus tareas de ${label}.
+      <strong>No se encontró tu cuenta en el organigrama de Adecco KPI.</strong><br>
+      Verifica que tu usuario esté activo${currentSession && currentSession.usuario ? ` (<code>${escapeHtml(currentSession.usuario.username)}</code>)` : ""} o recarga la página.
     </div>`;
     if(contentEl) contentEl.style.display = "none";
     return { autorizado: false, actorId: null };
   }
-  if(requiredFlag && !miPersonal[requiredFlag]){
+  const tieneRol = tier === "jefatura" ? esJefaturaU(miUsuario) : tier === "coordinador" ? esCoordinadorU(miUsuario) : tier === "supervisor" ? esSupervisorU(miUsuario) : true;
+  if(!tieneRol){
     boxEl.innerHTML = `<div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-      <strong>${escapeHtml(miPersonal.nombre_completo)}</strong> no tiene el permiso de ${label} habilitado en su perfil SSOMA.
+      <strong>${escapeHtml(miUsuario.nombre_completo)}</strong> (${escapeHtml(miUsuario.puesto || "sin puesto asignado")}) no tiene el rol de ${label} en Adecco KPI.
     </div>`;
     if(contentEl) contentEl.style.display = "none";
     return { autorizado: false, actorId: null };
   }
-  boxEl.innerHTML = `<div class="hint" style="font-size:13px;">Sesión activa: <strong style="color:var(--text);">${escapeHtml(miPersonal.nombre_completo)}</strong> · ${label}</div>`;
+  boxEl.innerHTML = `<div class="hint" style="font-size:13px;">Sesión activa: <strong style="color:var(--text);">${escapeHtml(miUsuario.nombre_completo)}</strong> · ${escapeHtml(miUsuario.puesto || label)}</div>`;
   if(contentEl) contentEl.style.display = "";
-  return { autorizado: true, actorId: miPersonal.id };
+  return { autorizado: true, actorId: miUsuario.id };
 }
 
 document.addEventListener("change", (e)=>{
@@ -2893,14 +2906,16 @@ document.addEventListener("change", (e)=>{
 });
 
 async function trLoadTareas(){
-  const { data, error } = await sb.from("ssoma_tareas").select(`
-    id, titulo, descripcion, destinatario_rol, asignado_por_rol, prioridad, fecha_limite, archivo_cierre, finalizado_at, created_at,
-    destinatario:ssoma_personal!ssoma_tareas_destinatario_id_fkey(id, nombre_completo),
-    asignado_por:ssoma_personal!ssoma_tareas_asignado_por_id_fkey(id, nombre_completo),
-    delegado_a:ssoma_personal!ssoma_tareas_delegado_a_id_fkey(id, nombre_completo)
-  `).order("created_at", { ascending: false });
+  const { data, error } = await sb.from("ssoma_tareas")
+    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, archivo_cierre, finalizado_at, created_at")
+    .order("created_at", { ascending: false });
   if(error){ console.error("No se pudieron cargar las tareas:", error.message); return; }
-  tareasData = data || [];
+  tareasData = (data || []).map(t => ({
+    ...t,
+    destinatario: usuariosPorId[t.destinatario_id] || null,
+    asignado_por: usuariosPorId[t.asignado_por_id] || null,
+    delegado_a: t.delegado_a_id ? (usuariosPorId[t.delegado_a_id] || null) : null,
+  }));
   trRenderJefatura();
   trRenderCoordinador();
   trRenderSupervisor();
@@ -2910,6 +2925,7 @@ async function trLoadTareas(){
 function renderCumplimientoTable(tbodyEl, tareas, incluirRol){
   const byDest = {};
   tareas.forEach(t=>{
+    if(!t.destinatario) return;
     const key = t.destinatario.id;
     if(!byDest[key]) byDest[key] = {nombre:t.destinatario.nombre_completo, rol:t.destinatario_rol, asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
     const e = tareaEstado(t);
@@ -2927,11 +2943,22 @@ function renderCumplimientoTable(tbodyEl, tareas, incluirRol){
 }
 
 function trRenderCoordinador(){
-  const r = trActorBox("coordinador", document.getElementById("tc-actor-box"), document.getElementById("tc-content"), "puede_ser_jefe_coordinador", "Coordinador", personalJefeCoordinador);
+  const r = trActorBox("coordinador", document.getElementById("tc-actor-box"), document.getElementById("tc-content"), "coordinador", "Coordinador", usuariosCoordinadores);
+
+  // El destinatario del formulario se limita a los supervisores que reportan a este coordinador
+  // (manager_id en b2c_users); en modo "Ver todas" (admin sin elegir a nadie) se listan todos.
+  const misSupervisores = r.actorId != null ? usuariosSupervisores.filter(u => u.manager_id === r.actorId) : usuariosSupervisores;
+  const selDest = document.getElementById("tarea-supervisor");
+  const prevVal = selDest.value;
+  selDest.innerHTML = "";
+  selDest.appendChild(new Option("Selecciona…", ""));
+  misSupervisores.forEach(u=> selDest.appendChild(new Option(u.nombre_completo, u.id)));
+  if(misSupervisores.some(u=> String(u.id) === prevVal)) selDest.value = prevVal;
+
   if(!r.autorizado){ document.getElementById("tareas-coord-count").textContent = "—"; return; }
   const actorId = r.actorId;
   const misAsignadas = actorId != null
-    ? tareasData.filter(t=> t.asignado_por.id === actorId && t.destinatario_rol === "supervisor")
+    ? tareasData.filter(t=> t.asignado_por && t.asignado_por.id === actorId && t.destinatario_rol === "supervisor")
     : tareasData.filter(t=> t.destinatario_rol === "supervisor");
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
@@ -2954,8 +2981,8 @@ function trRenderCoordinador(){
     return `
     <tr>
       <td>${escapeHtml(t.titulo)}</td>
-      <td>${escapeHtml(t.destinatario.nombre_completo)}</td>
-      <td>${escapeHtml(t.asignado_por.nombre_completo)}</td>
+      <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
+      <td>${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
       <td>${formatDate(t.fecha_limite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
@@ -2966,7 +2993,7 @@ function trRenderCoordinador(){
 
   // Bandeja: tareas que la jefatura (u otro jefe/coordinador) le asignó a este actor
   const misPendientes = actorId != null
-    ? tareasData.filter(t=> t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador")
+    ? tareasData.filter(t=> t.destinatario && t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador")
     : tareasData.filter(t=> t.destinatario_rol === "jefe_coordinador");
   const inbox = document.getElementById("tc-inbox-list");
   inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCardDelegable(t, actorId == null)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
@@ -3024,10 +3051,10 @@ document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
 });
 
 function trRenderJefatura(){
-  const r = trActorBox("jefatura", document.getElementById("tj-actor-box"), document.getElementById("tj-content"), "es_jefatura", "Jefatura", personalJefatura);
+  const r = trActorBox("jefatura", document.getElementById("tj-actor-box"), document.getElementById("tj-content"), "jefatura", "Jefatura", usuariosJefatura);
   if(!r.autorizado){ document.getElementById("tareas-jefe-count").textContent = "—"; return; }
   const actorId = r.actorId;
-  const misAsignadas = actorId != null ? tareasData.filter(t=> t.asignado_por.id === actorId) : tareasData;
+  const misAsignadas = actorId != null ? tareasData.filter(t=> t.asignado_por && t.asignado_por.id === actorId) : tareasData;
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
   const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
@@ -3049,7 +3076,7 @@ function trRenderJefatura(){
     return `
     <tr>
       <td>${escapeHtml(t.titulo)}</td>
-      <td>${escapeHtml(t.destinatario.nombre_completo)}</td>
+      <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
       <td>${tareaRolLabel(t.destinatario_rol)}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
       <td>${formatDate(t.fecha_limite)}</td>
@@ -3105,14 +3132,14 @@ function renderTareaCard(t, mostrarDestinatario){
          <span style="color:var(--muted);">Finalizada el ${formatDate(t.finalizado_at.slice(0,10))}</span>
        </div>`
     : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
-  const destLine = mostrarDestinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
+  const destLine = mostrarDestinatario && t.destinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
   const delegLine = t.delegado_a ? ` · Delegada a ${escapeHtml(t.delegado_a.nombre_completo)}` : "";
   return `
   <div class="stat-card" style="padding:16px 18px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignado_por.nombre_completo)} (${tareaRolLabel(t.asignado_por_rol)})${destLine}${delegLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine}${delegLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3122,23 +3149,24 @@ function renderTareaCard(t, mostrarDestinatario){
 }
 
 /* Tarjeta de la bandeja del coordinador: además de finalizarla él mismo, puede
-   delegarla a un supervisor para que la ejecute directamente. */
+   delegarla a uno de sus propios supervisores (manager_id) para que la ejecute directamente. */
 function renderTareaCardDelegable(t, mostrarDestinatario){
   const e = tareaEstado(t);
   if(e === "finalizada") return renderTareaCard(t, mostrarDestinatario);
+  const misSupervisores = t.destinatario ? usuariosSupervisores.filter(u => u.manager_id === t.destinatario.id) : [];
   const delegOpts = ['<option value="">Delegar a un supervisor…</option>']
-    .concat(personalSupervisores.map(p=> `<option value="${p.id}"${t.delegado_a && t.delegado_a.id === p.id ? " selected" : ""}>${escapeHtml(p.nombre_completo)}</option>`))
+    .concat(misSupervisores.map(u=> `<option value="${u.id}"${t.delegado_a && t.delegado_a.id === u.id ? " selected" : ""}>${escapeHtml(u.nombre_completo)}</option>`))
     .join("");
   const delegInfo = t.delegado_a
     ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;">→ Delegada a <strong style="color:var(--text);">${escapeHtml(t.delegado_a.nombre_completo)}</strong>, a la espera de que la finalice.</div>`
     : "";
-  const destLine = mostrarDestinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
+  const destLine = mostrarDestinatario && t.destinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
   return `
   <div class="stat-card" style="padding:16px 18px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${escapeHtml(t.asignado_por.nombre_completo)} (${tareaRolLabel(t.asignado_por_rol)})${destLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3154,11 +3182,11 @@ function renderTareaCardDelegable(t, mostrarDestinatario){
 }
 
 function trRenderSupervisor(){
-  const r = trActorBox("supervisor", document.getElementById("ts-actor-box"), document.getElementById("ts-content"), null, "Tareas", personalTodos);
+  const r = trActorBox("supervisor", document.getElementById("ts-actor-box"), document.getElementById("ts-content"), null, "Tareas", usuariosTareas);
   if(!r.autorizado){ document.getElementById("ts-count").textContent = "—"; return; }
   const supSel = r.actorId;
   const mis = supSel != null
-    ? tareasData.filter(t=> t.destinatario.id === supSel || (t.delegado_a && t.delegado_a.id === supSel))
+    ? tareasData.filter(t=> (t.destinatario && t.destinatario.id === supSel) || (t.delegado_a && t.delegado_a.id === supSel))
     : tareasData;
   const pendientes = mis.filter(t=>tareaEstado(t)==="pendiente");
   const vencidas = mis.filter(t=>tareaEstado(t)==="vencida");
