@@ -5,10 +5,12 @@
 // via b2c_sessions) y el resto del backend (ssoma_tareas, etc.) ya es de acceso
 // permisivo por diseño, así que se mantiene el mismo modelo de confianza.
 //
-// Requiere el secreto FCM_SERVICE_ACCOUNT_JSON: el contenido completo del JSON
-// de la cuenta de servicio de Firebase (Project Settings → Cuentas de servicio
-// → Generar nueva clave privada). Configúralo con:
-//   supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(cat service-account.json)"
+// La cuenta de servicio de Firebase (JSON de "Generar nueva clave privada") se
+// guarda cifrada en Supabase Vault (secreto 'fcm_service_account_json'), no
+// como variable de entorno — así queda protegida sin depender de que alguien
+// la configure a mano con `supabase secrets set`. Se lee vía la función
+// public.ssoma_get_fcm_service_account(), restringida a service_role
+// (ver supabase/migrations/0016_ssoma_fcm_service_account_accessor.sql).
 //
 // Body esperado: { usuario_ids: number[], titulo: string, cuerpo: string, datos?: object }
 
@@ -16,7 +18,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const FCM_SERVICE_ACCOUNT_JSON = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
 
 function base64url(input: ArrayBuffer | string): string {
   const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
@@ -77,9 +78,15 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Método no permitido" }), { status: 405 });
   }
-  if (!FCM_SERVICE_ACCOUNT_JSON) {
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const { data: fcmServiceAccountJson, error: secretError } = await supabase.rpc("ssoma_get_fcm_service_account");
+  if (secretError) {
+    return new Response(JSON.stringify({ error: `No se pudo leer la credencial de Firebase: ${secretError.message}` }), { status: 500 });
+  }
+  if (!fcmServiceAccountJson) {
     return new Response(
-      JSON.stringify({ error: "Firebase no está configurado todavía (falta el secreto FCM_SERVICE_ACCOUNT_JSON)." }),
+      JSON.stringify({ error: "Firebase no está configurado todavía (falta el secreto fcm_service_account_json en Vault)." }),
       { status: 200 },
     );
   }
@@ -97,9 +104,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "usuario_ids y titulo son obligatorios" }), { status: 400 });
   }
 
-  const serviceAccount = JSON.parse(FCM_SERVICE_ACCOUNT_JSON);
+  const serviceAccount = JSON.parse(fcmServiceAccountJson);
   const projectId = serviceAccount.project_id;
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   const { data: tokens, error } = await supabase
     .from("ssoma_push_tokens")

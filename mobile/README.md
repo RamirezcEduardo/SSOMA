@@ -22,22 +22,25 @@ npx cap open android              # abre en Android Studio, o:
 cd android && ./gradlew assembleDebug
 ```
 
-## Notificaciones push (Firebase)
+## Notificaciones push (Firebase) — ya configurado
 
-Proyecto Firebase: `ssoma-adecco`. `mobile/android/app/google-services.json`
-ya está en el repo (identifica la app ante Firebase; no es un secreto — Google
-la protege por Security Rules y restricción de package/firma, no por
-ocultarla — así que se commitea como cualquier otro archivo de configuración).
+Proyecto Firebase: `ssoma-adecco`.
 
-Falta un solo paso para que las notificaciones realmente se envíen:
+- `mobile/android/app/google-services.json` ya está en el repo (identifica la
+  app ante Firebase; no es un secreto — Google la protege por Security Rules
+  y restricción de package/firma, no por ocultarla — así que se commitea como
+  cualquier otro archivo de configuración).
+- La cuenta de servicio de Firebase (clave privada para enviar notificaciones)
+  está guardada cifrada en **Supabase Vault** como el secreto
+  `fcm_service_account_json`, no como variable de entorno de la función. La
+  función `ssoma-fcm-send` la lee en cada invocación vía
+  `public.ssoma_get_fcm_service_account()`, una función SQL restringida al rol
+  `service_role` (ver `supabase/migrations/0016_ssoma_fcm_service_account_accessor.sql`).
 
-- En Firebase, **Project Settings → Cuentas de servicio → Generar nueva clave
-  privada**, descargar el JSON de la cuenta de servicio y configurarlo como
-  secreto de Supabase (usado por la función que envía las notificaciones):
-  ```
-  supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(cat service-account.json)" --project-ref zlukrktpjffiycarpduc
-  ```
-
-Sin ese paso el APK compila y funciona igual, solo que las notificaciones
-push no se envían (la función `ssoma-fcm-send` responde sin error, pero no
-hace nada, hasta que el secreto `FCM_SERVICE_ACCOUNT_JSON` exista).
+Para rotar la clave en el futuro (ej. si se generó una nueva desde Firebase):
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'fcm_service_account_json'),
+  '<contenido completo del nuevo JSON>'
+);
+```
