@@ -435,6 +435,8 @@
   }
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   @media (max-width:600px){.grid2{grid-template-columns:1fr;}}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  @media (max-width:700px){.grid3{grid-template-columns:1fr;}}
 
   .field{margin-bottom:16px;}
   .field label{
@@ -1663,6 +1665,7 @@
               <option value="">Selecciona…</option>
               <optgroup label="Coordinadores" id="tj-optgroup-coord"></optgroup>
               <optgroup label="Supervisores" id="tj-optgroup-sup"></optgroup>
+              <optgroup label="Backoffice" id="tj-optgroup-backoffice"></optgroup>
             </select>
           </div>
         </div>
@@ -1670,10 +1673,14 @@
           <label>Descripción<span class="req">*</span></label>
           <textarea id="tj-descripcion" placeholder="Detalla qué se espera del destinatario"></textarea>
         </div>
-        <div class="grid2" style="margin-top:16px;">
+        <div class="grid3" style="margin-top:16px;">
           <div class="field" style="margin-bottom:0;">
             <label>Fecha límite<span class="req">*</span></label>
             <input type="date" id="tj-fecha-limite">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Hora límite</label>
+            <input type="time" id="tj-hora-limite">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Prioridad</label>
@@ -1725,7 +1732,7 @@
       <div class="section-subhead">Tareas asignadas por Jefatura</div>
       <div class="table-wrap">
         <table class="data-table" id="tj-table">
-          <thead><tr><th>Título</th><th>Destinatario</th><th>Rol</th><th>Asignada</th><th>Límite</th><th>Prioridad</th><th>Estado</th><th>Evidencia</th></tr></thead>
+          <thead><tr><th>Título</th><th>Destinatario</th><th>Rol</th><th>Asignada</th><th>Límite</th><th>Prioridad</th><th>Estado</th><th>Evidencia</th><th>Acciones</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -1768,10 +1775,14 @@
           <label>Descripción<span class="req">*</span></label>
           <textarea id="tarea-descripcion" placeholder="Detalla qué se espera del supervisor"></textarea>
         </div>
-        <div class="grid2" style="margin-top:16px;">
+        <div class="grid3" style="margin-top:16px;">
           <div class="field" style="margin-bottom:0;">
             <label>Fecha límite<span class="req">*</span></label>
             <input type="date" id="tarea-fecha-limite">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Hora límite</label>
+            <input type="time" id="tarea-hora-limite">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Prioridad</label>
@@ -1823,7 +1834,7 @@
       <div class="section-subhead">Todas las tareas</div>
       <div class="table-wrap">
         <table class="data-table" id="tc-table">
-          <thead><tr><th>Título</th><th>Supervisor</th><th>Coordinador</th><th>Asignada</th><th>Límite</th><th>Prioridad</th><th>Estado</th><th>Evidencia</th></tr></thead>
+          <thead><tr><th>Título</th><th>Supervisor</th><th>Coordinador</th><th>Asignada</th><th>Límite</th><th>Prioridad</th><th>Estado</th><th>Evidencia</th><th>Acciones</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -2013,12 +2024,60 @@
     </div>
     <div class="modal-body">
       <div class="mrow"><b>Tarea</b><span id="tf-modal-titulo"></span></div>
-      <div class="field" style="margin-top:16px;">
-        <label>Archivo de sustento (Excel, Word o PDF)<span class="req">*</span></label>
+      <div class="field" style="margin-top:16px;margin-bottom:10px;">
+        <label>Archivo de sustento (Excel, Word o PDF)</label>
         <input type="file" id="tf-archivo" accept=".xlsx,.xls,.docx,.doc,.pdf">
+      </div>
+      <div class="field" style="margin-bottom:4px;">
+        <label>O una foto como evidencia</label>
+        <input type="file" id="tf-foto" accept="image/*" capture="environment">
+        <div class="hint">Sube el archivo o la foto — con uno de los dos alcanza.</div>
       </div>
       <span class="login-error" id="tf-modal-error"></span>
       <button type="button" class="btn btn-primary" id="tf-guardar-btn" style="width:100%;margin-top:6px;">Marcar como finalizada</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tarea-editar-modal">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-head">
+      <h3>Editar tarea</h3>
+      <button class="modal-close" id="te-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Título de la tarea<span class="req">*</span></label>
+        <input type="text" id="te-titulo">
+      </div>
+      <div class="field">
+        <label>Destinatario<span class="req">*</span></label>
+        <select id="te-destinatario"></select>
+      </div>
+      <div class="field">
+        <label>Descripción<span class="req">*</span></label>
+        <textarea id="te-descripcion"></textarea>
+      </div>
+      <div class="grid3">
+        <div class="field" style="margin-bottom:0;">
+          <label>Fecha límite<span class="req">*</span></label>
+          <input type="date" id="te-fecha-limite">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Hora límite</label>
+          <input type="time" id="te-hora-limite">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Prioridad</label>
+          <select id="te-prioridad">
+            <option value="Media">Media</option>
+            <option value="Alta">Alta</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+      </div>
+      <span class="login-error" id="te-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="te-guardar-btn" style="width:100%;margin-top:6px;">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -2148,6 +2207,7 @@ let usuariosPorId = {};
 let usuariosJefatura = [];
 let usuariosCoordinadores = [];
 let usuariosSupervisores = [];
+let usuariosBackoffice = [];
 let miUsuario = null;
 let ubicacionesCat = [];
 let ocurrenciasCat = [];
@@ -2808,7 +2868,6 @@ spRenderConc();
    Los roles y el organigrama (Jefatura/Coordinador/Supervisor, quién reporta a quién)
    se toman directo de Adecco KPI (b2c_users.puesto + manager_id) vía la función
    ssoma_tareas_personal(), en vez de mantener un permiso aparte por persona en SSOMA. */
-const TAREAS_HOY = new Date().toISOString().slice(0, 10);
 let tareasData = [];
 
 function esAdmin(){
@@ -2822,6 +2881,7 @@ function esJefaturaU(u){ return !!(u && u.rol_tarea === "jefatura"); }
 function esCoordinadorU(u){ return !!(u && u.rol_tarea === "coordinador"); }
 function esSupervisorU(u){ return !!(u && u.rol_tarea === "supervisor"); }
 function esSsomaU(u){ return !!(u && u.rol_tarea === "ssoma"); }
+function esBackofficeU(u){ return !!(u && u.rol_tarea === "backoffice"); }
 
 async function trLoadUsuarios(){
   const { data, error } = await sb.rpc("ssoma_tareas_personal");
@@ -2832,6 +2892,7 @@ async function trLoadUsuarios(){
   usuariosJefatura = usuariosTareas.filter(esJefaturaU);
   usuariosCoordinadores = usuariosTareas.filter(esCoordinadorU);
   usuariosSupervisores = usuariosTareas.filter(esSupervisorU);
+  usuariosBackoffice = usuariosTareas.filter(esBackofficeU);
   miUsuario = (currentSession && currentSession.usuario) ? (usuariosPorId[currentSession.usuario.id] || null) : null;
   trPopulateSelectors();
   aplicarVisibilidadNav();
@@ -2842,7 +2903,11 @@ async function trLoadUsuarios(){
    Jefatura -> Jefatura · Asignar Tareas, Coordinador -> Coordinador · Asignar Tareas,
    Supervisor -> Tareas, SSOMA -> el grupo SSOMA completo. Sin rol mapeado -> nada. */
 function aplicarVisibilidadNav(){
-  const seccion = esAdmin() ? "admin" : (miUsuario ? miUsuario.rol_tarea : null);
+  // Sin puesto mapeado (jefatura/coordinador/supervisor/ssoma) pero con rol "operador"
+  // en Adecco KPI -> por defecto ve Inventario (personal operativo de almacén).
+  const seccion = esAdmin() ? "admin" : (miUsuario && miUsuario.rol_tarea
+    ? miUsuario.rol_tarea
+    : (currentSession && currentSession.usuario && currentSession.usuario.rol === "operador" ? "inventario" : null));
 
   const mostrar = (el, visible) => { if(el) el.style.display = visible ? "" : "none"; };
   const grupoSsoma = document.getElementById("navgroup-ssoma-toggle");
@@ -2874,14 +2939,20 @@ function aplicarVisibilidadNav(){
   } else if(seccion === "coordinador"){
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemCoordinador, true);
     vistaInicial = "tareas-coordinador";
-  } else if(seccion === "supervisor"){
+  } else if(seccion === "supervisor" || seccion === "backoffice"){
+    // Backoffice no recibe tareas del resto de módulos, pero sí necesita ver y finalizar
+    // las que le asigna Jefatura directamente, en la misma bandeja "Tareas" del supervisor.
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemTareas, true);
     vistaInicial = "tareas-supervisor";
+  } else if(seccion === "inventario"){
+    mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
+    vistaInicial = "inventario-shortpick";
   }
 
   document.querySelectorAll(".navgroup-header").forEach(h=> h.setAttribute("aria-expanded", "false"));
   if(seccion === "ssoma" && grupoSsoma) grupoSsoma.setAttribute("aria-expanded", "true");
-  if((seccion === "jefatura" || seccion === "coordinador" || seccion === "supervisor") && grupoTareas){
+  if(seccion === "inventario" && grupoInventario) grupoInventario.setAttribute("aria-expanded", "true");
+  if((seccion === "jefatura" || seccion === "coordinador" || seccion === "supervisor" || seccion === "backoffice") && grupoTareas){
     grupoTareas.setAttribute("aria-expanded", "true");
   }
 
@@ -2904,10 +2975,20 @@ function trCurrentActorId(view){
   return miUsuario ? miUsuario.id : null;
 }
 
+/* Fecha+hora límite como Date real. Si no se puso hora, se considera vencida
+   recién al cierre del día (23:59:59), como antes de tener hora límite. */
+function tareaFechaHoraLimite(t){
+  return new Date(`${t.fecha_limite}T${t.hora_limite || "23:59:59"}`);
+}
 function tareaEstado(t){
   if(t.finalizado_at) return "finalizada";
-  if(t.fecha_limite < TAREAS_HOY) return "vencida";
+  if(tareaFechaHoraLimite(t).getTime() < Date.now()) return "vencida";
   return "pendiente";
+}
+function formatHoraLimite(hora){
+  if(!hora) return "";
+  const [h, m] = hora.split(":");
+  return ` · ${h}:${m}`;
 }
 function tareaEstadoBadge(estado){
   if(estado === "finalizada") return '<span class="estado-badge finalizado">Finalizada</span>';
@@ -2918,15 +2999,30 @@ function tareaDiasEntre(a,b){
   return Math.round((new Date(b) - new Date(a)) / 86400000);
 }
 function tareaRolLabel(rol){
-  return rol === "supervisor" ? "Supervisor" : "Jefatura/Coordinador";
+  if(rol === "supervisor") return "Supervisor";
+  if(rol === "backoffice") return "Backoffice";
+  return "Jefatura/Coordinador";
+}
+
+/* Editar/Cancelar solo disponibles para quien creó la tarea (o admin), y solo
+   mientras no esté finalizada — una vez finalizada es un registro histórico. */
+function tareaAccionesCell(t, actorId, contexto){
+  if(tareaEstado(t) === "finalizada") return "—";
+  if(!esAdmin() && t.asignado_por_id !== actorId) return "—";
+  return `<div style="display:flex;gap:6px;">
+    <button type="button" class="btn btn-ghost te-editar-btn" data-id="${t.id}" data-contexto="${contexto}" style="padding:6px 10px;font-size:11px;">Editar</button>
+    <button type="button" class="btn btn-ghost te-cancelar-btn" data-id="${t.id}" style="padding:6px 10px;font-size:11px;color:#DC2626;">Cancelar</button>
+  </div>`;
 }
 
 function trPopulateSelectors(){
   const grpCoord = document.getElementById("tj-optgroup-coord");
   const grpSup = document.getElementById("tj-optgroup-sup");
-  [grpCoord, grpSup].forEach(el=>{ el.innerHTML = ""; });
+  const grpBack = document.getElementById("tj-optgroup-backoffice");
+  [grpCoord, grpSup, grpBack].forEach(el=>{ el.innerHTML = ""; });
   usuariosSupervisores.forEach(u=> grpSup.appendChild(new Option(u.nombre_completo, "supervisor|" + u.id)));
   usuariosCoordinadores.forEach(u=> grpCoord.appendChild(new Option(u.nombre_completo, "jefe_coordinador|" + u.id)));
+  usuariosBackoffice.forEach(u=> grpBack.appendChild(new Option(u.nombre_completo, "backoffice|" + u.id)));
 }
 
 /* Muestra quién está actuando en la sesión (o el motivo por el que no puede) y controla
@@ -2981,7 +3077,7 @@ document.addEventListener("change", (e)=>{
 
 async function trLoadTareas(){
   const { data, error } = await sb.from("ssoma_tareas")
-    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, archivo_cierre, finalizado_at, created_at")
+    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, finalizado_at, created_at")
     .order("created_at", { ascending: false });
   if(error){ console.error("No se pudieron cargar las tareas:", error.message); return; }
   tareasData = (data || []).map(t => ({
@@ -3066,12 +3162,19 @@ function trRenderCoordinador(){
       <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
       <td>${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
-      <td>${formatDate(t.fecha_limite)}</td>
+      <td>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
       <td>${tareaEstadoBadge(e)}</td>
       <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
+      <td>${tareaAccionesCell(t, actorId, "coordinador")}</td>
     </tr>`;
-  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+  }).join("") : `<tr><td colspan="9" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+  tbody.querySelectorAll(".te-editar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> teOpenModal(Number(btn.dataset.id), btn.dataset.contexto));
+  });
+  tbody.querySelectorAll(".te-cancelar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> teCancelarTarea(Number(btn.dataset.id)));
+  });
 
   // Bandeja: tareas que la jefatura (u otro jefe/coordinador) le asignó a este actor
   const misPendientes = actorId != null
@@ -3105,6 +3208,7 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
   const destinatarioId = document.getElementById("tarea-supervisor").value;
   const descripcion = document.getElementById("tarea-descripcion").value.trim();
   const fechaLimite = document.getElementById("tarea-fecha-limite").value;
+  const horaLimite = document.getElementById("tarea-hora-limite").value || null;
   const prioridad = document.getElementById("tarea-prioridad").value;
   const actorId = trCurrentActorId("coordinador");
   if(!titulo || !destinatarioId || !descripcion || !fechaLimite || !actorId){
@@ -3115,13 +3219,14 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
     titulo, descripcion,
     destinatario_id: Number(destinatarioId), destinatario_rol: "supervisor",
     asignado_por_id: actorId, asignado_por_rol: "jefe_coordinador",
-    prioridad, fecha_limite: fechaLimite,
+    prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
   document.getElementById("tarea-titulo").value = "";
   document.getElementById("tarea-supervisor").value = "";
   document.getElementById("tarea-descripcion").value = "";
   document.getElementById("tarea-fecha-limite").value = "";
+  document.getElementById("tarea-hora-limite").value = "";
   document.getElementById("tarea-prioridad").value = "Media";
   await trLoadTareas();
 });
@@ -3161,12 +3266,19 @@ function trRenderJefatura(){
       <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
       <td>${tareaRolLabel(t.destinatario_rol)}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
-      <td>${formatDate(t.fecha_limite)}</td>
+      <td>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
       <td>${tareaEstadoBadge(e)}</td>
       <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
+      <td>${tareaAccionesCell(t, actorId, "jefatura")}</td>
     </tr>`;
-  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+  }).join("") : `<tr><td colspan="9" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
+  tbody.querySelectorAll(".te-editar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> teOpenModal(Number(btn.dataset.id), btn.dataset.contexto));
+  });
+  tbody.querySelectorAll(".te-cancelar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> teCancelarTarea(Number(btn.dataset.id)));
+  });
 }
 
 document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
@@ -3176,6 +3288,7 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
   const destinoRaw = document.getElementById("tj-destinatario").value;
   const descripcion = document.getElementById("tj-descripcion").value.trim();
   const fechaLimite = document.getElementById("tj-fecha-limite").value;
+  const horaLimite = document.getElementById("tj-hora-limite").value || null;
   const prioridad = document.getElementById("tj-prioridad").value;
   const actorId = trCurrentActorId("jefatura");
   if(!titulo || !destinoRaw || !descripcion || !fechaLimite || !actorId){
@@ -3187,13 +3300,14 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
     titulo, descripcion,
     destinatario_id: Number(destinatarioId), destinatario_rol: destinatarioRol,
     asignado_por_id: actorId, asignado_por_rol: "jefe_coordinador",
-    prioridad, fecha_limite: fechaLimite,
+    prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
   document.getElementById("tj-titulo").value = "";
   document.getElementById("tj-destinatario").value = "";
   document.getElementById("tj-descripcion").value = "";
   document.getElementById("tj-fecha-limite").value = "";
+  document.getElementById("tj-hora-limite").value = "";
   document.getElementById("tj-prioridad").value = "Media";
   await trLoadTareas();
 });
@@ -3221,7 +3335,7 @@ function renderTareaCard(t, mostrarDestinatario){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine}${delegLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine}${delegLine} · Límite ${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3248,7 +3362,7 @@ function renderTareaCardDelegable(t, mostrarDestinatario){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine} · Límite ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine} · Límite ${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3280,7 +3394,7 @@ function trRenderSupervisor(){
   document.getElementById("ts-stat-finalizadas").textContent = finalizadas.length;
 
   const list = document.getElementById("ts-list");
-  const rowsSorted = [...mis].sort((a,b)=> a.fecha_limite.localeCompare(b.fecha_limite));
+  const rowsSorted = [...mis].sort((a,b)=> tareaFechaHoraLimite(a) - tareaFechaHoraLimite(b));
   list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t, supSel == null)).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
 
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
@@ -3294,6 +3408,7 @@ function tfOpenModal(id){
   tfCurrentId = id;
   document.getElementById("tf-modal-titulo").textContent = t.titulo;
   document.getElementById("tf-archivo").value = "";
+  document.getElementById("tf-foto").value = "";
   document.getElementById("tf-modal-error").textContent = "";
   document.getElementById("tarea-finalizar-modal").classList.add("show");
 }
@@ -3310,14 +3425,19 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
   const errorEl = document.getElementById("tf-modal-error");
   errorEl.textContent = "";
   if(tfCurrentId == null) return;
-  const fileInput = document.getElementById("tf-archivo");
-  const file = fileInput.files[0];
+  const docFile = document.getElementById("tf-archivo").files[0];
+  const fotoFile = document.getElementById("tf-foto").files[0];
+  const file = docFile || fotoFile;
   if(!file){
-    errorEl.textContent = "Sube el archivo de sustento (Excel, Word o PDF).";
+    errorEl.textContent = "Sube el archivo de sustento o una foto como evidencia.";
     return;
   }
-  if(!/\.(xlsx|xls|docx|doc|pdf)$/i.test(file.name)){
+  if(docFile && !/\.(xlsx|xls|docx|doc|pdf)$/i.test(docFile.name)){
     errorEl.textContent = "Formato no válido. Sube un Excel, Word o PDF.";
+    return;
+  }
+  if(fotoFile && !fotoFile.type.startsWith("image/")){
+    errorEl.textContent = "El archivo de evidencia debe ser una imagen.";
     return;
   }
   accReadFileAsDataUrl(file, async dataUrl => {
@@ -3330,6 +3450,98 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
     await trLoadTareas();
   });
 });
+
+/* ---- Editar / cancelar una tarea (por si se equivocaron al asignarla) ---- */
+let teCurrentId = null;
+let teContexto = null;
+
+function teOpenModal(id, contexto){
+  const t = tareasData.find(x=>x.id === id);
+  if(!t) return;
+  teCurrentId = id;
+  teContexto = contexto;
+  document.getElementById("te-modal-error").textContent = "";
+  document.getElementById("te-titulo").value = t.titulo;
+  document.getElementById("te-descripcion").value = t.descripcion;
+  document.getElementById("te-fecha-limite").value = t.fecha_limite;
+  document.getElementById("te-hora-limite").value = t.hora_limite || "";
+  document.getElementById("te-prioridad").value = t.prioridad;
+
+  const selDest = document.getElementById("te-destinatario");
+  selDest.innerHTML = "";
+  if(contexto === "jefatura"){
+    const grpCoord = document.createElement("optgroup"); grpCoord.label = "Coordinadores";
+    usuariosCoordinadores.forEach(u=> grpCoord.appendChild(new Option(u.nombre_completo, "jefe_coordinador|" + u.id)));
+    const grpSup = document.createElement("optgroup"); grpSup.label = "Supervisores";
+    usuariosSupervisores.forEach(u=> grpSup.appendChild(new Option(u.nombre_completo, "supervisor|" + u.id)));
+    const grpBack = document.createElement("optgroup"); grpBack.label = "Backoffice";
+    usuariosBackoffice.forEach(u=> grpBack.appendChild(new Option(u.nombre_completo, "backoffice|" + u.id)));
+    selDest.appendChild(grpCoord); selDest.appendChild(grpSup); selDest.appendChild(grpBack);
+    selDest.value = `${t.destinatario_rol}|${t.destinatario_id}`;
+  } else {
+    // Coordinador: solo puede reasignar entre sus propios supervisores (manager_id).
+    const misSupervisores = usuariosSupervisores.filter(u => u.manager_id === t.asignado_por_id);
+    misSupervisores.forEach(u=> selDest.appendChild(new Option(u.nombre_completo, u.id)));
+    selDest.value = String(t.destinatario_id);
+  }
+
+  document.getElementById("tarea-editar-modal").classList.add("show");
+}
+function teCloseModal(){
+  document.getElementById("tarea-editar-modal").classList.remove("show");
+  teCurrentId = null;
+  teContexto = null;
+}
+document.getElementById("te-modal-close").addEventListener("click", teCloseModal);
+document.getElementById("tarea-editar-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "tarea-editar-modal") teCloseModal();
+});
+
+document.getElementById("te-guardar-btn").addEventListener("click", async ()=>{
+  const errorEl = document.getElementById("te-modal-error");
+  errorEl.textContent = "";
+  if(teCurrentId == null) return;
+  const t = tareasData.find(x=>x.id === teCurrentId);
+  if(!t) return;
+  const titulo = document.getElementById("te-titulo").value.trim();
+  const destRaw = document.getElementById("te-destinatario").value;
+  const descripcion = document.getElementById("te-descripcion").value.trim();
+  const fechaLimite = document.getElementById("te-fecha-limite").value;
+  const horaLimite = document.getElementById("te-hora-limite").value || null;
+  const prioridad = document.getElementById("te-prioridad").value;
+  if(!titulo || !destRaw || !descripcion || !fechaLimite){
+    errorEl.textContent = "Completa título, destinatario, descripción y fecha límite.";
+    return;
+  }
+  let destinatarioRol, destinatarioId;
+  if(teContexto === "jefatura"){
+    const [rol, id] = destRaw.split("|");
+    destinatarioRol = rol; destinatarioId = Number(id);
+  } else {
+    destinatarioRol = "supervisor"; destinatarioId = Number(destRaw);
+  }
+  const cambioDestino = destinatarioId !== t.destinatario_id || destinatarioRol !== t.destinatario_rol;
+  const payload = {
+    titulo, descripcion, fecha_limite: fechaLimite, hora_limite: horaLimite, prioridad,
+    destinatario_id: destinatarioId, destinatario_rol: destinatarioRol,
+  };
+  // Si cambia el destinatario, cualquier delegación previa (hecha para el destinatario anterior) ya no aplica.
+  if(cambioDestino){ payload.delegado_a_id = null; payload.delegado_a_rol = null; }
+  const { error } = await sb.from("ssoma_tareas").update(payload).eq("id", teCurrentId);
+  if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+  teCloseModal();
+  await trLoadTareas();
+});
+
+function teCancelarTarea(id){
+  const t = tareasData.find(x=>x.id === id);
+  if(!t) return;
+  if(!confirm(`¿Cancelar la tarea "${t.titulo}"? Esta acción no se puede deshacer.`)) return;
+  sb.from("ssoma_tareas").delete().eq("id", id).then(({ error })=>{
+    if(error){ alert("No se pudo cancelar la tarea: " + error.message); return; }
+    trLoadTareas();
+  });
+}
 
 /* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
 function spUpdateImportState(){
