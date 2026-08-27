@@ -1495,6 +1495,12 @@
       </div>
       <p class="section-desc">Seguimiento de faltantes de picking (Short Pick) a partir de la data del WMS. Filtra por semana y sub área para ver el resumen por turno, supervisor y proceso — igual que tu plantilla SP_DIARIO.</p>
 
+      <div class="tab-bar" id="sp-tabs">
+        <button type="button" class="tab-btn active" data-tab="auditoria">Auditoría</button>
+        <button type="button" class="tab-btn" data-tab="conciliacion">Conciliación <span class="tab-count" id="sp-tab-count-conciliacion">0</span></button>
+      </div>
+
+      <div id="sp-tab-auditoria">
       <div class="import-card">
         <div class="import-card-head">
           <div>
@@ -1566,8 +1572,11 @@
         </table>
       </div>
 
-      <div class="section-subhead">Detalle</div>
-      <div class="table-wrap">
+      <button type="button" class="section-subhead collapsible-toggle" id="sp-detail-toggle" aria-expanded="false">
+        Detalle
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="sp-detail-wrap">
         <table class="data-table" id="sp-detail-table">
           <thead><tr><th>Fe y Hr Crea</th><th>Cod Alternat</th><th>Descripción</th><th>Ubicación</th><th>Sub Área</th><th>Turno</th><th>Responsable</th><th>Supervisor</th><th>Nro Orden</th><th>Proceso*</th><th>Un Ajust</th><th>Valorizado (S/)**</th><th>Semana</th><th>Estado</th></tr></thead>
           <tbody></tbody>
@@ -1580,15 +1589,14 @@
           Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
           <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
           <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (tabla VALOR) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
-          <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en <b>Conciliación Shortpick</b>, abajo — solo cuenta la cantidad realmente encontrada.</div>
+          <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en la pestaña <b>Conciliación</b>, arriba — solo cuenta la cantidad realmente encontrada.</div>
         </div>
       </div>
-
-      <!-- Conciliación Shortpick: ahora es una sección dentro de Auditoría Shortpick, no un módulo aparte -->
-      <div class="section-head" style="margin-top:30px;">
-        <h2 class="section-title" style="font-size:16px;">Conciliación Shortpick</h2>
-        <span class="count-pill" id="conc-count">0 pendientes</span>
       </div>
+
+      <!-- Conciliación Shortpick: pestaña aparte dentro del mismo panel, no un módulo distinto -->
+      <div id="sp-tab-conciliacion" style="display:none;">
+      <span id="conc-count" style="display:none;"></span>
       <p class="section-desc">Verifica físicamente cada faltante reportado por el WMS: sube una foto del producto encontrado e indica si recuperaste la cantidad completa o solo una parte. Solo lo encontrado se resta del valorizado como "conciliado".</p>
 
       <div class="stats-row stats-row-3" style="margin-top:18px;">
@@ -1611,6 +1619,7 @@
           <thead><tr><th>Fe y Hr Crea</th><th>Cod Alternat</th><th>Descripción</th><th>Ubicación</th><th>Cant. WMS</th><th>Estado</th><th>Cant. encontrada</th><th>Evidencia</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
       </div>
     </section>
 
@@ -2757,6 +2766,11 @@ document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const expanded = btn.getAttribute("aria-expanded") === "true";
   btn.setAttribute("aria-expanded", String(!expanded));
 });
+document.getElementById("sp-detail-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
 
 /* ---- Conciliación Shortpick ---- */
 function concEstadoBadge(v){
@@ -2774,6 +2788,7 @@ function spRenderConc(){
     valorConciliado += concValorConciliadoRow(r);
   });
   document.getElementById("conc-count").textContent = pendientes + (pendientes===1 ? " pendiente" : " pendientes");
+  document.getElementById("sp-tab-count-conciliacion").textContent = pendientes;
   document.getElementById("conc-stat-pendientes").textContent = pendientes;
   document.getElementById("conc-stat-verificados").textContent = verificados;
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
@@ -3022,10 +3037,13 @@ function tareaEstadoBadge(estado){
 function tareaDiasEntre(a,b){
   return Math.round((new Date(b) - new Date(a)) / 86400000);
 }
-function tareaRolLabel(rol){
-  if(rol === "supervisor") return "Supervisor";
-  if(rol === "backoffice") return "Backoffice";
-  return "Jefatura/Coordinador";
+function tareaRolLabel(rolTarea){
+  if(rolTarea === "jefatura") return "Jefatura";
+  if(rolTarea === "coordinador") return "Coordinador";
+  if(rolTarea === "supervisor") return "Supervisor";
+  if(rolTarea === "backoffice") return "Backoffice";
+  if(rolTarea === "ssoma") return "SSOMA";
+  return "—";
 }
 
 /* Editar/Cancelar solo disponibles para quien creó la tarea (o admin), y solo
@@ -3111,6 +3129,10 @@ document.addEventListener("click", (e)=>{
   btn.classList.add("active");
   if(barra.id === "ts-tabs"){ tsTabActivo = btn.dataset.tab; trRenderSupervisor(); }
   else if(barra.id === "tc-inbox-tabs"){ tcInboxTabActivo = btn.dataset.tab; trRenderCoordinador(); }
+  else if(barra.id === "sp-tabs"){
+    document.getElementById("sp-tab-auditoria").style.display = btn.dataset.tab === "auditoria" ? "" : "none";
+    document.getElementById("sp-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
+  }
 });
 
 async function trLoadTareas(){
@@ -3135,7 +3157,7 @@ function renderCumplimientoTable(tbodyEl, tareas, incluirRol){
   tareas.forEach(t=>{
     if(!t.destinatario) return;
     const key = t.destinatario.id;
-    if(!byDest[key]) byDest[key] = {nombre:t.destinatario.nombre_completo, rol:t.destinatario_rol, asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
+    if(!byDest[key]) byDest[key] = {nombre:t.destinatario.nombre_completo, rol:t.destinatario.rol_tarea, asignadas:0, finalizadas:0, vencidas:0, tiempos:[]};
     const e = tareaEstado(t);
     byDest[key].asignadas++;
     if(e === "finalizada"){ byDest[key].finalizadas++; byDest[key].tiempos.push(tareaDiasEntre(t.created_at.slice(0,10), t.finalizado_at.slice(0,10))); }
@@ -3314,7 +3336,7 @@ function trRenderJefatura(){
     <tr>
       <td>${escapeHtml(t.titulo)}</td>
       <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
-      <td>${tareaRolLabel(t.destinatario_rol)}</td>
+      <td>${tareaRolLabel(t.destinatario && t.destinatario.rol_tarea)}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
       <td>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
@@ -3393,7 +3415,7 @@ function renderTareaCard(t, mostrarDestinatario){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine}${delegLine} · Límite ${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por && t.asignado_por.rol_tarea)})${destLine}${delegLine} · Límite ${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3420,7 +3442,7 @@ function renderTareaCardDelegable(t, mostrarDestinatario){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
       <div>
         <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(t.titulo)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})${destLine} · Límite ${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por && t.asignado_por.rol_tarea)})${destLine} · Límite ${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
       </div>
       ${tareaEstadoBadge(e)}
     </div>
@@ -3626,8 +3648,8 @@ function tiOpenModal(id){
       <h4 style="margin:0;font-size:16px;color:var(--text);">${escapeHtml(t.titulo)}</h4>
       ${tareaEstadoBadge(e)}
     </div>
-    <div class="mrow"><b>Asignada por</b><span>${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})</span></div>
-    <div class="mrow"><b>Destinatario</b><span>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"} (${tareaRolLabel(t.destinatario_rol)})</span></div>
+    <div class="mrow"><b>Asignada por</b><span>${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por && t.asignado_por.rol_tarea)})</span></div>
+    <div class="mrow"><b>Destinatario</b><span>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"} (${tareaRolLabel(t.destinatario && t.destinatario.rol_tarea)})</span></div>
     ${t.delegado_a ? `<div class="mrow"><b>Delegada a</b><span>${escapeHtml(t.delegado_a.nombre_completo)}</span></div>` : ""}
     <div class="mrow"><b>Prioridad</b><span>${escapeHtml(t.prioridad)}</span></div>
     <div class="mrow"><b>Asignada el</b><span>${formatDate(t.created_at.slice(0,10))}</span></div>
