@@ -2082,6 +2082,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="tarea-informe-modal">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-head">
+      <h3>Informe de la tarea</h3>
+      <button class="modal-close" id="ti-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body" id="ti-modal-body"></div>
+  </div>
+</div>
+
 </div><!-- /app-root -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -3007,12 +3017,12 @@ function tareaRolLabel(rol){
 /* Editar/Cancelar solo disponibles para quien creó la tarea (o admin), y solo
    mientras no esté finalizada — una vez finalizada es un registro histórico. */
 function tareaAccionesCell(t, actorId, contexto){
-  if(tareaEstado(t) === "finalizada") return "—";
-  if(!esAdmin() && t.asignado_por_id !== actorId) return "—";
-  return `<div style="display:flex;gap:6px;">
+  const btnInforme = `<button type="button" class="btn btn-ghost ti-informe-btn" data-id="${t.id}" style="padding:6px 10px;font-size:11px;">Ver informe</button>`;
+  const puedeEditar = tareaEstado(t) !== "finalizada" && (esAdmin() || t.asignado_por_id === actorId);
+  const btnsEdicion = puedeEditar ? `
     <button type="button" class="btn btn-ghost te-editar-btn" data-id="${t.id}" data-contexto="${contexto}" style="padding:6px 10px;font-size:11px;">Editar</button>
-    <button type="button" class="btn btn-ghost te-cancelar-btn" data-id="${t.id}" style="padding:6px 10px;font-size:11px;color:#DC2626;">Cancelar</button>
-  </div>`;
+    <button type="button" class="btn btn-ghost te-cancelar-btn" data-id="${t.id}" style="padding:6px 10px;font-size:11px;color:#DC2626;">Cancelar</button>` : "";
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;">${btnInforme}${btnsEdicion}</div>`;
 }
 
 function trPopulateSelectors(){
@@ -3175,6 +3185,9 @@ function trRenderCoordinador(){
   tbody.querySelectorAll(".te-cancelar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> teCancelarTarea(Number(btn.dataset.id)));
   });
+  tbody.querySelectorAll(".ti-informe-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> tiOpenModal(Number(btn.dataset.id)));
+  });
 
   // Bandeja: tareas que la jefatura (u otro jefe/coordinador) le asignó a este actor
   const misPendientes = actorId != null
@@ -3184,6 +3197,9 @@ function trRenderCoordinador(){
   inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCardDelegable(t, actorId == null)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
   inbox.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
+  });
+  inbox.querySelectorAll(".ti-informe-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> tiOpenModal(Number(btn.dataset.id)));
   });
   inbox.querySelectorAll(".tc-delegar-btn").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
@@ -3279,6 +3295,9 @@ function trRenderJefatura(){
   tbody.querySelectorAll(".te-cancelar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> teCancelarTarea(Number(btn.dataset.id)));
   });
+  tbody.querySelectorAll(".ti-informe-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> tiOpenModal(Number(btn.dataset.id)));
+  });
 }
 
 document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
@@ -3322,12 +3341,17 @@ let tfCurrentId = null;
 
 function renderTareaCard(t, mostrarDestinatario){
   const e = tareaEstado(t);
+  const btnInforme = `<button type="button" class="btn btn-ghost ti-informe-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>`;
   const footer = e === "finalizada"
     ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
          <span class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</span>
          <span style="color:var(--muted);">Finalizada el ${formatDate(t.finalizado_at.slice(0,10))}</span>
+         ${btnInforme}
        </div>`
-    : `<button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="margin-top:10px;padding:8px 14px;font-size:12px;">Marcar como finalizada</button>`;
+    : `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+         <button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Marcar como finalizada</button>
+         ${btnInforme}
+       </div>`;
   const destLine = mostrarDestinatario && t.destinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
   const delegLine = t.delegado_a ? ` · Delegada a ${escapeHtml(t.delegado_a.nombre_completo)}` : "";
   return `
@@ -3372,6 +3396,7 @@ function renderTareaCardDelegable(t, mostrarDestinatario){
       <select class="tc-delegar-select" data-id="${t.id}" style="max-width:230px;">${delegOpts}</select>
       <button type="button" class="btn btn-ghost tc-delegar-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">${t.delegado_a ? "Cambiar delegado" : "Delegar"}</button>
       <button type="button" class="btn btn-primary tf-finalizar-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Marcar como finalizada</button>
+      <button type="button" class="btn btn-ghost ti-informe-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>
     </div>
     <span class="tc-delegar-error" data-id="${t.id}" style="color:#DC2626;font-size:11px;display:block;margin-top:6px;"></span>
   </div>`;
@@ -3399,6 +3424,9 @@ function trRenderSupervisor(){
 
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
+  });
+  list.querySelectorAll(".ti-informe-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> tiOpenModal(Number(btn.dataset.id)));
   });
 }
 
@@ -3542,6 +3570,51 @@ function teCancelarTarea(id){
     trLoadTareas();
   });
 }
+
+/* ---- Ver informe de la tarea (disponible para cualquiera que pueda ver la tarea) ---- */
+function tiOpenModal(id){
+  const t = tareasData.find(x=>x.id === id);
+  if(!t) return;
+  const e = tareaEstado(t);
+  let evidenciaHtml = `<div class="hint">Sin evidencia todavía.</div>`;
+  if(t.archivo_cierre){
+    const esImagen = (t.archivo_cierre.tipo || "").startsWith("image/");
+    evidenciaHtml = esImagen
+      ? `<img src="${t.archivo_cierre.contenido}" alt="Evidencia" class="ti-evidencia-img" style="max-width:240px;max-height:180px;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);display:block;">`
+      : `<a href="${t.archivo_cierre.contenido}" download="${escapeHtml(t.archivo_cierre.nombre)}" target="_blank" class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</a>`;
+  }
+  document.getElementById("ti-modal-body").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:16px;">
+      <h4 style="margin:0;font-size:16px;color:var(--text);">${escapeHtml(t.titulo)}</h4>
+      ${tareaEstadoBadge(e)}
+    </div>
+    <div class="mrow"><b>Asignada por</b><span>${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"} (${tareaRolLabel(t.asignado_por_rol)})</span></div>
+    <div class="mrow"><b>Destinatario</b><span>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"} (${tareaRolLabel(t.destinatario_rol)})</span></div>
+    ${t.delegado_a ? `<div class="mrow"><b>Delegada a</b><span>${escapeHtml(t.delegado_a.nombre_completo)}</span></div>` : ""}
+    <div class="mrow"><b>Prioridad</b><span>${escapeHtml(t.prioridad)}</span></div>
+    <div class="mrow"><b>Asignada el</b><span>${formatDate(t.created_at.slice(0,10))}</span></div>
+    <div class="mrow"><b>Fecha límite</b><span>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</span></div>
+    ${t.finalizado_at ? `<div class="mrow"><b>Finalizada el</b><span>${formatDate(t.finalizado_at.slice(0,10))}</span></div>` : ""}
+    <div class="field" style="margin-top:14px;">
+      <label>Descripción</label>
+      <div style="font-size:13px;color:var(--text-soft);white-space:pre-wrap;">${escapeHtml(t.descripcion)}</div>
+    </div>
+    <div class="field" style="margin-top:14px;margin-bottom:0;">
+      <label>Evidencia</label>
+      ${evidenciaHtml}
+    </div>
+  `;
+  document.getElementById("tarea-informe-modal").classList.add("show");
+  const img = document.querySelector("#ti-modal-body .ti-evidencia-img");
+  if(img) img.addEventListener("click", ()=> openImageLightbox(t.archivo_cierre.contenido));
+}
+function tiCloseModal(){
+  document.getElementById("tarea-informe-modal").classList.remove("show");
+}
+document.getElementById("ti-modal-close").addEventListener("click", tiCloseModal);
+document.getElementById("tarea-informe-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "tarea-informe-modal") tiCloseModal();
+});
 
 /* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
 function spUpdateImportState(){
