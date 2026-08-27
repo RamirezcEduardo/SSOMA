@@ -324,6 +324,20 @@
   @media (max-width:980px){.stats-row{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:520px){.stats-row{grid-template-columns:1fr;}}
 
+  .tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .tab-btn{
+    font-family:'Inter',sans-serif;background:none;border:none;cursor:pointer;
+    padding:9px 4px;margin-right:18px;font-size:13px;font-weight:700;color:var(--muted);
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+  .tab-btn .tab-count{
+    display:inline-block;margin-left:6px;padding:1px 7px;border-radius:20px;
+    background:var(--panel-alt);color:var(--muted);font-size:11px;font-weight:700;
+  }
+  .tab-btn.active .tab-count{background:var(--red-tint);color:var(--red-dark);}
+
   .section-subhead{
     font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;
     color:var(--muted);margin:26px 0 10px;
@@ -1057,12 +1071,11 @@
       <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="false" style="margin-top:10px;">
         <span class="navgroup-icon">📦</span>
         <span class="navgroup-title">Inventario</span>
-        <span class="navgroup-count" id="navgroup-inventario-count">4</span>
+        <span class="navgroup-count" id="navgroup-inventario-count">3</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-inventario-body">
         <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag pending">Próximamente</span></button>
-        <button class="navitem" data-view="inventario-conciliacion-shortpick"><span class="dot" style="background:#16A34A;"></span><span class="label">Conciliación Shortpick</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
       </div>
@@ -1567,15 +1580,13 @@
           Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
           <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
           <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (tabla VALOR) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
-          <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en <b>Conciliación Shortpick</b> — solo cuenta la cantidad realmente encontrada.</div>
+          <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en <b>Conciliación Shortpick</b>, abajo — solo cuenta la cantidad realmente encontrada.</div>
         </div>
       </div>
-    </section>
 
-    <!-- INVENTARIO · CONCILIACIÓN SHORTPICK -->
-    <section class="panel" id="panel-inventario-conciliacion-shortpick">
-      <div class="section-head">
-        <h2 class="section-title">Inventario — Conciliación Shortpick</h2>
+      <!-- Conciliación Shortpick: ahora es una sección dentro de Auditoría Shortpick, no un módulo aparte -->
+      <div class="section-head" style="margin-top:30px;">
+        <h2 class="section-title" style="font-size:16px;">Conciliación Shortpick</h2>
         <span class="count-pill" id="conc-count">0 pendientes</span>
       </div>
       <p class="section-desc">Verifica físicamente cada faltante reportado por el WMS: sube una foto del producto encontrado e indica si recuperaste la cantidad completa o solo una parte. Solo lo encontrado se resta del valorizado como "conciliado".</p>
@@ -1600,11 +1611,6 @@
           <thead><tr><th>Fe y Hr Crea</th><th>Cod Alternat</th><th>Descripción</th><th>Ubicación</th><th>Cant. WMS</th><th>Estado</th><th>Cant. encontrada</th><th>Evidencia</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-      </div>
-
-      <div class="help-tip" style="margin-top:18px;max-width:640px;">
-        <span class="ic">📌</span>
-        <div>Este resumen es dinámico: toma los mismos registros de <b>Auditoría Shortpick</b>. Lo que conciles aquí es lo que alimenta el KPI "Valor conciliado" de ese módulo.</div>
       </div>
     </section>
 
@@ -1751,6 +1757,10 @@
 
       <div id="tc-content">
       <div class="section-subhead">Mis tareas (asignadas por Jefatura)</div>
+      <div class="tab-bar" id="tc-inbox-tabs">
+        <button type="button" class="tab-btn active" data-tab="pendientes">Pendientes <span class="tab-count" id="tc-inbox-tab-count-pendientes">0</span></button>
+        <button type="button" class="tab-btn" data-tab="finalizadas">Finalizadas <span class="tab-count" id="tc-inbox-tab-count-finalizadas">0</span></button>
+      </div>
       <div id="tc-inbox-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px;"></div>
 
       <div class="section-subhead">Asignar a supervisores</div>
@@ -1867,7 +1877,11 @@
         </div>
       </div>
 
-      <div id="ts-list" style="margin-top:18px;display:flex;flex-direction:column;gap:12px;"></div>
+      <div class="tab-bar" id="ts-tabs" style="margin-top:22px;">
+        <button type="button" class="tab-btn active" data-tab="pendientes">Pendientes <span class="tab-count" id="ts-tab-count-pendientes">0</span></button>
+        <button type="button" class="tab-btn" data-tab="finalizadas">Finalizadas <span class="tab-count" id="ts-tab-count-finalizadas">0</span></button>
+      </div>
+      <div id="ts-list" style="display:flex;flex-direction:column;gap:12px;"></div>
       </div>
     </section>
 
@@ -3085,6 +3099,20 @@ document.addEventListener("change", (e)=>{
   else if(sel.dataset.view === "supervisor") trRenderSupervisor();
 });
 
+/* Pestañas "Pendientes / Finalizadas" de la bandeja del coordinador y de "Mis Tareas",
+   para no mezclar lo activo con lo ya cerrado en una sola lista larga. */
+let tsTabActivo = "pendientes";
+let tcInboxTabActivo = "pendientes";
+document.addEventListener("click", (e)=>{
+  const btn = e.target.closest(".tab-btn");
+  if(!btn) return;
+  const barra = btn.closest(".tab-bar");
+  barra.querySelectorAll(".tab-btn").forEach(b=> b.classList.remove("active"));
+  btn.classList.add("active");
+  if(barra.id === "ts-tabs"){ tsTabActivo = btn.dataset.tab; trRenderSupervisor(); }
+  else if(barra.id === "tc-inbox-tabs"){ tcInboxTabActivo = btn.dataset.tab; trRenderCoordinador(); }
+});
+
 async function trLoadTareas(){
   const { data, error } = await sb.from("ssoma_tareas")
     .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, finalizado_at, created_at")
@@ -3190,11 +3218,17 @@ function trRenderCoordinador(){
   });
 
   // Bandeja: tareas que la jefatura (u otro jefe/coordinador) le asignó a este actor
-  const misPendientes = actorId != null
+  const bandeja = actorId != null
     ? tareasData.filter(t=> t.destinatario && t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador")
     : tareasData.filter(t=> t.destinatario_rol === "jefe_coordinador");
+  const bandejaFinalizadas = bandeja.filter(t=> tareaEstado(t) === "finalizada");
+  const bandejaActivas = bandeja.filter(t=> tareaEstado(t) !== "finalizada");
+  document.getElementById("tc-inbox-tab-count-pendientes").textContent = bandejaActivas.length;
+  document.getElementById("tc-inbox-tab-count-finalizadas").textContent = bandejaFinalizadas.length;
+  const enBandejaTab = tcInboxTabActivo === "finalizadas" ? bandejaFinalizadas : bandejaActivas;
   const inbox = document.getElementById("tc-inbox-list");
-  inbox.innerHTML = misPendientes.length ? misPendientes.map(t=> renderTareaCardDelegable(t, actorId == null)).join("") : `<div class="empty">Jefatura no te ha asignado tareas.</div>`;
+  const bandejaVacia = tcInboxTabActivo === "finalizadas" ? "Todavía no finalizas ninguna tarea." : "Jefatura no te ha asignado tareas.";
+  inbox.innerHTML = enBandejaTab.length ? enBandejaTab.map(t=> renderTareaCardDelegable(t, actorId == null)).join("") : `<div class="empty">${bandejaVacia}</div>`;
   inbox.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
   });
@@ -3417,10 +3451,14 @@ function trRenderSupervisor(){
   document.getElementById("ts-stat-pendientes").textContent = pendientes.length;
   document.getElementById("ts-stat-vencidas").textContent = vencidas.length;
   document.getElementById("ts-stat-finalizadas").textContent = finalizadas.length;
+  document.getElementById("ts-tab-count-pendientes").textContent = pendientes.length + vencidas.length;
+  document.getElementById("ts-tab-count-finalizadas").textContent = finalizadas.length;
 
   const list = document.getElementById("ts-list");
-  const rowsSorted = [...mis].sort((a,b)=> tareaFechaHoraLimite(a) - tareaFechaHoraLimite(b));
-  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t, supSel == null)).join("") : `<div class="empty">No tienes tareas asignadas.</div>`;
+  const enTab = tsTabActivo === "finalizadas" ? finalizadas : [...pendientes, ...vencidas];
+  const rowsSorted = [...enTab].sort((a,b)=> tareaFechaHoraLimite(a) - tareaFechaHoraLimite(b));
+  const vacioMsg = tsTabActivo === "finalizadas" ? "Todavía no finalizas ninguna tarea." : "No tienes tareas pendientes.";
+  list.innerHTML = rowsSorted.length ? rowsSorted.map(t=> renderTareaCard(t, supSel == null)).join("") : `<div class="empty">${vacioMsg}</div>`;
 
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
