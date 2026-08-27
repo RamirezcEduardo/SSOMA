@@ -1,6 +1,6 @@
 {
   "appId": "com.adecco.ssoma",
-  "appName": "SSOMA Adecco",
+  "appName": "ADECCO RP",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
