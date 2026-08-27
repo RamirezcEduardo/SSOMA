@@ -2016,7 +2016,7 @@
 
       <div class="field" style="margin-top:16px;">
         <label>Foto del producto encontrado</label>
-        <input type="file" accept="image/*" id="conc-foto">
+        <input type="file" accept="image/*" capture="environment" id="conc-foto">
       </div>
 
       <div class="field">
@@ -2284,7 +2284,7 @@ function renderImageWidget(key){
     <div class="img-slot">
       ${img
         ? `<img src="${img}" class="img-thumb"><button type="button" class="img-remove" data-key="${key}" data-idx="${i}">×</button>`
-        : `<label class="img-empty"><input type="file" accept="image/*" class="img-input" data-key="${key}" data-idx="${i}" hidden>+</label>`
+        : `<label class="img-empty"><input type="file" accept="image/*" capture="environment" class="img-input" data-key="${key}" data-idx="${i}" hidden>+</label>`
       }
     </div>
   `).join("");
@@ -2978,7 +2978,12 @@ function aplicarVisibilidadNav(){
   } else if(seccion === "coordinador"){
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemCoordinador, true);
     vistaInicial = "tareas-coordinador";
-  } else if(seccion === "supervisor" || seccion === "backoffice"){
+  } else if(seccion === "supervisor"){
+    // El supervisor también hace reportes de campo, no solo Designación de Tareas.
+    mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemTareas, true);
+    mostrar(grupoSsoma, true); mostrar(cuerpoSsoma, true);
+    vistaInicial = "tareas-supervisor";
+  } else if(seccion === "backoffice"){
     // Backoffice no recibe tareas del resto de módulos, pero sí necesita ver y finalizar
     // las que le asigna Jefatura directamente, en la misma bandeja "Tareas" del supervisor.
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemTareas, true);
