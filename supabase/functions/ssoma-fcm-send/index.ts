@@ -12,7 +12,10 @@
 // public.ssoma_get_fcm_service_account(), restringida a service_role
 // (ver supabase/migrations/0016_ssoma_fcm_service_account_accessor.sql).
 //
-// Body esperado: { usuario_ids: number[], titulo: string, cuerpo: string, datos?: object }
+// Body esperado: { usuario_ids: number[], titulo: string, cuerpo: string, datos?: object, color?: "#RRGGBB" }
+// El canal "ssoma_tareas" ("SSOMA · Tareas") lo crea la app en el dispositivo
+// (ver ssomaInicializarPush en index.html); si no existe todavía, Android usa
+// el canal por defecto en su lugar.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -104,7 +107,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Firebase no está configurado todavía (falta el secreto fcm_service_account_json en Vault)." });
   }
 
-  let payload: { usuario_ids?: number[]; titulo?: string; cuerpo?: string; datos?: Record<string, unknown> };
+  let payload: { usuario_ids?: number[]; titulo?: string; cuerpo?: string; datos?: Record<string, unknown>; color?: string };
   try {
     payload = await req.json();
   } catch {
@@ -113,6 +116,8 @@ Deno.serve(async (req) => {
   const usuarioIds = Array.isArray(payload.usuario_ids) ? payload.usuario_ids : [];
   const titulo = (payload.titulo || "").toString().slice(0, 200);
   const cuerpo = (payload.cuerpo || "").toString().slice(0, 500);
+  // Rojo por defecto (Adecco) si el llamador no manda un color específico por tipo de aviso.
+  const color = /^#[0-9A-Fa-f]{6}$/.test(payload.color || "") ? payload.color! : "#E31E24";
   if (!usuarioIds.length || !titulo) {
     return jsonResponse({ error: "usuario_ids y titulo son obligatorios" }, 400);
   }
@@ -146,7 +151,7 @@ Deno.serve(async (req) => {
             token: row.token,
             notification: { title: titulo, body: cuerpo },
             data: datosString,
-            android: { priority: "high" },
+            android: { priority: "high", notification: { channel_id: "ssoma_tareas", color } },
           },
         }),
       });

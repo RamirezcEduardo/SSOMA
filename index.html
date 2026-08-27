@@ -3294,7 +3294,11 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
     prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
-  ssomaNotificarPush(Number(destinatarioId), "Nueva tarea asignada", titulo, { tipo: "tarea_asignada" });
+  ssomaNotificarPush(
+    Number(destinatarioId), "Nueva tarea asignada",
+    ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId),
+    { tipo: "tarea_asignada" }, SSOMA_PUSH_COLORES.asignada,
+  );
   document.getElementById("tarea-titulo").value = "";
   document.getElementById("tarea-supervisor").value = "";
   document.getElementById("tarea-descripcion").value = "";
@@ -3379,7 +3383,11 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
     prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
-  ssomaNotificarPush(Number(destinatarioId), "Nueva tarea asignada", titulo, { tipo: "tarea_asignada" });
+  ssomaNotificarPush(
+    Number(destinatarioId), "Nueva tarea asignada",
+    ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId),
+    { tipo: "tarea_asignada" }, SSOMA_PUSH_COLORES.asignada,
+  );
   document.getElementById("tj-titulo").value = "";
   document.getElementById("tj-destinatario").value = "";
   document.getElementById("tj-descripcion").value = "";
@@ -3537,7 +3545,14 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
     }).eq("id", tfCurrentId);
     if(error){ errorEl.textContent = "No se pudo finalizar la tarea: " + error.message; return; }
     const tFinalizada = tareasData.find(x=> x.id === tfCurrentId);
-    if(tFinalizada) ssomaNotificarPush(tfNotificarIdsFinalizacion(tFinalizada), "Tarea finalizada", tFinalizada.titulo, { tipo: "tarea_finalizada" });
+    if(tFinalizada){
+      const quien = miUsuario ? miUsuario.nombre_completo : "Alguien";
+      ssomaNotificarPush(
+        tfNotificarIdsFinalizacion(tFinalizada), "Tarea finalizada",
+        `${quien} marcó como lista: ${tFinalizada.titulo}`,
+        { tipo: "tarea_finalizada" }, SSOMA_PUSH_COLORES.finalizada,
+      );
+    }
     tfCloseModal();
     await trLoadTareas();
   });
@@ -4521,6 +4536,15 @@ async function ssomaInicializarPush(){
   if(permiso.receive !== "granted") return;
   await PushNotifications.register();
 
+  // Canal propio (Android 8+): reemplaza el "Miscelánea" por defecto para que
+  // los avisos de tareas se vean y se administren aparte del resto del sistema.
+  if(PushNotifications.createChannel){
+    PushNotifications.createChannel({
+      id: "ssoma_tareas", name: "SSOMA · Tareas",
+      importance: 5, visibility: 1, vibration: true, lights: true,
+    }).catch(()=>{});
+  }
+
   PushNotifications.addListener("registration", async (token)=>{
     if(!currentSession || !token || !token.value) return;
     try{
@@ -4553,11 +4577,22 @@ function tfNotificarIdsFinalizacion(t){
   return Array.from(ids);
 }
 
-async function ssomaNotificarPush(usuarioIds, titulo, cuerpo, datos){
+/* Un color por tipo de aviso, igual al que ya distingue los estados dentro
+   de la app (rojo = nuevo, ámbar = por vencer, verde = finalizado). */
+const SSOMA_PUSH_COLORES = { asignada: "#E31E24", vencer: "#C4820F", finalizada: "#1F7A4D" };
+
+function ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId){
+  const asignadoPor = usuariosPorId[actorId];
+  const limite = `Vence ${formatDate(fechaLimite)}${formatHoraLimite(horaLimite)}`;
+  const de = asignadoPor ? ` — de ${asignadoPor.nombre_completo}` : "";
+  return `${titulo} · Prioridad ${prioridad}\n${limite}${de}`;
+}
+
+async function ssomaNotificarPush(usuarioIds, titulo, cuerpo, datos, color){
   try{
     const ids = (Array.isArray(usuarioIds) ? usuarioIds : [usuarioIds]).filter(v => v != null);
     if(!ids.length) return;
-    await sb.functions.invoke("ssoma-fcm-send", { body: { usuario_ids: ids, titulo, cuerpo, datos: datos || {} } });
+    await sb.functions.invoke("ssoma-fcm-send", { body: { usuario_ids: ids, titulo, cuerpo, datos: datos || {}, color } });
   }catch(e){ console.warn("No se pudo enviar la notificación push:", e && e.message); }
 }
 
