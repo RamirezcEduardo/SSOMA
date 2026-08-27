@@ -19,6 +19,19 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// La app la llama desde supabase-js (fetch en el WebView de Capacitor), que
+// primero manda un preflight OPTIONS. Sin estos headers el navegador bloquea
+// la llamada real antes de que llegue acá (por eso no se veían errores del
+// lado de la app: el POST nunca salía).
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+}
+
 function base64url(input: ArrayBuffer | string): string {
   const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
   let str = "";
@@ -75,33 +88,33 @@ async function getFcmAccessToken(serviceAccount: { client_email: string; private
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Método no permitido" }), { status: 405 });
+    return jsonResponse({ error: "Método no permitido" }, 405);
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const { data: fcmServiceAccountJson, error: secretError } = await supabase.rpc("ssoma_get_fcm_service_account");
   if (secretError) {
-    return new Response(JSON.stringify({ error: `No se pudo leer la credencial de Firebase: ${secretError.message}` }), { status: 500 });
+    return jsonResponse({ error: `No se pudo leer la credencial de Firebase: ${secretError.message}` }, 500);
   }
   if (!fcmServiceAccountJson) {
-    return new Response(
-      JSON.stringify({ error: "Firebase no está configurado todavía (falta el secreto fcm_service_account_json en Vault)." }),
-      { status: 200 },
-    );
+    return jsonResponse({ error: "Firebase no está configurado todavía (falta el secreto fcm_service_account_json en Vault)." });
   }
 
   let payload: { usuario_ids?: number[]; titulo?: string; cuerpo?: string; datos?: Record<string, unknown> };
   try {
     payload = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Body inválido" }), { status: 400 });
+    return jsonResponse({ error: "Body inválido" }, 400);
   }
   const usuarioIds = Array.isArray(payload.usuario_ids) ? payload.usuario_ids : [];
   const titulo = (payload.titulo || "").toString().slice(0, 200);
   const cuerpo = (payload.cuerpo || "").toString().slice(0, 500);
   if (!usuarioIds.length || !titulo) {
-    return new Response(JSON.stringify({ error: "usuario_ids y titulo son obligatorios" }), { status: 400 });
+    return jsonResponse({ error: "usuario_ids y titulo son obligatorios" }, 400);
   }
 
   const serviceAccount = JSON.parse(fcmServiceAccountJson);
@@ -112,10 +125,10 @@ Deno.serve(async (req) => {
     .select("token")
     .in("usuario_id", usuarioIds);
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return jsonResponse({ error: error.message }, 500);
   }
   if (!tokens || !tokens.length) {
-    return new Response(JSON.stringify({ enviados: 0, motivo: "Ningún destinatario tiene la app instalada con notificaciones activas." }), { status: 200 });
+    return jsonResponse({ enviados: 0, motivo: "Ningún destinatario tiene la app instalada con notificaciones activas." });
   }
 
   const accessToken = await getFcmAccessToken(serviceAccount);
@@ -148,5 +161,5 @@ Deno.serve(async (req) => {
   );
 
   const enviados = resultados.filter((r) => r.ok).length;
-  return new Response(JSON.stringify({ enviados, total: tokens.length, resultados }), { status: 200 });
+  return jsonResponse({ enviados, total: tokens.length, resultados });
 });
