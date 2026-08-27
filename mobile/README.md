@@ -1,4 +1,4 @@
-# App móvil (SSOMA Adecco)
+# App móvil (ADECCO RP)
 
 Empaqueta la misma app web (`../index.html`) como app Android nativa usando
 [Capacitor](https://capacitorjs.com), para poder recibir notificaciones push
@@ -44,3 +44,13 @@ select vault.update_secret(
   '<contenido completo del nuevo JSON>'
 );
 ```
+
+## Firma de debug fija
+
+`mobile/android/keystores/debug.keystore` está commiteado a propósito, con la
+firma de debug estándar de Android (usuario/contraseña "android" — no es un
+secreto real, nunca sirve para publicar en Play Store). Sin esto, cada build
+de GitHub Actions corre en una máquina nueva y Gradle generaría una firma
+distinta cada vez, así que instalar la versión nueva encima de la anterior
+fallaría y habría que desinstalar la app en cada actualización. Con la firma
+fija, actualizar es simplemente instalar el `.apk` nuevo encima.
