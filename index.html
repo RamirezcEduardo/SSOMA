@@ -1089,6 +1089,14 @@
 
   <main>
 
+    <!-- Se muestra cuando la cuenta no tiene ningún rol de tareas ni de SSOMA asignado -->
+    <section class="panel" id="panel-sin-acceso">
+      <div class="empty" style="border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-top:20px;">
+        <strong>Tu cuenta todavía no tiene un módulo asignado en el Centro de Reportería.</strong><br>
+        Contacta al administrador para que te asigne un puesto (Jefatura, Coordinador, Supervisor o SSOMA) en Adecco KPI.
+      </div>
+    </section>
+
     <!-- RACS PANEL -->
     <section class="panel active" id="panel-racs">
       <div class="section-head">
@@ -2813,6 +2821,7 @@ function esAdmin(){
 function esJefaturaU(u){ return !!(u && u.rol_tarea === "jefatura"); }
 function esCoordinadorU(u){ return !!(u && u.rol_tarea === "coordinador"); }
 function esSupervisorU(u){ return !!(u && u.rol_tarea === "supervisor"); }
+function esSsomaU(u){ return !!(u && u.rol_tarea === "ssoma"); }
 
 async function trLoadUsuarios(){
   const { data, error } = await sb.rpc("ssoma_tareas_personal");
@@ -2825,6 +2834,67 @@ async function trLoadUsuarios(){
   usuariosSupervisores = usuariosTareas.filter(esSupervisorU);
   miUsuario = (currentSession && currentSession.usuario) ? (usuariosPorId[currentSession.usuario.id] || null) : null;
   trPopulateSelectors();
+  aplicarVisibilidadNav();
+}
+
+/* Controla qué grupos/ítems del menú lateral ve cada quien según su puesto real en Adecco KPI.
+   Administradores ven todo. El resto ve solo su propio módulo:
+   Jefatura -> Jefatura · Asignar Tareas, Coordinador -> Coordinador · Asignar Tareas,
+   Supervisor -> Tareas, SSOMA -> el grupo SSOMA completo. Sin rol mapeado -> nada. */
+function aplicarVisibilidadNav(){
+  const seccion = esAdmin() ? "admin" : (miUsuario ? miUsuario.rol_tarea : null);
+
+  const mostrar = (el, visible) => { if(el) el.style.display = visible ? "" : "none"; };
+  const grupoSsoma = document.getElementById("navgroup-ssoma-toggle");
+  const cuerpoSsoma = document.getElementById("navgroup-ssoma-body");
+  const grupoInventario = document.getElementById("navgroup-inventario-toggle");
+  const cuerpoInventario = document.getElementById("navgroup-inventario-body");
+  const grupoTareas = document.getElementById("navgroup-tareas-toggle");
+  const cuerpoTareas = document.getElementById("navgroup-tareas-body");
+  const itemJefatura = document.querySelector('.navitem[data-view="tareas-jefatura"]');
+  const itemCoordinador = document.querySelector('.navitem[data-view="tareas-coordinador"]');
+  const itemTareas = document.querySelector('.navitem[data-view="tareas-supervisor"]');
+
+  if(seccion === "admin"){
+    [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoTareas, cuerpoTareas,
+     itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, true));
+    return;
+  }
+
+  [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoTareas, cuerpoTareas,
+   itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, false));
+
+  let vistaInicial = null;
+  if(seccion === "ssoma"){
+    mostrar(grupoSsoma, true); mostrar(cuerpoSsoma, true);
+    vistaInicial = "racs";
+  } else if(seccion === "jefatura"){
+    mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemJefatura, true);
+    vistaInicial = "tareas-jefatura";
+  } else if(seccion === "coordinador"){
+    mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemCoordinador, true);
+    vistaInicial = "tareas-coordinador";
+  } else if(seccion === "supervisor"){
+    mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemTareas, true);
+    vistaInicial = "tareas-supervisor";
+  }
+
+  document.querySelectorAll(".navgroup-header").forEach(h=> h.setAttribute("aria-expanded", "false"));
+  if(seccion === "ssoma" && grupoSsoma) grupoSsoma.setAttribute("aria-expanded", "true");
+  if((seccion === "jefatura" || seccion === "coordinador" || seccion === "supervisor") && grupoTareas){
+    grupoTareas.setAttribute("aria-expanded", "true");
+  }
+
+  document.querySelectorAll(".navitem").forEach(b=> b.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=> p.classList.remove("active"));
+  if(vistaInicial){
+    const btn = document.querySelector(`.navitem[data-view="${vistaInicial}"]`);
+    if(btn) btn.classList.add("active");
+    const panel = document.getElementById("panel-" + vistaInicial);
+    if(panel) panel.classList.add("active");
+  } else {
+    document.getElementById("panel-sin-acceso").classList.add("active");
+  }
 }
 
 /* Solo para administradores: a quién están "viendo/actuando como" en cada vista ("" = ver todas). */
@@ -2961,9 +3031,17 @@ function trRenderCoordinador(){
 
   if(!r.autorizado){ document.getElementById("tareas-coord-count").textContent = "—"; return; }
   const actorId = r.actorId;
-  const misAsignadas = actorId != null
+  // Tareas que el coordinador asignó él mismo a un supervisor, más las que jefatura le asignó
+  // a él y delegó a un supervisor: ambas cuentan para su status y métricas, contabilizadas
+  // bajo el supervisor que realmente la ejecuta.
+  const misPropias = actorId != null
     ? tareasData.filter(t=> t.asignado_por && t.asignado_por.id === actorId && t.destinatario_rol === "supervisor")
     : tareasData.filter(t=> t.destinatario_rol === "supervisor");
+  const misDelegadas = (actorId != null
+    ? tareasData.filter(t=> t.destinatario && t.destinatario.id === actorId && t.destinatario_rol === "jefe_coordinador" && t.delegado_a)
+    : tareasData.filter(t=> t.destinatario_rol === "jefe_coordinador" && t.delegado_a)
+  ).map(t => ({ ...t, asignado_por: t.destinatario, destinatario: t.delegado_a, destinatario_rol: "supervisor" }));
+  const misAsignadas = [...misPropias, ...misDelegadas];
   const total = misAsignadas.length;
   const finalizadas = misAsignadas.filter(t=>tareaEstado(t)==="finalizada");
   const vencidas = misAsignadas.filter(t=>tareaEstado(t)==="vencida");
