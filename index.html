@@ -1349,6 +1349,9 @@
           </div>
         </div>
       </form>
+
+      <div class="section-subhead" style="margin-top:22px;">Evaluaciones registradas</div>
+      <div id="comp-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </section>
 
     <!-- LEVANTAMIENTO PANEL -->
@@ -2510,15 +2513,13 @@ document.addEventListener("keydown", (e)=>{
   if(e.key === "Escape"){ closeReportModal(); closeImageLightbox(); closeHelpModal(); concCloseModal(); tfCloseModal(); }
 });
 
-function downloadReport(id){
-  const r = reports.find(x => x.id === id);
-  if(!r) return;
-  const bodyHtml = buildReportDetails(r, false);
+/* Ventana imprimible/descargable reutilizada por RACS, Comportamental y Accidentes/Incidentes. */
+function abrirVentanaImpresion(titulo, bodyHtml){
   const win = window.open("", "_blank");
   if(!win){ alert("Habilita las ventanas emergentes para descargar el informe."); return; }
   win.document.write(`
     <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-    <title>${r.id} — Informe RACS</title>
+    <title>${titulo}</title>
     <style>
       body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:720px;margin:0 auto;font-size:15px;line-height:1.5;}
       .hd{border-left:5px solid #E31E24;padding-left:18px;margin-bottom:32px;}
@@ -2543,7 +2544,7 @@ function downloadReport(id){
     </head><body>
       <div class="hd">
         <div class="eyebrow">Centro de Reportes SSOMA</div>
-        <h1>${r.id} — Informe RACS</h1>
+        <h1>${titulo}</h1>
       </div>
       ${bodyHtml}
     </body></html>
@@ -2551,6 +2552,11 @@ function downloadReport(id){
   win.document.close();
   win.focus();
   setTimeout(()=>{ win.print(); }, 400);
+}
+function downloadReport(id){
+  const r = reports.find(x => x.id === id);
+  if(!r) return;
+  abrirVentanaImpresion(`${r.id} — Informe RACS`, buildReportDetails(r, false));
 }
 
 const headerTimeTextEl = document.getElementById("header-time-text");
@@ -4067,7 +4073,7 @@ async function loadReports(){
         observador: r.observador ? r.observador.nombre_completo : "",
         ubicacion: r.ubicacion ? r.ubicacion.nombre : "",
         tipo: r.tipo,
-        estado: r.estado,
+        estado: lev ? "Levantado" : "Pendiente",
         ocurrencia: r.ocurrencia,
         trabajador: r.trabajador,
         condicion: r.condicion,
@@ -4254,8 +4260,72 @@ function scoreClass(pct){
   if(pct >= 60) return "mid";
   return "low";
 }
+function compPorcentaje(r){
+  const total = COMP_PREGUNTAS.length;
+  const siCount = COMP_PREGUNTAS.filter(p => r.respuestas[p.id] === "SI").length;
+  return total>0 ? Math.round((siCount/total)*100) : 0;
+}
+function buildCompReportDetails(r){
+  const pct = compPorcentaje(r);
+  let html = `
+    <div class="modal-section-title">Datos de la evaluación</div>
+    <div class="info-grid">
+      <div class="mrow"><b>ID</b>${r.id}</div>
+      <div class="mrow"><b>Fecha</b>${formatDate(r.fecha)}</div>
+      <div class="mrow"><b>Supervisor</b>${escapeHtml(r.supervisor)}</div>
+      <div class="mrow"><b>Colaborador</b>${escapeHtml(r.colaborador)}</div>
+      <div class="mrow"><b>Área</b>${escapeHtml(r.area)}</div>
+      <div class="mrow"><b>Turno</b>${escapeHtml(r.turno)}</div>
+      <div class="mrow"><b>Sede</b>${escapeHtml(r.sede)}</div>
+      <div class="mrow"><b>Cumplimiento</b><span class="estado-badge ${pct>=85?'levantado':'pendiente'}">${pct}%</span></div>
+    </div>
+    <div class="modal-section-title">Checklist</div>
+    ${COMP_PREGUNTAS.map(p=> `<div class="mrow mrow-full"><b>${escapeHtml(p.q)}</b>${escapeHtml(r.respuestas[p.id] || "—")}</div>`).join("")}
+  `;
+  if(r.observaciones) html += `<div class="modal-section-title">Observaciones</div><div class="mrow mrow-full">${escapeHtml(r.observaciones)}</div>`;
+  if(r.evidencia && r.evidencia.length) html += `<div class="modal-section-title">Evidencia fotográfica</div>${imgRowHtml(r.evidencia, false)}`;
+  return html;
+}
+function openCompReportModal(id){
+  const r = compReports.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById("modal-title").textContent = r.id + " — Evaluación Comportamental";
+  document.getElementById("modal-body").innerHTML = buildCompReportDetails(r);
+  document.getElementById("report-modal").classList.add("show");
+}
+function downloadCompReport(id){
+  const r = compReports.find(x => x.id === id);
+  if(!r) return;
+  abrirVentanaImpresion(`${r.id} — Evaluación Comportamental`, buildCompReportDetails(r));
+}
 function renderCompList(){
   document.getElementById("comp-count").textContent = compReports.length + (compReports.length===1 ? " evaluación" : " evaluaciones");
+  const list = document.getElementById("comp-list");
+  if(!list) return;
+  if(!compReports.length){
+    list.innerHTML = `<div class="empty">Todavía no hay evaluaciones registradas.</div>`;
+    return;
+  }
+  const ordenado = [...compReports].sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||""));
+  list.innerHTML = ordenado.map(r=>{
+    const pct = compPorcentaje(r);
+    return `
+    <div class="stat-card" style="padding:14px 16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;color:var(--text);font-size:13.5px;">${escapeHtml(r.colaborador)}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${formatDate(r.fecha)} · ${escapeHtml(r.area)} · ${escapeHtml(r.turno)}</div>
+        </div>
+        <span class="estado-badge ${pct>=85?'levantado':'pendiente'}">${pct}%</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-ghost comp-view-btn" data-id="${r.id}" style="padding:7px 12px;font-size:11.5px;">Ver informe</button>
+        <button type="button" class="btn btn-ghost comp-download-btn" data-id="${r.id}" style="padding:7px 12px;font-size:11.5px;">Descargar</button>
+      </div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".comp-view-btn").forEach(btn=> btn.addEventListener("click", ()=> openCompReportModal(btn.dataset.id)));
+  list.querySelectorAll(".comp-download-btn").forEach(btn=> btn.addEventListener("click", ()=> downloadCompReport(btn.dataset.id)));
 }
 
 document.getElementById("comp-reset").addEventListener("click", ()=>{
@@ -4754,6 +4824,45 @@ function accReadFileAsDataUrl(file, callback){
   reader.readAsDataURL(file);
 }
 
+function buildAccReportDetails(r){
+  const involucrados = (r.personal_involucrado || []).join(", ") || "—";
+  const causaLabel = r.causa_inmediata_tipo === "ACTO SUB ESTANDAR" ? "Acto subestándar" : "Condición subestándar";
+  const acciones = r.ssoma_accidentes_acciones || [];
+  let html = `
+    <div class="modal-section-title">Datos del reporte</div>
+    <div class="info-grid">
+      <div class="mrow"><b>Código</b>${r.codigo}</div>
+      <div class="mrow"><b>Fecha</b>${formatDate(r.fecha)}</div>
+      <div class="mrow"><b>Reportado por</b>${escapeHtml(r.reportado_por ? r.reportado_por.nombre_completo : "—")}</div>
+      <div class="mrow"><b>Ubicación</b>${escapeHtml(r.ubicacion ? r.ubicacion.nombre : "—")}</div>
+      <div class="mrow"><b>Cliente</b>${escapeHtml(r.cliente || "—")}</div>
+      <div class="mrow"><b>Tipo</b><span class="estado-badge ${r.tipo==='ACCIDENTE'?'tipo-accidente':'tipo-incidente'}">${r.tipo}</span></div>
+    </div>
+    <div class="modal-section-title">Descripción</div>
+    <div class="mrow mrow-full">${escapeHtml(r.descripcion)}</div>
+    <div class="mrow mrow-full"><b>Personal involucrado</b>${escapeHtml(involucrados)}</div>
+    <div class="mrow mrow-full"><b>Causa inmediata (${causaLabel})</b>${escapeHtml(r.causa_inmediata_item || "")}${r.causa_inmediata_detalle ? " — " + escapeHtml(r.causa_inmediata_detalle) : ""}</div>
+  `;
+  if(r.evidencia && r.evidencia.length) html += `<div class="modal-section-title">Evidencia</div>${imgRowHtml(r.evidencia, false)}`;
+  if(acciones.length){
+    html += `<div class="modal-section-title">Acciones correctivas</div>`;
+    html += acciones.map(a=> `<div class="mrow mrow-full"><b>${escapeHtml(a.accion)}</b>${escapeHtml(a.responsable)} · plazo ${formatDate(a.plazo)} · ${a.finalizado_at ? "Finalizado el " + formatDate(a.finalizado_at.slice(0,10)) : "En proceso"}</div>`).join("");
+  }
+  return html;
+}
+function openAccReportModal(id){
+  const r = accidentesReports.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById("modal-title").textContent = r.codigo + " — Informe " + r.tipo;
+  document.getElementById("modal-body").innerHTML = buildAccReportDetails(r);
+  document.getElementById("report-modal").classList.add("show");
+}
+function downloadAccReport(id){
+  const r = accidentesReports.find(x => x.id === id);
+  if(!r) return;
+  abrirVentanaImpresion(`${r.codigo} — Informe ${r.tipo}`, buildAccReportDetails(r));
+}
+
 function renderAccidentesInformes(){
   const accidentes = accidentesReports.filter(r => r.tipo === "ACCIDENTE").length;
   const incidentes = accidentesReports.filter(r => r.tipo === "INCIDENTE").length;
@@ -4787,6 +4896,10 @@ function renderAccidentesInformes(){
         <div class="form-note" style="margin-top:8px;"><b>Personal involucrado:</b> ${escapeHtml(involucrados)}</div>
         <div class="form-note" style="margin-top:4px;"><b>Causa inmediata (${causaLabel}):</b> ${escapeHtml(r.causa_inmediata_item)}${r.causa_inmediata_detalle ? " — " + escapeHtml(r.causa_inmediata_detalle) : ""}</div>
         ${imgRowHtml(r.evidencia, false)}
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button type="button" class="btn btn-ghost acc-view-btn" data-id="${r.id}" style="padding:7px 12px;font-size:11.5px;">Ver informe</button>
+          <button type="button" class="btn btn-ghost acc-download-btn" data-id="${r.id}" style="padding:7px 12px;font-size:11.5px;">Descargar</button>
+        </div>
       </div>
       ${acciones.length === 0 ? "" : `
         <div style="margin-top:10px;">
@@ -4807,6 +4920,12 @@ function renderAccidentesInformes(){
     </div>`;
   }).join("");
 
+  list.querySelectorAll(".acc-view-btn").forEach(btn => {
+    btn.addEventListener("click", () => openAccReportModal(Number(btn.dataset.id)));
+  });
+  list.querySelectorAll(".acc-download-btn").forEach(btn => {
+    btn.addEventListener("click", () => downloadAccReport(Number(btn.dataset.id)));
+  });
   list.querySelectorAll(".acc-finalizar-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const input = document.createElement("input");
