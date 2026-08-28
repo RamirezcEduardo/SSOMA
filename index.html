@@ -2159,10 +2159,10 @@
       </div>
       <div class="grid3">
         <div class="field" style="margin-bottom:0;">
-          <label>Fecha límite<span class="req">*</span></label>
+          <label id="te-fecha-limite-label">Fecha límite<span class="req">*</span></label>
           <input type="date" id="te-fecha-limite">
         </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field" id="te-hora-limite-field" style="margin-bottom:0;">
           <label>Hora límite</label>
           <input type="time" id="te-hora-limite">
         </div>
@@ -2175,6 +2175,7 @@
           </select>
         </div>
       </div>
+      <div class="hint" id="te-semanal-hint" style="display:none;font-size:12px;margin-top:-8px;margin-bottom:14px;">↻ Esta es una tarea semanal: la fecha define la semana (lunes a domingo), no un día puntual.</div>
       <span class="login-error" id="te-modal-error"></span>
       <button type="button" class="btn btn-primary" id="te-guardar-btn" style="width:100%;margin-top:6px;">Guardar cambios</button>
     </div>
@@ -2645,8 +2646,8 @@ async function loadCatalogos(){
   await trLoadUsuarios();
 }
 
-document.getElementById("f-fecha").valueAsDate = new Date();
-document.getElementById("c-fecha").valueAsDate = new Date();
+document.getElementById("f-fecha").value = ssomaFormatISO(new Date());
+document.getElementById("c-fecha").value = ssomaFormatISO(new Date());
 
 initImageWidget("acto");
 initImageWidget("cond");
@@ -3873,9 +3874,12 @@ function teOpenModal(id, contexto){
   document.getElementById("te-modal-error").textContent = "";
   document.getElementById("te-titulo").value = t.titulo;
   document.getElementById("te-descripcion").value = t.descripcion;
-  document.getElementById("te-fecha-limite").value = t.fecha_limite;
+  document.getElementById("te-fecha-limite").value = t.es_semanal ? (t.semana_inicio || t.fecha_limite) : t.fecha_limite;
   document.getElementById("te-hora-limite").value = t.hora_limite || "";
   document.getElementById("te-prioridad").value = t.prioridad;
+  document.getElementById("te-fecha-limite-label").innerHTML = t.es_semanal ? `Semana (elige cualquier día)<span class="req">*</span>` : `Fecha límite<span class="req">*</span>`;
+  document.getElementById("te-hora-limite-field").style.display = t.es_semanal ? "none" : "";
+  document.getElementById("te-semanal-hint").style.display = t.es_semanal ? "" : "none";
 
   const selDest = document.getElementById("te-destinatario");
   selDest.innerHTML = "";
@@ -3931,10 +3935,14 @@ document.getElementById("te-guardar-btn").addEventListener("click", async ()=>{
     destinatarioRol = "supervisor"; destinatarioId = Number(destRaw);
   }
   const cambioDestino = destinatarioId !== t.destinatario_id || destinatarioRol !== t.destinatario_rol;
+  const semanaInicio = t.es_semanal ? ssomaLunesDeSemana(fechaLimite) : null;
+  const fechaLimiteFinal = t.es_semanal ? ssomaDomingoDeSemana(fechaLimite) : fechaLimite;
+  const horaLimiteFinal = t.es_semanal ? null : horaLimite;
   const payload = {
-    titulo, descripcion, fecha_limite: fechaLimite, hora_limite: horaLimite, prioridad,
+    titulo, descripcion, fecha_limite: fechaLimiteFinal, hora_limite: horaLimiteFinal, prioridad,
     destinatario_id: destinatarioId, destinatario_rol: destinatarioRol,
   };
+  if(t.es_semanal) payload.semana_inicio = semanaInicio;
   // Si cambia el destinatario, cualquier delegación previa (hecha para el destinatario anterior) ya no aplica.
   if(cambioDestino){ payload.delegado_a_id = null; payload.delegado_a_rol = null; }
   const { error } = await sb.from("ssoma_tareas").update(payload).eq("id", teCurrentId);
@@ -4130,7 +4138,7 @@ document.getElementById("racs-reset").addEventListener("click", ()=>{
   document.querySelectorAll("#racs-form .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("block-acto").classList.remove("show");
   document.getElementById("block-cond").classList.remove("show");
-  document.getElementById("f-fecha").valueAsDate = new Date();
+  document.getElementById("f-fecha").value = ssomaFormatISO(new Date());
   document.getElementById("form-error").textContent = "";
   clearImages("acto");
   clearImages("cond");
@@ -4197,7 +4205,7 @@ document.getElementById("racs-form").addEventListener("submit", async (e)=>{
   document.querySelectorAll("#racs-form .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("block-acto").classList.remove("show");
   document.getElementById("block-cond").classList.remove("show");
-  document.getElementById("f-fecha").valueAsDate = new Date();
+  document.getElementById("f-fecha").value = ssomaFormatISO(new Date());
   clearImages("acto");
   clearImages("cond");
   selectedTipo = "";
@@ -4332,7 +4340,7 @@ document.getElementById("comp-reset").addEventListener("click", ()=>{
   document.getElementById("comp-form").reset();
   compAnswers = {};
   renderChecklist();
-  document.getElementById("c-fecha").valueAsDate = new Date();
+  document.getElementById("c-fecha").value = ssomaFormatISO(new Date());
   document.getElementById("comp-form-error").textContent = "";
   clearImages("comp");
 });
@@ -4375,7 +4383,7 @@ document.getElementById("comp-form").addEventListener("submit", async (e)=>{
   document.getElementById("comp-form").reset();
   compAnswers = {};
   renderChecklist();
-  document.getElementById("c-fecha").valueAsDate = new Date();
+  document.getElementById("c-fecha").value = ssomaFormatISO(new Date());
   clearImages("comp");
 });
 
@@ -4465,8 +4473,8 @@ function renderLevList(){
         <div class="lev-actions">
           <button class="btn btn-ghost lev-view" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>
           <button class="btn btn-ghost lev-download" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Descargar</button>
-          <button class="btn btn-ghost lev-reabrir" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Reabrir</button>
-          <button class="btn btn-ghost lev-del" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Eliminar</button>
+          ${esAdmin() ? `<button class="btn btn-ghost lev-reabrir" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Reabrir</button>` : ""}
+          ${esAdmin() ? `<button class="btn btn-ghost lev-del" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Eliminar</button>` : ""}
         </div>
       ` : `
         <div class="lev-form" id="lev-form-${r.id}">
@@ -4496,7 +4504,7 @@ function renderLevList(){
         <div class="lev-actions">
           <button class="btn btn-ghost lev-view" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>
           <button class="btn btn-ghost lev-download" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Descargar</button>
-          <button class="btn btn-ghost lev-del" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Eliminar</button>
+          ${esAdmin() ? `<button class="btn btn-ghost lev-del" data-id="${r.id}" style="padding:8px 14px;font-size:12px;">Eliminar</button>` : ""}
         </div>
       `}
     </div>`;
@@ -4504,6 +4512,7 @@ function renderLevList(){
 
   list.querySelectorAll(".lev-del").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
+      if(!esAdmin()){ alert("Solo un administrador puede eliminar un reporte RACS."); return; }
       if(!confirm("¿Eliminar este reporte?")) return;
       const r = reports.find(x => x.id === btn.dataset.id);
       if(!r) return;
@@ -4525,7 +4534,7 @@ function renderLevList(){
       const f = document.getElementById("lev-form-" + btn.dataset.id);
       f.classList.toggle("show");
       if(f.classList.contains("show")){
-        document.getElementById("lev-fecha-" + btn.dataset.id).valueAsDate = new Date();
+        document.getElementById("lev-fecha-" + btn.dataset.id).value = ssomaFormatISO(new Date());
         initImageWidget("lev-" + btn.dataset.id);
       }
     });
@@ -4555,6 +4564,7 @@ function renderLevList(){
 
   list.querySelectorAll(".lev-reabrir").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
+      if(!esAdmin()){ alert("Solo un administrador puede reabrir un reporte ya levantado."); return; }
       if(!confirm("¿Reabrir este reporte como pendiente de levantamiento?")) return;
       const r = reports.find(x => x.id === btn.dataset.id);
       if(!r) return;
@@ -4723,7 +4733,7 @@ function accResetForm(){
   document.querySelectorAll(".acc-tipo-btn").forEach(b=>b.classList.remove("active"));
   accTipoEvento = "";
   accSetCausaTipo("ACTO SUB ESTANDAR");
-  document.getElementById("acc-fecha").valueAsDate = new Date();
+  document.getElementById("acc-fecha").value = ssomaFormatISO(new Date());
   clearImages("acc");
   accInvolucrados = [];
   accRenderChips();
