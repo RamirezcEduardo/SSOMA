@@ -406,6 +406,35 @@
     margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;
     background:var(--green-tint,rgba(22,163,74,.1));color:var(--green);border:1px solid var(--green);
   }
+  /* Tareas semanales: tira de días L-D (tarjeta del supervisor y mini versión en tablas) */
+  .week-strip{display:flex;gap:6px;margin:12px 0 4px;}
+  .day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 3px 6px;border-radius:9px;border:1.5px solid transparent;min-width:0;}
+  .day-label{font-size:9.5px;font-weight:700;letter-spacing:.03em;color:var(--muted);text-transform:uppercase;}
+  .day-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;}
+  .day-sub{font-size:9px;color:var(--muted);}
+  .day.done{background:var(--green-tint);}
+  .day.done .day-dot{background:var(--green);color:#fff;}
+  .day.done .day-label{color:var(--green);}
+  .day.hoy{border-color:var(--blue);background:var(--blue-tint);}
+  .day.hoy .day-dot{background:var(--panel);border:2px solid var(--blue);color:var(--blue);}
+  .day.hoy .day-label{color:var(--blue);}
+  .day.vencido{background:var(--red-tint);}
+  .day.vencido .day-dot{background:var(--red);color:#fff;}
+  .day.vencido .day-label{color:var(--red-dark);}
+  .day.futuro .day-dot,.day.opcional .day-dot{background:var(--panel-alt);border:1.5px dashed var(--border-strong);color:var(--muted);}
+  .day.futuro .day-label,.day.opcional .day-label{color:var(--muted);}
+  .mini-strip{display:flex;gap:3px;}
+  .mini-dot{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0;}
+  .mini-dot.done{background:var(--green);}
+  .mini-dot.hoy{background:var(--panel);border:2px solid var(--blue);}
+  .mini-dot.vencido{background:var(--red);}
+  .mini-dot.futuro,.mini-dot.opcional{background:var(--panel-alt);border:1.5px dashed var(--border-strong);}
+  .badge-semanal{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--blue-tint);color:var(--blue);letter-spacing:.02em;}
+  .avance-log{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+  .avance-row{display:flex;gap:10px;font-size:12px;}
+  .avance-day{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--muted);width:36px;flex-shrink:0;}
+  .avance-note{color:var(--text-soft);line-height:1.5;}
+  .avance-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);background:var(--panel-alt);border:1px solid var(--border);padding:1px 6px;border-radius:6px;margin-left:6px;}
   .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 16px 14px;box-shadow:var(--shadow);}
   .stat-label{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:700;}
   .stat-value{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:600;margin:6px 0 2px;}
@@ -1688,12 +1717,16 @@
           <label>Descripción<span class="req">*</span></label>
           <textarea id="tj-descripcion" placeholder="Detalla qué se espera del destinatario"></textarea>
         </div>
+        <div class="field" style="margin-top:14px;margin-bottom:0;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="tj-semanal" style="width:auto;margin:0;">
+          <label for="tj-semanal" style="margin:0;font-weight:600;">Tarea semanal (reporte diario lun–sáb, domingo opcional; cierra sola el domingo)</label>
+        </div>
         <div class="grid3" style="margin-top:16px;">
           <div class="field" style="margin-bottom:0;">
-            <label>Fecha límite<span class="req">*</span></label>
+            <label id="tj-fecha-limite-label">Fecha límite<span class="req">*</span></label>
             <input type="date" id="tj-fecha-limite">
           </div>
-          <div class="field" style="margin-bottom:0;">
+          <div class="field" style="margin-bottom:0;" id="tj-hora-limite-field">
             <label>Hora límite</label>
             <input type="time" id="tj-hora-limite">
           </div>
@@ -1794,12 +1827,16 @@
           <label>Descripción<span class="req">*</span></label>
           <textarea id="tarea-descripcion" placeholder="Detalla qué se espera del supervisor"></textarea>
         </div>
+        <div class="field" style="margin-top:14px;margin-bottom:0;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="tarea-semanal" style="width:auto;margin:0;">
+          <label for="tarea-semanal" style="margin:0;font-weight:600;">Tarea semanal (reporte diario lun–sáb, domingo opcional; cierra sola el domingo)</label>
+        </div>
         <div class="grid3" style="margin-top:16px;">
           <div class="field" style="margin-bottom:0;">
-            <label>Fecha límite<span class="req">*</span></label>
+            <label id="tarea-fecha-limite-label">Fecha límite<span class="req">*</span></label>
             <input type="date" id="tarea-fecha-limite">
           </div>
-          <div class="field" style="margin-bottom:0;">
+          <div class="field" style="margin-bottom:0;" id="tarea-hora-limite-field">
             <label>Hora límite</label>
             <input type="time" id="tarea-hora-limite">
           </div>
@@ -2055,13 +2092,45 @@
         <label>Archivo de sustento (Excel, Word o PDF)</label>
         <input type="file" id="tf-archivo" accept=".xlsx,.xls,.docx,.doc,.pdf">
       </div>
-      <div class="field" style="margin-bottom:4px;">
+      <div class="field" style="margin-bottom:10px;">
         <label>O una foto como evidencia</label>
         <input type="file" id="tf-foto" accept="image/*" capture="environment">
         <div class="hint">Sube el archivo o la foto — con uno de los dos alcanza.</div>
       </div>
+      <div class="field" style="margin-bottom:4px;">
+        <label>Comentario (opcional)</label>
+        <textarea id="tf-comentario" placeholder="Alguna observación sobre cómo quedó la tarea…"></textarea>
+      </div>
       <span class="login-error" id="tf-modal-error"></span>
       <button type="button" class="btn btn-primary" id="tf-guardar-btn" style="width:100%;margin-top:6px;">Marcar como finalizada</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tarea-avance-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-head">
+      <h3>Registrar avance de hoy</h3>
+      <button class="modal-close" id="ta-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mrow"><b>Tarea</b><span id="ta-modal-titulo"></span></div>
+      <div class="mrow"><b>Fecha</b><span id="ta-modal-fecha"></span></div>
+      <div class="field" style="margin-top:16px;margin-bottom:10px;">
+        <label>Avance de hoy<span class="req">*</span></label>
+        <textarea id="ta-nota" placeholder="Qué se hizo hoy…"></textarea>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Archivo (Excel, Word o PDF)</label>
+        <input type="file" id="ta-archivo" accept=".xlsx,.xls,.docx,.doc,.pdf">
+      </div>
+      <div class="field" style="margin-bottom:4px;">
+        <label>O una foto como evidencia</label>
+        <input type="file" id="ta-foto" accept="image/*" capture="environment">
+        <div class="hint">La evidencia es opcional — el avance de texto ya alcanza para registrar el día.</div>
+      </div>
+      <span class="login-error" id="ta-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="ta-guardar-btn" style="width:100%;margin-top:6px;">Guardar avance</button>
     </div>
   </div>
 </div>
@@ -3038,6 +3107,7 @@ function tareaFechaHoraLimite(t){
 }
 function tareaEstado(t){
   if(t.finalizado_at) return "finalizada";
+  if(t.es_semanal) return "pendiente"; // se cierra sola el domingo (cron); el día a día se ve en la tira de la semana.
   if(tareaFechaHoraLimite(t).getTime() < Date.now()) return "vencida";
   return "pendiente";
 }
@@ -3050,6 +3120,67 @@ function tareaEstadoBadge(estado){
   if(estado === "finalizada") return '<span class="estado-badge finalizado">Finalizada</span>';
   if(estado === "vencida") return '<span class="estado-badge tipo-accidente">Vencida</span>';
   return '<span class="estado-badge pendiente">Pendiente</span>';
+}
+
+/* ---- Tareas semanales: tira de días (L a D) a partir de semana_inicio + avances ---- */
+const SSOMA_DIAS_SEMANA = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+function tareaSemanaDias(t){
+  if(!t.semana_inicio) return [];
+  const [y,m,d] = t.semana_inicio.split("-").map(Number);
+  const inicio = new Date(y, m-1, d);
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const avancesPorFecha = {};
+  (t.avances || []).forEach(a=> avancesPorFecha[a.fecha] = a);
+  return SSOMA_DIAS_SEMANA.map((label, i)=>{
+    const dt = new Date(inicio); dt.setDate(inicio.getDate() + i);
+    const fechaStr = ssomaFormatISO(dt);
+    const avance = avancesPorFecha[fechaStr] || null;
+    const esOpcional = i === 6;
+    let estado;
+    if(avance) estado = "hecho";
+    else if(dt.getTime() === hoy.getTime()) estado = "hoy";
+    else if(esOpcional) estado = "opcional";
+    else estado = dt.getTime() > hoy.getTime() ? "futuro" : "vencido";
+    return { label, fechaStr, diaNum: dt.getDate(), avance, estado, esOpcional };
+  });
+}
+function tareaSemanaProgreso(t){
+  const dias = tareaSemanaDias(t).filter(d=>!d.esOpcional);
+  const hechos = dias.filter(d=>d.estado === "hecho").length;
+  return `${hechos} / ${dias.length}`;
+}
+function renderSemanaStrip(t){
+  return `<div class="week-strip">${tareaSemanaDias(t).map(d=>{
+    const mark = d.estado === "hecho" ? "✓" : d.estado === "vencido" ? "!" : d.estado === "hoy" ? "●" : "";
+    return `<div class="day ${d.estado}"><span class="day-label">${d.label}</span><span class="day-dot">${mark}</span><span class="day-sub">${d.diaNum}</span></div>`;
+  }).join("")}</div>`;
+}
+function renderSemanaMiniStrip(t){
+  return `<div class="mini-strip">${tareaSemanaDias(t).map(d=>{
+    const mark = d.estado === "hecho" ? "✓" : d.estado === "vencido" ? "!" : "";
+    return `<div class="mini-dot ${d.estado}" title="${d.label} ${d.diaNum}">${mark}</div>`;
+  }).join("")}</div>`;
+}
+function tareaLimiteCell(t){
+  if(t.es_semanal) return `Semana ${formatDate(t.semana_inicio)}–${formatDate(t.fecha_limite)}`;
+  return `${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}`;
+}
+function tareaEstadoCell(t){
+  const e = tareaEstado(t);
+  if(t.es_semanal && e !== "finalizada"){
+    return `<span class="estado-badge pendiente">Semanal · ${tareaSemanaProgreso(t)}</span><div style="margin-top:4px;">${renderSemanaMiniStrip(t)}</div>`;
+  }
+  return tareaEstadoBadge(e);
+}
+function renderAvanceLog(t){
+  if(!t.avances || !t.avances.length) return `<div style="font-size:12px;color:var(--muted);margin-top:10px;">Todavía no hay avances registrados esta semana.</div>`;
+  return `<div class="avance-log">${t.avances.map(a=>{
+    const chip = a.archivo
+      ? (a.archivo.tipo && a.archivo.tipo.startsWith("image/") ? `<span class="avance-chip">📷 foto</span>` : `<span class="avance-chip">📄 ${escapeHtml(a.archivo.nombre)}</span>`)
+      : "";
+    return `<div class="avance-row"><span class="avance-day">${formatDate(a.fecha).slice(0,5)}</span><span class="avance-note">${escapeHtml(a.nota)}${chip}</span></div>`;
+  }).join("")}</div>`;
 }
 function tareaDiasEntre(a,b){
   return Math.round((new Date(b) - new Date(a)) / 86400000);
@@ -3154,14 +3285,30 @@ document.addEventListener("click", (e)=>{
 
 async function trLoadTareas(){
   const { data, error } = await sb.from("ssoma_tareas")
-    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, finalizado_at, created_at")
+    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, finalizado_at, created_at, es_semanal, semana_inicio, comentario_cierre")
     .order("created_at", { ascending: false });
   if(error){ console.error("No se pudieron cargar las tareas:", error.message); return; }
+
+  const tareaIdsSemanales = (data || []).filter(t=>t.es_semanal).map(t=>t.id);
+  const avancesPorTarea = {};
+  if(tareaIdsSemanales.length){
+    const { data: avancesData, error: avancesError } = await sb.from("ssoma_tareas_avances")
+      .select("id, tarea_id, fecha, nota, archivo, creado_por_id, created_at")
+      .in("tarea_id", tareaIdsSemanales)
+      .order("fecha", { ascending: false });
+    if(avancesError) console.error("No se pudieron cargar los avances:", avancesError.message);
+    (avancesData || []).forEach(a=>{
+      if(!avancesPorTarea[a.tarea_id]) avancesPorTarea[a.tarea_id] = [];
+      avancesPorTarea[a.tarea_id].push(a);
+    });
+  }
+
   tareasData = (data || []).map(t => ({
     ...t,
     destinatario: usuariosPorId[t.destinatario_id] || null,
     asignado_por: usuariosPorId[t.asignado_por_id] || null,
     delegado_a: t.delegado_a_id ? (usuariosPorId[t.delegado_a_id] || null) : null,
+    avances: t.es_semanal ? (avancesPorTarea[t.id] || []) : [],
   }));
   trRenderJefatura();
   trRenderCoordinador();
@@ -3239,9 +3386,9 @@ function trRenderCoordinador(){
       <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
       <td>${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
-      <td>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</td>
+      <td>${tareaLimiteCell(t)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
-      <td>${tareaEstadoBadge(e)}</td>
+      <td>${tareaEstadoCell(t)}</td>
       <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
       <td>${tareaAccionesCell(t, actorId, "coordinador")}</td>
     </tr>`;
@@ -3271,6 +3418,9 @@ function trRenderCoordinador(){
   inbox.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
   });
+  inbox.querySelectorAll(".ta-avance-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> taOpenModal(Number(btn.dataset.id)));
+  });
   inbox.querySelectorAll(".ti-informe-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tiOpenModal(Number(btn.dataset.id)));
   });
@@ -3299,21 +3449,28 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
   const fechaLimite = document.getElementById("tarea-fecha-limite").value;
   const horaLimite = document.getElementById("tarea-hora-limite").value || null;
   const prioridad = document.getElementById("tarea-prioridad").value;
+  const esSemanal = document.getElementById("tarea-semanal").checked;
   const actorId = trCurrentActorId("coordinador");
   if(!titulo || !destinatarioId || !descripcion || !fechaLimite || !actorId){
     errorEl.textContent = actorId ? "Completa título, supervisor, descripción y fecha límite." : "Elige a quién representas antes de asignar (no puedes asignar en modo 'Ver todas').";
     return;
   }
+  const semanaInicio = esSemanal ? ssomaLunesDeSemana(fechaLimite) : null;
+  const fechaLimiteFinal = esSemanal ? ssomaDomingoDeSemana(fechaLimite) : fechaLimite;
+  const horaLimiteFinal = esSemanal ? null : horaLimite;
   const { error } = await sb.from("ssoma_tareas").insert({
     titulo, descripcion,
     destinatario_id: Number(destinatarioId), destinatario_rol: "supervisor",
     asignado_por_id: actorId, asignado_por_rol: "jefe_coordinador",
-    prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
+    prioridad, fecha_limite: fechaLimiteFinal, hora_limite: horaLimiteFinal,
+    es_semanal: esSemanal, semana_inicio: semanaInicio,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
   ssomaNotificarPush(
     Number(destinatarioId), "Nueva tarea asignada",
-    ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId),
+    esSemanal
+      ? `${titulo} · Semanal · Semana del ${formatDate(semanaInicio)} al ${formatDate(fechaLimiteFinal)}`
+      : ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId),
     { tipo: "tarea_asignada" }, SSOMA_PUSH_COLORES.asignada,
   );
   document.getElementById("tarea-titulo").value = "";
@@ -3322,7 +3479,14 @@ document.getElementById("tarea-asignar-btn").addEventListener("click", async ()=
   document.getElementById("tarea-fecha-limite").value = "";
   document.getElementById("tarea-hora-limite").value = "";
   document.getElementById("tarea-prioridad").value = "Media";
+  document.getElementById("tarea-semanal").checked = false;
+  document.getElementById("tarea-semanal").dispatchEvent(new Event("change"));
   await trLoadTareas();
+});
+document.getElementById("tarea-semanal").addEventListener("change", (e)=>{
+  const on = e.target.checked;
+  document.getElementById("tarea-fecha-limite-label").innerHTML = on ? `Semana (elige cualquier día)<span class="req">*</span>` : `Fecha límite<span class="req">*</span>`;
+  document.getElementById("tarea-hora-limite-field").style.display = on ? "none" : "";
 });
 
 document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
@@ -3360,9 +3524,9 @@ function trRenderJefatura(){
       <td>${t.destinatario ? escapeHtml(t.destinatario.nombre_completo) : "—"}</td>
       <td>${tareaRolLabel(t.destinatario && t.destinatario.rol_tarea)}</td>
       <td>${formatDate(t.created_at.slice(0,10))}</td>
-      <td>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</td>
+      <td>${tareaLimiteCell(t)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
-      <td>${tareaEstadoBadge(e)}</td>
+      <td>${tareaEstadoCell(t)}</td>
       <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
       <td>${tareaAccionesCell(t, actorId, "jefatura")}</td>
     </tr>`;
@@ -3387,22 +3551,29 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
   const fechaLimite = document.getElementById("tj-fecha-limite").value;
   const horaLimite = document.getElementById("tj-hora-limite").value || null;
   const prioridad = document.getElementById("tj-prioridad").value;
+  const esSemanal = document.getElementById("tj-semanal").checked;
   const actorId = trCurrentActorId("jefatura");
   if(!titulo || !destinoRaw || !descripcion || !fechaLimite || !actorId){
     errorEl.textContent = actorId ? "Completa título, destinatario, descripción y fecha límite." : "Elige a quién representas antes de asignar (no puedes asignar en modo 'Ver todas').";
     return;
   }
   const [destinatarioRol, destinatarioId] = destinoRaw.split("|");
+  const semanaInicio = esSemanal ? ssomaLunesDeSemana(fechaLimite) : null;
+  const fechaLimiteFinal = esSemanal ? ssomaDomingoDeSemana(fechaLimite) : fechaLimite;
+  const horaLimiteFinal = esSemanal ? null : horaLimite;
   const { error } = await sb.from("ssoma_tareas").insert({
     titulo, descripcion,
     destinatario_id: Number(destinatarioId), destinatario_rol: destinatarioRol,
     asignado_por_id: actorId, asignado_por_rol: "jefe_coordinador",
-    prioridad, fecha_limite: fechaLimite, hora_limite: horaLimite,
+    prioridad, fecha_limite: fechaLimiteFinal, hora_limite: horaLimiteFinal,
+    es_semanal: esSemanal, semana_inicio: semanaInicio,
   });
   if(error){ errorEl.textContent = "No se pudo asignar la tarea: " + error.message; return; }
   ssomaNotificarPush(
     Number(destinatarioId), "Nueva tarea asignada",
-    ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId),
+    esSemanal
+      ? `${titulo} · Semanal · Semana del ${formatDate(semanaInicio)} al ${formatDate(fechaLimiteFinal)}`
+      : ssomaTextoAsignacion(titulo, prioridad, fechaLimite, horaLimite, actorId),
     { tipo: "tarea_asignada" }, SSOMA_PUSH_COLORES.asignada,
   );
   document.getElementById("tj-titulo").value = "";
@@ -3411,7 +3582,14 @@ document.getElementById("tj-asignar-btn").addEventListener("click", async ()=>{
   document.getElementById("tj-fecha-limite").value = "";
   document.getElementById("tj-hora-limite").value = "";
   document.getElementById("tj-prioridad").value = "Media";
+  document.getElementById("tj-semanal").checked = false;
+  document.getElementById("tj-semanal").dispatchEvent(new Event("change"));
   await trLoadTareas();
+});
+document.getElementById("tj-semanal").addEventListener("change", (e)=>{
+  const on = e.target.checked;
+  document.getElementById("tj-fecha-limite-label").innerHTML = on ? `Semana (elige cualquier día)<span class="req">*</span>` : `Fecha límite<span class="req">*</span>`;
+  document.getElementById("tj-hora-limite-field").style.display = on ? "none" : "";
 });
 
 document.getElementById("tj-summary-toggle").addEventListener("click", (e)=>{
@@ -3422,7 +3600,38 @@ document.getElementById("tj-summary-toggle").addEventListener("click", (e)=>{
 
 let tfCurrentId = null;
 
+/* Tarjeta de tarea semanal: en vez de "finalizar" de una, se va registrando
+   un avance por día y la tira L-D muestra de un vistazo cómo va la semana. */
+function renderTareaCardSemanal(t, mostrarDestinatario){
+  const e = tareaEstado(t);
+  const destLine = mostrarDestinatario && t.destinatario ? ` · Para ${escapeHtml(t.destinatario.nombre_completo)}` : "";
+  const btnInforme = `<button type="button" class="btn btn-ghost ti-informe-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>`;
+  const btnAvance = e !== "finalizada"
+    ? `<button type="button" class="btn btn-primary ta-avance-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Registrar avance de hoy</button>`
+    : "";
+  const estadoChip = e === "finalizada"
+    ? tareaEstadoBadge(e)
+    : `<span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--green-tint);color:var(--green);white-space:nowrap;">${tareaSemanaProgreso(t)} días</span>`;
+  return `
+  <div class="stat-card" style="padding:16px 18px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+      <div>
+        <span class="badge-semanal">↻ Semanal</span>
+        <div style="font-weight:700;color:var(--text);font-size:14px;margin-top:6px;">${escapeHtml(t.titulo)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Asignada por ${t.asignado_por ? escapeHtml(t.asignado_por.nombre_completo) : "—"}${destLine} · Semana del ${formatDate(t.semana_inicio)} al ${formatDate(t.fecha_limite)} · Prioridad ${escapeHtml(t.prioridad)}</div>
+      </div>
+      ${estadoChip}
+    </div>
+    <div style="font-size:12.5px;color:var(--text-soft);margin-top:10px;">${escapeHtml(t.descripcion)}</div>
+    ${renderSemanaStrip(t)}
+    ${e === "finalizada" && t.comentario_cierre ? `<div style="font-size:12px;color:var(--text-soft);margin-top:8px;"><b style="color:var(--text);">Comentario de cierre:</b> ${escapeHtml(t.comentario_cierre)}</div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">${btnAvance}${btnInforme}</div>
+    ${renderAvanceLog(t)}
+  </div>`;
+}
+
 function renderTareaCard(t, mostrarDestinatario){
+  if(t.es_semanal) return renderTareaCardSemanal(t, mostrarDestinatario);
   const e = tareaEstado(t);
   const btnInforme = `<button type="button" class="btn btn-ghost ti-informe-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>`;
   const footer = e === "finalizada"
@@ -3454,6 +3663,7 @@ function renderTareaCard(t, mostrarDestinatario){
 /* Tarjeta de la bandeja del coordinador: además de finalizarla él mismo, puede
    delegarla a uno de sus propios supervisores (manager_id) para que la ejecute directamente. */
 function renderTareaCardDelegable(t, mostrarDestinatario){
+  if(t.es_semanal) return renderTareaCardSemanal(t, mostrarDestinatario);
   const e = tareaEstado(t);
   if(e === "finalizada") return renderTareaCard(t, mostrarDestinatario);
   const misSupervisores = t.destinatario ? usuariosSupervisores.filter(u => u.manager_id === t.destinatario.id) : [];
@@ -3512,6 +3722,9 @@ function trRenderSupervisor(){
   list.querySelectorAll(".tf-finalizar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tfOpenModal(Number(btn.dataset.id)));
   });
+  list.querySelectorAll(".ta-avance-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> taOpenModal(Number(btn.dataset.id)));
+  });
   list.querySelectorAll(".ti-informe-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> tiOpenModal(Number(btn.dataset.id)));
   });
@@ -3524,6 +3737,7 @@ function tfOpenModal(id){
   document.getElementById("tf-modal-titulo").textContent = t.titulo;
   document.getElementById("tf-archivo").value = "";
   document.getElementById("tf-foto").value = "";
+  document.getElementById("tf-comentario").value = "";
   document.getElementById("tf-modal-error").textContent = "";
   document.getElementById("tarea-finalizar-modal").classList.add("show");
 }
@@ -3555,10 +3769,12 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
     errorEl.textContent = "El archivo de evidencia debe ser una imagen.";
     return;
   }
+  const comentario = document.getElementById("tf-comentario").value.trim();
   accReadFileAsDataUrl(file, async dataUrl => {
     const { error } = await sb.from("ssoma_tareas").update({
       archivo_cierre: { nombre: file.name, tipo: file.type, contenido: dataUrl },
       finalizado_at: new Date().toISOString(),
+      comentario_cierre: comentario || null,
     }).eq("id", tfCurrentId);
     if(error){ errorEl.textContent = "No se pudo finalizar la tarea: " + error.message; return; }
     const tFinalizada = tareasData.find(x=> x.id === tfCurrentId);
@@ -3573,6 +3789,70 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
     tfCloseModal();
     await trLoadTareas();
   });
+});
+
+/* ---- Tareas semanales: registrar el avance del día (no cierra la tarea) ---- */
+let taCurrentId = null;
+
+function taOpenModal(id){
+  const t = tareasData.find(x=>x.id === id);
+  if(!t) return;
+  taCurrentId = id;
+  const hoy = ssomaFormatISO(new Date());
+  document.getElementById("ta-modal-titulo").textContent = t.titulo;
+  document.getElementById("ta-modal-fecha").textContent = formatDate(hoy);
+  const existente = (t.avances || []).find(a=> a.fecha === hoy);
+  document.getElementById("ta-nota").value = existente ? existente.nota : "";
+  document.getElementById("ta-archivo").value = "";
+  document.getElementById("ta-foto").value = "";
+  document.getElementById("ta-modal-error").textContent = "";
+  document.getElementById("tarea-avance-modal").classList.add("show");
+}
+function taCloseModal(){
+  document.getElementById("tarea-avance-modal").classList.remove("show");
+  taCurrentId = null;
+}
+document.getElementById("ta-modal-close").addEventListener("click", taCloseModal);
+document.getElementById("tarea-avance-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "tarea-avance-modal") taCloseModal();
+});
+
+document.getElementById("ta-guardar-btn").addEventListener("click", ()=>{
+  const errorEl = document.getElementById("ta-modal-error");
+  errorEl.textContent = "";
+  if(taCurrentId == null) return;
+  const nota = document.getElementById("ta-nota").value.trim();
+  if(!nota){ errorEl.textContent = "Escribe el avance de hoy."; return; }
+  const docFile = document.getElementById("ta-archivo").files[0];
+  const fotoFile = document.getElementById("ta-foto").files[0];
+  const file = docFile || fotoFile;
+  if(docFile && !/\.(xlsx|xls|docx|doc|pdf)$/i.test(docFile.name)){
+    errorEl.textContent = "Formato no válido. Sube un Excel, Word o PDF.";
+    return;
+  }
+  if(fotoFile && !fotoFile.type.startsWith("image/")){
+    errorEl.textContent = "El archivo de evidencia debe ser una imagen.";
+    return;
+  }
+  const guardar = async (archivo)=>{
+    const t = tareasData.find(x=> x.id === taCurrentId);
+    const { error } = await sb.from("ssoma_tareas_avances").upsert({
+      tarea_id: taCurrentId, fecha: ssomaFormatISO(new Date()), nota, archivo,
+      creado_por_id: miUsuario ? miUsuario.id : null,
+    }, { onConflict: "tarea_id,fecha" });
+    if(error){ errorEl.textContent = "No se pudo guardar el avance: " + error.message; return; }
+    if(t){
+      ssomaNotificarPush(
+        t.asignado_por_id, "Avance registrado",
+        `${miUsuario ? miUsuario.nombre_completo : "Alguien"} registró el avance de hoy en "${t.titulo}"`,
+        { tipo: "tarea_avance" }, SSOMA_PUSH_COLORES.finalizada,
+      );
+    }
+    taCloseModal();
+    await trLoadTareas();
+  };
+  if(file) accReadFileAsDataUrl(file, dataUrl => guardar({ nombre: file.name, tipo: file.type, contenido: dataUrl }));
+  else guardar(null);
 });
 
 /* ---- Editar / cancelar una tarea (por si se equivocaron al asignarla) ---- */
@@ -3689,16 +3969,17 @@ function tiOpenModal(id){
     ${t.delegado_a ? `<div class="mrow"><b>Delegada a</b><span>${escapeHtml(t.delegado_a.nombre_completo)}</span></div>` : ""}
     <div class="mrow"><b>Prioridad</b><span>${escapeHtml(t.prioridad)}</span></div>
     <div class="mrow"><b>Asignada el</b><span>${formatDate(t.created_at.slice(0,10))}</span></div>
-    <div class="mrow"><b>Fecha límite</b><span>${formatDate(t.fecha_limite)}${formatHoraLimite(t.hora_limite)}</span></div>
+    <div class="mrow"><b>${t.es_semanal ? "Semana" : "Fecha límite"}</b><span>${tareaLimiteCell(t)}</span></div>
     ${t.finalizado_at ? `<div class="mrow"><b>Finalizada el</b><span>${formatDate(t.finalizado_at.slice(0,10))}</span></div>` : ""}
+    ${t.comentario_cierre ? `<div class="mrow"><b>Comentario</b><span>${escapeHtml(t.comentario_cierre)}</span></div>` : ""}
     <div class="field" style="margin-top:14px;">
       <label>Descripción</label>
       <div style="font-size:13px;color:var(--text-soft);white-space:pre-wrap;">${escapeHtml(t.descripcion)}</div>
     </div>
-    <div class="field" style="margin-top:14px;margin-bottom:0;">
-      <label>Evidencia</label>
-      ${evidenciaHtml}
-    </div>
+    ${t.es_semanal
+      ? `<div class="field" style="margin-top:14px;margin-bottom:0;"><label>Avances de la semana</label>${renderSemanaStrip(t)}${renderAvanceLog(t)}</div>`
+      : `<div class="field" style="margin-top:14px;margin-bottom:0;"><label>Evidencia</label>${evidenciaHtml}</div>`
+    }
   `;
   document.getElementById("tarea-informe-modal").classList.add("show");
   const img = document.querySelector("#ti-modal-body .ti-evidencia-img");
@@ -3818,6 +4099,24 @@ function formatDate(d){
   const parts = d.split("-");
   if(parts.length!==3) return d;
   return parts[2]+"/"+parts[1]+"/"+parts[0];
+}
+
+/* Tareas semanales: cualquier fecha que se elija en el formulario cae dentro
+   de "su" semana lunes-domingo, sin depender del huso horario del navegador. */
+function ssomaFormatISO(dt){
+  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,"0"), d = String(dt.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+function ssomaLunesDeSemana(fechaStr){
+  const [y,m,d] = fechaStr.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  const dow = dt.getDay();
+  dt.setDate(dt.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return ssomaFormatISO(dt);
+}
+function ssomaDomingoDeSemana(fechaStr){
+  const [y,m,d] = ssomaLunesDeSemana(fechaStr).split("-").map(Number);
+  return ssomaFormatISO(new Date(y, m-1, d + 6));
 }
 
 document.getElementById("racs-reset").addEventListener("click", ()=>{
