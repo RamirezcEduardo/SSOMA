@@ -2016,7 +2016,11 @@
 
       <div class="field" style="margin-top:16px;">
         <label>Foto del producto encontrado</label>
-        <input type="file" accept="image/*" capture="environment" id="conc-foto">
+        <label class="import-drop" for="conc-foto" id="conc-drop-foto" style="padding:14px;">
+          <input type="file" accept="image/*" capture="environment" id="conc-foto" hidden>
+          <span class="import-drop-icon">📷</span>
+          <span class="import-drop-hint" id="conc-foto-name">Toca para tomar una foto o elegir un archivo</span>
+        </label>
       </div>
 
       <div class="field">
@@ -2831,6 +2835,8 @@ function concOpenModal(rowId){
   document.getElementById("conc-cantidad-encontrada").max = cantWms;
   document.getElementById("conc-modal-error").textContent = "";
   document.getElementById("conc-foto").value = "";
+  document.getElementById("conc-foto-name").textContent = "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("conc-drop-foto").classList.remove("filled");
 
   document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("conc-cantidad-wrap").style.display = "none";
@@ -2855,6 +2861,11 @@ function concCloseModal(){
 document.getElementById("conc-modal-close").addEventListener("click", concCloseModal);
 document.getElementById("conc-modal").addEventListener("click", (e)=>{
   if(e.target.id === "conc-modal") concCloseModal();
+});
+document.getElementById("conc-foto").addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  document.getElementById("conc-foto-name").textContent = f ? f.name : "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("conc-drop-foto").classList.toggle("filled", !!f);
 });
 
 document.querySelectorAll("#conc-modal .toggle-btn").forEach(btn=>{
