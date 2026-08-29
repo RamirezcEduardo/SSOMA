@@ -1128,7 +1128,7 @@
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-inventario-body">
-        <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag pending">Próximamente</span></button>
         <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
       </div>
@@ -1543,7 +1543,7 @@
       </div>
     </section>
 
-    <!-- INVENTARIO · AUDITORÍA SHORTPICK (maqueta) -->
+    <!-- INVENTARIO · AUDITORÍA SHORTPICK (conectado a Supabase: ssoma_sp_registros / ssoma_sp_verificaciones) -->
     <section class="panel" id="panel-inventario-shortpick">
       <div class="section-head">
         <h2 class="section-title">Inventario — Auditoría Shortpick</h2>
@@ -1643,7 +1643,7 @@
       <div class="help-tip" style="margin-top:18px;max-width:640px;">
         <span class="ic">📌</span>
         <div>
-          Esta es una maqueta con datos de ejemplo tomados de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Cuando confirmes el diseño, la conectamos a la carga real de datos.
+          Los registros que importes o concilies aquí ya quedan guardados de verdad (Supabase), a partir de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). El archivo "Estado de pedidos" todavía no se cruza automáticamente con los ajustes — avísanos si necesitas esa validación.
           <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
           <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (tabla VALOR) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
           <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en la pestaña <b>Conciliación</b>, arriba — solo cuenta la cantidad realmente encontrada.</div>
@@ -2123,7 +2123,7 @@
       <div class="help-tab-panel" id="help-tab-inventario" style="display:none;">
       <div class="help-block">
         <h4>📦 Inventario (en desarrollo)</h4>
-        <p><b>Auditoría Shortpick</b> tiene ya una vista de trabajo (importar reportes del WMS, resumen y conciliación de faltantes) pero todavía funciona con datos de ejemplo mientras se confirma el diseño final. <b>Auditoría Bultos Perdidos</b> y <b>Auditoría Sin Ubicación</b> aún no están construidos. Si necesitas alguno de estos módulos antes de tiempo, avisa al equipo para priorizarlo.</p>
+        <p><b>Auditoría Shortpick</b> ya está conectada de verdad: puedes importar los reportes del WMS, conciliar faltantes y consultar el historial, y todo queda guardado. <b>Auditoría Bultos Perdidos</b> y <b>Auditoría Sin Ubicación</b> aún no están construidos. Si necesitas alguno de estos módulos antes de tiempo, avisa al equipo para priorizarlo.</p>
       </div>
       </div>
 
@@ -2305,6 +2305,7 @@
 </div><!-- /app-root -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const SUPABASE_URL = "https://zlukrktpjffiycarpduc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QFLNZihxZRqdvyc-GSRZPw_Q-rkA6No";
@@ -2809,7 +2810,7 @@ allNavgroupToggles.forEach(navgroupToggle=>{
   });
 });
 
-/* ---- Inventario · Auditoría Shortpick (maqueta con datos de ejemplo) ---- */
+/* ---- Inventario · Auditoría Shortpick (conectado a Supabase: ssoma_sp_registros) ---- */
 /* "Proceso" no viene directo del WMS: se calcula igual que en la hoja Filtro
    -> Sub Proceso = primeros 3 caracteres de Nro Orden
    -> Proceso = BUSCARV(Sub Proceso, TB_PROCESO)  (tabla TB_PROCESO de la hoja Areas) */
@@ -2833,43 +2834,83 @@ const VALOR_COSTOS = {
 };
 function spCosto(codAlternat){ return VALOR_COSTOS[codAlternat] || 0; }
 function spValorizado(row){
-  const override = spOverrides[row.id];
-  if(override !== undefined) return override;
+  if(row.valorizado !== undefined && row.valorizado !== null) return row.valorizado;
   return spCosto(row.codAlternat) * Math.abs(row.unajust);
 }
-const spOverrides = {};
 
-/* ---- Conciliación Shortpick: verificación física por fila ----
-   verificaciones[id] = { estado: "completo"|"parcial", cantidadEncontrada, fotoNombre, fecha }
+/* ---- Conciliación Shortpick: verificación física por fila (persistida en
+   ssoma_sp_verificaciones) ----
+   verificaciones[registro_id] = { estado: "completo"|"parcial", cantidadEncontrada, otraUbicacion, fotoNombre, fecha }
    Solo la cantidad realmente encontrada se resta del valorizado como "conciliado". */
-const verificaciones = {};
+let verificaciones = {};
 function concValorConciliadoRow(row){
   const v = verificaciones[row.id];
   if(!v) return 0;
   return spCosto(row.codAlternat) * v.cantidadEncontrada;
 }
 
-const spData = [
-  {id:1,  fecha:"2026-05-21 21:44:19", codAlternat:"137684", codigoBarras:"7501234567890", producto:"Cicatricure Crema Acqua Defense Noche",     desc:"CICATRICURE CR ACQUA DEFENS NOCH PTEX50G", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:2,  fecha:"2026-05-21 21:03:08", codAlternat:"101825", codigoBarras:"7501234567906", producto:"Claritromicina 500mg",                      desc:"CLARITROMICINA PTG. 500MG TAB CJAX100UND", ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:3,  fecha:"2026-05-20 09:12:41", codAlternat:"131851", codigoBarras:"7891350123456", producto:"Skala Crema Tratamiento Keratina",          desc:"SKALA CR TRAT KERATINA PTE 1 KG",          ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"P150198765432", unajust:-14, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:4,  fecha:"2026-05-20 10:47:03", codAlternat:"130233", codigoBarras:"8058664123456", producto:"Chicco Tijera con Protector",               desc:"CHICCO TIJERA ,PROTECTOR 0, UNIDAD",       ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      orden:"TXF0201122334", unajust:-2,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:5,  fecha:"2026-05-21 14:30:55", codAlternat:"139175", codigoBarras:"7501029876543", producto:"Cluny Body Lotion Kiss Me",                 desc:"CLUNY BODY LOT FCOX200ML, KISS ME",        ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  orden:"Q020345566778", unajust:-1,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:6,  fecha:"2026-05-21 19:05:12", codAlternat:"140524", codigoBarras:"7501122334455", producto:"Life Color Men Tinte #03 Dark Brown",       desc:"LIFE F. MEN TINT 35ML CX2U, #03 DARK BRO", ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           orden:"Q240456677889", unajust:-6,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:7,  fecha:"2026-05-19 16:22:37", codAlternat:"136222", codigoBarras:"7501987654321", producto:"Cefalogen 1g Vial IM",                      desc:"CEFALOGEN 1 GR IM FCO VIAL (D)",           ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      orden:"Q210567788990", unajust:-3,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:8,  fecha:"2026-05-19 08:50:19", codAlternat:"106210", codigoBarras:"7501765432198", producto:"Novacilina 500mg Comprimidos",              desc:"NOVACILINA 500MG COP REC CJAX7UND",        ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         orden:"TXD0678899001", unajust:-8,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:9,  fecha:"2026-05-21 22:18:44", codAlternat:"103759", codigoBarras:"7500435127890", producto:"Gillette Mach3 Repuestos x2",               desc:"GILL.MACH3 REP.AFEI CJAX2UND",             ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"P210789900112", unajust:-5,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:10, fecha:"2026-05-20 13:04:27", codAlternat:"138154", codigoBarras:"8410412345678", producto:"Babaria Leche Limpiadora Rosa Mosqueta",    desc:"BABARIA LECHE LIMP ROSA MOSQ FCO 300ML",   ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"ZZZ0890011223", unajust:-4,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-];
+/* ---- Registros reales (ssoma_sp_registros), cargados desde Supabase ---- */
+let spData = [];
 
-function spRenderFilters(){
-  const selSem = document.getElementById("sp-f-semana");
-  const selSub = document.getElementById("sp-f-subarea");
-  if(!selSem || !selSub) return;
-  const semanas = [...new Set(spData.map(r=>r.semana))].sort();
-  const subareas = [...new Set(spData.map(r=>r.subarea))].sort();
-  semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSem.appendChild(o); });
-  subareas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSub.appendChild(o); });
+function spFmtFechaHora(d){
+  const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
+  const h=String(d.getHours()).padStart(2,"0"), mi=String(d.getMinutes()).padStart(2,"0"), se=String(d.getSeconds()).padStart(2,"0");
+  return `${y}-${mo}-${da} ${h}:${mi}:${se}`;
+}
+/* Semana ISO ("SEM 34") a partir de una fecha, igual que la numeración de semana estándar. */
+function spSemanaDeFecha(d){
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (dt.getUTCDay() + 6) % 7;
+  dt.setUTCDate(dt.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4));
+  const weekNum = 1 + Math.round(((dt - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+  return "SEM " + weekNum;
+}
+
+/* Puebla los filtros de Semana/Sub Área de Auditoría e Historial a partir de spData,
+   preservando la selección actual si sigue siendo válida. */
+function spPopulateFiltros(){
+  const semanas = [...new Set(spData.map(r=>r.semana).filter(Boolean))].sort();
+  const subareas = [...new Set(spData.map(r=>r.subarea).filter(Boolean))].sort();
+  [["sp-f-semana", semanas], ["hist-f-semana", semanas], ["sp-f-subarea", subareas], ["hist-f-subarea", subareas]].forEach(([id, vals])=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>';
+    vals.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+    if(vals.includes(current)) sel.value = current;
+  });
+}
+
+/* Carga registros + verificaciones reales desde Supabase y vuelve a pintar
+   Auditoría, Conciliación e Historial. */
+async function spLoadData(){
+  const { data: registrosData, error: regError } = await sb.from("ssoma_sp_registros").select("*").order("fecha", { ascending: false });
+  if(regError){ console.error("No se pudieron cargar los registros de Short Pick:", regError.message); return; }
+  spData = (registrosData || []).map(r => ({
+    id: r.id, fecha: spFmtFechaHora(new Date(r.fecha)), codAlternat: r.cod_alternat,
+    codigoBarras: r.codigo_barras, producto: r.producto, desc: r.descripcion, ubicacion: r.ubicacion,
+    subarea: r.subarea, turno: r.turno, responsable: r.responsable, supervisor: r.supervisor,
+    orden: r.orden, unajust: r.un_ajust, semana: r.semana, estado: r.estado, valorizado: r.valorizado,
+  }));
+
+  verificaciones = {};
+  const ids = spData.map(r=>r.id);
+  if(ids.length){
+    const { data: verData, error: verError } = await sb.from("ssoma_sp_verificaciones").select("*").in("registro_id", ids);
+    if(verError) console.error("No se pudieron cargar las verificaciones:", verError.message);
+    (verData || []).forEach(v=>{
+      verificaciones[v.registro_id] = {
+        estado: v.estado, cantidadEncontrada: v.cantidad_encontrada, otraUbicacion: v.otra_ubicacion,
+        fotoNombre: v.foto && v.foto.nombre ? v.foto.nombre : "", foto: v.foto || null, fecha: spFmtFechaHora(new Date(v.fecha)),
+      };
+    });
+  }
+
+  spPopulateFiltros();
+  spRender();
+  spRenderConc();
+  spRenderHistorial();
 }
 
 function spFilteredData(){
@@ -2941,17 +2982,20 @@ function spRender(){
     </tr>`).join("") : `<tr><td colspan="14" style="text-align:center;color:var(--muted);">Sin registros para este filtro.</td></tr>`;
 
   detailBody.querySelectorAll(".sp-valor-input").forEach(input=>{
-    input.addEventListener("change", (e)=>{
+    input.addEventListener("change", async (e)=>{
       const id = Number(e.target.dataset.id);
       const val = parseFloat(e.target.value);
-      spOverrides[id] = isNaN(val) ? undefined : val;
+      const valorizado = isNaN(val) ? null : val;
+      const { error } = await sb.from("ssoma_sp_registros").update({ valorizado }).eq("id", id);
+      if(error){ console.error("No se pudo actualizar el valorizado:", error.message); return; }
+      const row = spData.find(r=>r.id===id);
+      if(row) row.valorizado = valorizado;
       spRender();
     });
   });
 }
 
-spRenderFilters();
-spRender();
+spLoadData();
 document.getElementById("sp-f-semana").addEventListener("change", spRender);
 document.getElementById("sp-f-subarea").addEventListener("change", spRender);
 
@@ -3017,19 +3061,7 @@ function spRenderConc(){
   });
 }
 
-function histPopulateFiltros(){
-  const selSem = document.getElementById("hist-f-semana");
-  const selSub = document.getElementById("hist-f-subarea");
-  if(!selSem || !selSub || selSem.dataset.filled) return;
-  const semanas = [...new Set(spData.map(r=>r.semana))].sort();
-  const subareas = [...new Set(spData.map(r=>r.subarea))].sort();
-  semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSem.appendChild(o); });
-  subareas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSub.appendChild(o); });
-  selSem.dataset.filled = "1";
-}
-
 function spRenderHistorial(){
-  histPopulateFiltros();
   const fSemana = document.getElementById("hist-f-semana").value;
   const fSubarea = document.getElementById("hist-f-subarea").value;
   const fEstado = document.getElementById("hist-f-estado").value;
@@ -3083,8 +3115,6 @@ function concOpenModal(rowId){
   document.getElementById("conc-cantidad-encontrada").max = cantWms;
   document.getElementById("conc-modal-error").textContent = "";
   document.getElementById("conc-foto").value = "";
-  document.getElementById("conc-foto-name").textContent = "Toca para tomar una foto o elegir un archivo";
-  document.getElementById("conc-drop-foto").classList.remove("filled");
 
   document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("conc-cantidad-wrap").style.display = "none";
@@ -3092,6 +3122,13 @@ function concOpenModal(rowId){
   document.getElementById("conc-foto-wrap").style.display = "none";
 
   const existing = verificaciones[rowId];
+  if(existing && existing.otraUbicacion && existing.fotoNombre){
+    document.getElementById("conc-foto-name").textContent = existing.fotoNombre;
+    document.getElementById("conc-drop-foto").classList.add("filled");
+  }else{
+    document.getElementById("conc-foto-name").textContent = "Toca para tomar una foto o elegir un archivo";
+    document.getElementById("conc-drop-foto").classList.remove("filled");
+  }
   if(existing){
     if(existing.estado === "completo"){
       document.getElementById("conc-btn-completo").classList.add("active");
@@ -3136,7 +3173,7 @@ document.querySelectorAll("#conc-modal .toggle-btn").forEach(btn=>{
   });
 });
 
-document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
+document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("conc-modal-error");
   errorEl.textContent = "";
   if(concCurrentRowId == null) return;
@@ -3166,28 +3203,43 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
   const otraUbicacion = activeUbicacionBtn.dataset.val === "otra";
 
   const fotoInput = document.getElementById("conc-foto");
+  const fotoFile = fotoInput.files[0];
   const previa = verificaciones[concCurrentRowId];
-  let fotoNombre = fotoInput.files[0] ? fotoInput.files[0].name : (previa ? previa.fotoNombre : "");
-  if(otraUbicacion && !fotoNombre){
+  if(otraUbicacion && !fotoFile && !(previa && previa.fotoNombre)){
     errorEl.textContent = "Sube una foto del producto encontrado en otra ubicación.";
     return;
   }
-  if(!otraUbicacion) fotoNombre = "";
 
-  verificaciones[concCurrentRowId] = { estado, cantidadEncontrada, otraUbicacion, fotoNombre, fecha: new Date().toISOString() };
-  concCloseModal();
-  spRenderConc();
-  spRenderHistorial();
-  spRender();
+  const guardarBtn = document.getElementById("conc-guardar-btn");
+  const originalLabel = guardarBtn.textContent;
+  guardarBtn.disabled = true;
+  guardarBtn.textContent = "Guardando…";
+
+  const persistir = async (fotoJson) => {
+    const actorId = miUsuario ? miUsuario.id : null;
+    const { error } = await sb.from("ssoma_sp_verificaciones").upsert({
+      registro_id: concCurrentRowId, estado, cantidad_encontrada: cantidadEncontrada,
+      otra_ubicacion: otraUbicacion, foto: otraUbicacion ? fotoJson : null,
+      verificado_por_id: actorId, fecha: new Date().toISOString(),
+    }, { onConflict: "registro_id" });
+    guardarBtn.disabled = false;
+    guardarBtn.textContent = originalLabel;
+    if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+    concCloseModal();
+    await spLoadData();
+  };
+
+  if(otraUbicacion && fotoFile){
+    accReadFileAsDataUrl(fotoFile, dataUrl => persistir({ nombre: fotoFile.name, tipo: fotoFile.type, contenido: dataUrl }));
+  }else{
+    await persistir(otraUbicacion ? (previa ? previa.foto : null) : null);
+  }
 });
 
 document.getElementById("hist-f-semana").addEventListener("change", spRenderHistorial);
 document.getElementById("hist-f-subarea").addEventListener("change", spRenderHistorial);
 document.getElementById("hist-f-estado").addEventListener("change", spRenderHistorial);
 document.getElementById("hist-f-buscar").addEventListener("input", spRenderHistorial);
-
-spRenderConc();
-spRenderHistorial();
 
 /* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ----
    Los roles y el organigrama (Jefatura/Coordinador/Supervisor, quién reporta a quién)
@@ -4213,7 +4265,10 @@ document.getElementById("tarea-informe-modal").addEventListener("click", (e)=>{
   if(e.target.id === "tarea-informe-modal") tiCloseModal();
 });
 
-/* ---- Importar reportes del día (maqueta: valida selección, todavía no procesa el Excel real) ---- */
+/* ---- Importar reportes del día: lee el Excel/CSV real (SheetJS) y lo guarda en
+   ssoma_sp_registros. El archivo "Estado de pedidos" todavía no se cruza
+   automáticamente — se pide igual (para no romper el flujo ya validado) pero
+   por ahora solo se usa el de "Ajustes de inventario" para crear los registros. */
 function spUpdateImportState(){
   const f1 = document.getElementById("sp-file-adjust").files[0];
   const f2 = document.getElementById("sp-file-orders").files[0];
@@ -4226,6 +4281,63 @@ function spUpdateImportState(){
 document.getElementById("sp-file-adjust").addEventListener("change", spUpdateImportState);
 document.getElementById("sp-file-orders").addEventListener("change", spUpdateImportState);
 
+async function spParseWorkbookFile(file){
+  let bytes = new Uint8Array(await file.arrayBuffer());
+  const esZip = bytes[0] === 0x50 && bytes[1] === 0x4B; // PK.. = xlsx/xls binario real (Excel), no tocar
+  const tieneBom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
+  if(!esZip && !tieneBom){
+    // CSV/texto sin BOM: se asume UTF-8 explícito para que SheetJS no
+    // adivine mal tildes/ñ. Si el archivo real viene en otra codificación,
+    // avísanos y ajustamos esto.
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const combinado = new Uint8Array(bom.length + bytes.length);
+    combinado.set(bom, 0);
+    combinado.set(bytes, bom.length);
+    bytes = combinado;
+  }
+  const wb = XLSX.read(bytes.buffer, { type: "array", cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, { defval: "" });
+}
+function spBuscaCampo(fila, alias){
+  const claves = Object.keys(fila);
+  for(const a of alias){
+    const k = claves.find(k => k.trim().toLowerCase() === a.toLowerCase());
+    if(k !== undefined && fila[k] !== "") return fila[k];
+  }
+  return "";
+}
+async function spImportarRegistros(file){
+  const filas = await spParseWorkbookFile(file);
+  const actorId = miUsuario ? miUsuario.id : null;
+  const registros = filas.map(fila=>{
+    const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha","Fecha Creación","FechaHora","Fecha y Hora"]);
+    let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
+    if(isNaN(fechaDt.getTime())) fechaDt = new Date();
+    const unajustRaw = spBuscaCampo(fila, ["Un Ajust","Un. Ajust","Unidades Ajustadas","Cantidad"]);
+    return {
+      fecha: fechaDt.toISOString(),
+      cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
+      codigo_barras: String(spBuscaCampo(fila, ["Código de Barras","Codigo de Barras","EAN","Serie"])).trim() || null,
+      producto: String(spBuscaCampo(fila, ["Producto","Nombre Producto"])).trim() || null,
+      descripcion: String(spBuscaCampo(fila, ["Descripción","Descripcion","Desc"])).trim(),
+      ubicacion: String(spBuscaCampo(fila, ["Ubicación","Ubicacion"])).trim(),
+      subarea: String(spBuscaCampo(fila, ["Sub Área","Sub Area","SubArea"])).trim() || null,
+      turno: String(spBuscaCampo(fila, ["Turno"])).trim() || null,
+      responsable: String(spBuscaCampo(fila, ["Responsable"])).trim() || null,
+      supervisor: String(spBuscaCampo(fila, ["Supervisor"])).trim() || null,
+      orden: String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim() || null,
+      un_ajust: parseInt(unajustRaw, 10) || 0,
+      semana: spSemanaDeFecha(fechaDt),
+      estado: String(spBuscaCampo(fila, ["Estado"])).trim() || "SHORT PICK ACTIVO",
+      creado_por_id: actorId,
+    };
+  }).filter(r => r.cod_alternat && r.descripcion);
+  if(!registros.length) return { count: 0, error: null };
+  const { error } = await sb.from("ssoma_sp_registros").insert(registros);
+  return { count: registros.length, error };
+}
+
 document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
   const btn = e.currentTarget;
   const originalLabel = btn.textContent;
@@ -4234,13 +4346,23 @@ document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
   const statusEl = document.getElementById("sp-import-status");
   statusEl.style.display = "none";
 
-  await new Promise(res => setTimeout(res, 700));
-
-  spRender();
-  statusEl.textContent = `✅ Importado: ${spData.length} registros de Short Pick cruzados con Estado de pedidos. Resumen actualizado abajo.`;
+  try{
+    const f1 = document.getElementById("sp-file-adjust").files[0];
+    const { count, error } = await spImportarRegistros(f1);
+    if(error){
+      statusEl.textContent = "❌ No se pudo importar: " + error.message;
+    }else if(count === 0){
+      statusEl.textContent = "⚠️ No se encontraron filas válidas en el archivo (revisa que tenga columnas de Cod Alternat y Descripción).";
+    }else{
+      await spLoadData();
+      statusEl.textContent = `✅ Importados ${count} registros de Short Pick. Resumen actualizado abajo. El archivo "Estado de pedidos" todavía no se cruza automáticamente — avísame si necesitas esa validación y la agrego.`;
+    }
+  }catch(err){
+    statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
+  }
   statusEl.style.display = "block";
   btn.textContent = originalLabel;
-  btn.disabled = false;
+  spUpdateImportState();
 });
 
 // toggle acto/condicion
