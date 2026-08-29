@@ -4265,10 +4265,11 @@ document.getElementById("tarea-informe-modal").addEventListener("click", (e)=>{
   if(e.target.id === "tarea-informe-modal") tiCloseModal();
 });
 
-/* ---- Importar reportes del día: lee el Excel/CSV real (SheetJS) y lo guarda en
-   ssoma_sp_registros. El archivo "Estado de pedidos" todavía no se cruza
-   automáticamente — se pide igual (para no romper el flujo ya validado) pero
-   por ahora solo se usa el de "Ajustes de inventario" para crear los registros. */
+/* ---- Importar reportes del día: lee el Excel/CSV real (SheetJS). "Ajustes de
+   inventario" = hoja "Data Short pick" del WMS (crea los registros). "Estado de
+   pedidos" = hoja "Filtro" del WMS (varias filas por Nro Orden con su historial de
+   estados); se usa para cruzar y quedarnos con el estado más reciente de cada
+   pedido al importar. Todo se guarda en ssoma_sp_registros. */
 function spUpdateImportState(){
   const f1 = document.getElementById("sp-file-adjust").files[0];
   const f2 = document.getElementById("sp-file-orders").files[0];
@@ -4307,7 +4308,33 @@ function spBuscaCampo(fila, alias){
   }
   return "";
 }
-async function spImportarRegistros(file){
+/* Cruce con "Estado de pedidos" (hoja Filtro de tu plantilla): esa hoja trae varias
+   filas por Nro Orden (una por cada cambio de estado del pedido — "No preparado",
+   "Cancelado", etc.). Nos quedamos con el estado más reciente (mayor Fe y Hr Crea)
+   de cada orden, para saber en qué quedó realmente. */
+async function spEstadoPedidosPorOrden(file){
+  const filas = await spParseWorkbookFile(file);
+  const porOrden = {};
+  filas.forEach(fila=>{
+    const orden = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim();
+    if(!orden) return;
+    const estado = String(spBuscaCampo(fila, ["Estado"])).trim();
+    if(!estado) return;
+    const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha","Fecha Creación","FechaHora"]);
+    const fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : null);
+    const previo = porOrden[orden];
+    if(!previo || (fechaDt && (!previo.fecha || fechaDt > previo.fecha))){
+      porOrden[orden] = { estado, fecha: fechaDt };
+    }
+  });
+  return porOrden;
+}
+
+/* "Ajustes de inventario" = hoja "Data Short pick" de tu plantilla. Columnas reales
+   confirmadas contra SP_DIARIO_PLANTILLA: el "Producto" del WMS es el código de
+   barras/EAN (no un nombre), "Cod Razon" trae el motivo tipo "SHORT PICK ACTIVO", y
+   Turno/Responsable/Supervisor/Proceso ya vienen calculados en el propio export. */
+async function spImportarRegistros(file, estadoPorOrden){
   const filas = await spParseWorkbookFile(file);
   const actorId = miUsuario ? miUsuario.id : null;
   const registros = filas.map(fila=>{
@@ -4315,21 +4342,23 @@ async function spImportarRegistros(file){
     let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
     if(isNaN(fechaDt.getTime())) fechaDt = new Date();
     const unajustRaw = spBuscaCampo(fila, ["Un Ajust","Un. Ajust","Unidades Ajustadas","Cantidad"]);
+    const orden = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim() || null;
+    const estadoPedido = orden && estadoPorOrden && estadoPorOrden[orden] ? estadoPorOrden[orden].estado : null;
     return {
       fecha: fechaDt.toISOString(),
       cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
-      codigo_barras: String(spBuscaCampo(fila, ["Código de Barras","Codigo de Barras","EAN","Serie"])).trim() || null,
-      producto: String(spBuscaCampo(fila, ["Producto","Nombre Producto"])).trim() || null,
+      codigo_barras: String(spBuscaCampo(fila, ["Producto","Código de Barras","Codigo de Barras","EAN","Serie"])).trim() || null,
+      producto: String(spBuscaCampo(fila, ["Nombre Producto"])).trim() || null,
       descripcion: String(spBuscaCampo(fila, ["Descripción","Descripcion","Desc"])).trim(),
       ubicacion: String(spBuscaCampo(fila, ["Ubicación","Ubicacion"])).trim(),
       subarea: String(spBuscaCampo(fila, ["Sub Área","Sub Area","SubArea"])).trim() || null,
       turno: String(spBuscaCampo(fila, ["Turno"])).trim() || null,
       responsable: String(spBuscaCampo(fila, ["Responsable"])).trim() || null,
       supervisor: String(spBuscaCampo(fila, ["Supervisor"])).trim() || null,
-      orden: String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim() || null,
+      orden,
       un_ajust: parseInt(unajustRaw, 10) || 0,
       semana: spSemanaDeFecha(fechaDt),
-      estado: String(spBuscaCampo(fila, ["Estado"])).trim() || "SHORT PICK ACTIVO",
+      estado: estadoPedido || String(spBuscaCampo(fila, ["Cod Razon","Estado"])).trim() || "SHORT PICK ACTIVO",
       creado_por_id: actorId,
     };
   }).filter(r => r.cod_alternat && r.descripcion);
@@ -4348,14 +4377,16 @@ document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
 
   try{
     const f1 = document.getElementById("sp-file-adjust").files[0];
-    const { count, error } = await spImportarRegistros(f1);
+    const f2 = document.getElementById("sp-file-orders").files[0];
+    const estadoPorOrden = await spEstadoPedidosPorOrden(f2);
+    const { count, error } = await spImportarRegistros(f1, estadoPorOrden);
     if(error){
       statusEl.textContent = "❌ No se pudo importar: " + error.message;
     }else if(count === 0){
       statusEl.textContent = "⚠️ No se encontraron filas válidas en el archivo (revisa que tenga columnas de Cod Alternat y Descripción).";
     }else{
       await spLoadData();
-      statusEl.textContent = `✅ Importados ${count} registros de Short Pick. Resumen actualizado abajo. El archivo "Estado de pedidos" todavía no se cruza automáticamente — avísame si necesitas esa validación y la agrego.`;
+      statusEl.textContent = `✅ Importados ${count} registros de Short Pick, cruzados con el estado más reciente de cada pedido en "Estado de pedidos". Resumen actualizado abajo.`;
     }
   }catch(err){
     statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
