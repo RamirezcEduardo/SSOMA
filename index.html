@@ -932,6 +932,9 @@
     padding:10px 12px;font-size:12.5px;color:var(--text-soft);line-height:1.55;margin-top:6px;
   }
   .help-tip span.ic{flex-shrink:0;font-size:15px;line-height:1.4;}
+  .help-tabs{flex-wrap:wrap;row-gap:6px;margin-bottom:18px;}
+  .help-tabs .tab-btn{margin-right:14px;padding:8px 2px;font-size:12.5px;}
+  .help-tab-panel .help-block{margin-bottom:0;}
   .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
   .modal-body .img-row{margin-top:8px;}
   .modal-body .img-thumb-sm{width:76px;height:76px;}
@@ -1966,6 +1969,18 @@
     <div class="modal-body">
       <p class="help-intro">Guía rápida del <strong>Centro de Reportes SSOMA</strong>: qué es cada módulo, quién puede usarlo y cómo registrar la información paso a paso.</p>
 
+      <div class="tab-bar help-tabs" id="help-tabs">
+        <button type="button" class="tab-btn active" data-tab="roles">Roles</button>
+        <button type="button" class="tab-btn" data-tab="racs">RACS</button>
+        <button type="button" class="tab-btn" data-tab="comportamental">Comportamental</button>
+        <button type="button" class="tab-btn" data-tab="levantamiento">Levantamiento</button>
+        <button type="button" class="tab-btn" data-tab="accidentes">Accidentes</button>
+        <button type="button" class="tab-btn" data-tab="tareas">Tareas</button>
+        <button type="button" class="tab-btn" data-tab="inventario">Inventario</button>
+        <button type="button" class="tab-btn" data-tab="general">General</button>
+      </div>
+
+      <div class="help-tab-panel" id="help-tab-roles">
       <div class="help-block">
         <h4>👤 Roles y accesos</h4>
         <p>Lo que ves en el menú lateral depende del rol asignado a tu usuario en el organigrama. Tu nombre y rol aparecen en la tarjeta de cuenta, abajo en la barra lateral.</p>
@@ -1979,7 +1994,9 @@
           <div class="help-role-item"><b>Sin rol de tareas asignado</b> — por defecto ve el módulo Inventario (en desarrollo).</div>
         </div>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-racs" style="display:none;">
       <div class="help-block">
         <h4><span class="dot" style="background:#E31E24;"></span>RACS — Reporte de Actos y Condiciones Subestándar</h4>
         <p>Sirve para reportar un acto inseguro de una persona o una condición insegura del entorno de trabajo.</p>
@@ -1991,7 +2008,9 @@
           <li>Pulsa <b>Guardar reporte</b> para registrarlo.</li>
         </ol>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-comportamental" style="display:none;">
       <div class="help-block">
         <h4><span class="dot" style="background:#2563EB;"></span>Evaluación Comportamental — SST</h4>
         <p>Registra observaciones planeadas de seguridad sobre el comportamiento de un colaborador en su puesto de trabajo.</p>
@@ -2003,7 +2022,9 @@
           <li>En <b>Evaluaciones registradas</b>, usa <b>Ver informe</b> para revisar el detalle de cualquier evaluación o <b>Descargar</b> para imprimirla/guardarla en PDF.</li>
         </ol>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-levantamiento" style="display:none;">
       <div class="help-block">
         <h4><span class="dot" style="background:#16A34A;"></span>Informes · Levantamiento de Observaciones</h4>
         <p>Aquí se hace seguimiento a los RACS ya reportados: se cierra el ciclo indicando cómo se corrigió el acto o condición. El estado (<b>Pendiente</b>/<b>Levantado</b>) se actualiza solo apenas se registra la acción correctiva.</p>
@@ -2016,7 +2037,9 @@
           <li>Solo un <b>administrador</b> puede <b>Eliminar</b> un reporte o <b>Reabrir</b> uno ya levantado.</li>
         </ol>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-accidentes" style="display:none;">
       <div class="help-block">
         <h4><span class="dot" style="background:#F59E0B;"></span>Accidentes / Incidentes</h4>
         <p>Registra accidentes e incidentes ocurridos, con causas y evidencias, para su análisis y plan de acción.</p>
@@ -2029,7 +2052,9 @@
           <li>Desde la pestaña <b>Informes</b> revisa el historial, las acciones correctivas de cada caso, y usa <b>Ver informe</b> / <b>Descargar</b> para cada uno.</li>
         </ol>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-tareas" style="display:none;">
       <div class="help-block">
         <h4>📋 Designación de Tareas</h4>
         <p>Permite a Jefatura y Coordinadores asignar tareas a su equipo, y a Supervisores/Backoffice recibirlas y darles cierre. Cada tarea envía una notificación push al destinatario cuando se asigna, cuando está por vencer y cuando se finaliza.</p>
@@ -2046,12 +2071,16 @@
           <li>El Coordinador también puede <b>Delegar</b> una tarea recibida de Jefatura a uno de sus propios supervisores.</li>
         </ol>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-inventario" style="display:none;">
       <div class="help-block">
         <h4>📦 Inventario (en desarrollo)</h4>
         <p><b>Auditoría Shortpick</b> tiene ya una vista de trabajo (importar reportes del WMS, resumen y conciliación de faltantes) pero todavía funciona con datos de ejemplo mientras se confirma el diseño final. <b>Auditoría Bultos Perdidos</b> y <b>Auditoría Sin Ubicación</b> aún no están construidos. Si necesitas alguno de estos módulos antes de tiempo, avisa al equipo para priorizarlo.</p>
       </div>
+      </div>
 
+      <div class="help-tab-panel" id="help-tab-general" style="display:none;">
       <div class="help-block">
         <h4>⚙️ Funciones generales</h4>
         <ul class="help-steps">
@@ -2063,6 +2092,7 @@
           <li><b>Cerrar Sesión</b>: cierra tu sesión de forma segura desde la tarjeta de cuenta.</li>
         </ul>
         <div class="help-tip"><span class="ic">💡</span>Todos los formularios replican la estructura de los Google Forms oficiales del equipo SSOMA, así que la información que ya conoces de esos formularios aplica igual aquí.</div>
+      </div>
       </div>
     </div>
   </div>
@@ -2525,6 +2555,10 @@ document.getElementById("report-modal").addEventListener("click", (e)=>{
 
 function openHelpModal(){
   document.getElementById("help-modal").classList.add("show");
+  document.querySelectorAll("#help-tabs .tab-btn").forEach(b=> b.classList.remove("active"));
+  document.querySelector('#help-tabs .tab-btn[data-tab="roles"]').classList.add("active");
+  document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
+  document.getElementById("help-tab-roles").style.display = "";
 }
 function closeHelpModal(){
   document.getElementById("help-modal").classList.remove("show");
@@ -3312,6 +3346,11 @@ document.addEventListener("click", (e)=>{
   else if(barra.id === "sp-tabs"){
     document.getElementById("sp-tab-auditoria").style.display = btn.dataset.tab === "auditoria" ? "" : "none";
     document.getElementById("sp-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
+  }
+  else if(barra.id === "help-tabs"){
+    document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
+    const panel = document.getElementById("help-tab-" + btn.dataset.tab);
+    if(panel) panel.style.display = "";
   }
 });
 
