@@ -1968,15 +1968,15 @@
 
       <div class="help-block">
         <h4>👤 Roles y accesos</h4>
-        <p>Lo que ves en el menú lateral depende del rol asignado a tu usuario. Tu rol actual aparece en la tarjeta de cuenta, abajo en la barra lateral.</p>
+        <p>Lo que ves en el menú lateral depende del rol asignado a tu usuario en el organigrama. Tu nombre y rol aparecen en la tarjeta de cuenta, abajo en la barra lateral.</p>
         <div class="help-role-grid">
-          <div class="help-role-item"><b>Administrador</b> — acceso total a los 4 módulos y configuración.</div>
-          <div class="help-role-item"><b>Gerencia</b> — visualización y reportería general.</div>
-          <div class="help-role-item"><b>Coordinador</b> — registro y seguimiento de reportes de su área.</div>
-          <div class="help-role-item"><b>Supervisor</b> — registro de campo (RACS, comportamental, accidentes).</div>
-          <div class="help-role-item"><b>Operador</b> — registro básico de reportes.</div>
-          <div class="help-role-item"><b>Gestión Humana</b> — evaluaciones comportamentales y clima laboral.</div>
-          <div class="help-role-item"><b>Invitado</b> — acceso de solo lectura.</div>
+          <div class="help-role-item"><b>Administrador</b> — acceso total a todos los módulos, para cualquier persona.</div>
+          <div class="help-role-item"><b>Jefatura</b> — asigna tareas a coordinadores y supervisores; ve también RACS, Comportamental, Levantamiento y Accidentes.</div>
+          <div class="help-role-item"><b>Coordinador</b> — asigna tareas a sus supervisores; ve también RACS, Comportamental, Levantamiento y Accidentes.</div>
+          <div class="help-role-item"><b>Supervisor SSOMA</b> — registro de campo: RACS, Comportamental, Levantamiento y Accidentes.</div>
+          <div class="help-role-item"><b>Supervisor</b> — recibe y finaliza sus tareas asignadas; ve también los reportes SSOMA.</div>
+          <div class="help-role-item"><b>Backoffice</b> — recibe y finaliza las tareas que le asigna Jefatura directamente.</div>
+          <div class="help-role-item"><b>Sin rol de tareas asignado</b> — por defecto ve el módulo Inventario (en desarrollo).</div>
         </div>
       </div>
 
@@ -2000,19 +2000,20 @@
           <li>Completa el nombre del colaborador y el área o proceso evaluado (ej. Despacho B2C).</li>
           <li>Marca los criterios observados y agrega observaciones si es necesario.</li>
           <li>Pulsa <b>Guardar evaluación</b>.</li>
-          <li>Usa <b>Exportar CSV</b> para descargar el historial de evaluaciones.</li>
+          <li>En <b>Evaluaciones registradas</b>, usa <b>Ver informe</b> para revisar el detalle de cualquier evaluación o <b>Descargar</b> para imprimirla/guardarla en PDF.</li>
         </ol>
       </div>
 
       <div class="help-block">
         <h4><span class="dot" style="background:#16A34A;"></span>Informes · Levantamiento de Observaciones</h4>
-        <p>Aquí se hace seguimiento a los RACS ya reportados: se cierra el ciclo indicando cómo se corrigió el acto o condición.</p>
+        <p>Aquí se hace seguimiento a los RACS ya reportados: se cierra el ciclo indicando cómo se corrigió el acto o condición. El estado (<b>Pendiente</b>/<b>Levantado</b>) se actualiza solo apenas se registra la acción correctiva.</p>
         <ol class="help-steps">
           <li>Entra al módulo <b>Levantamiento</b> y busca el reporte pendiente en la lista.</li>
           <li>Pulsa <b>Registrar levantamiento</b> sobre el reporte que quieres cerrar.</li>
           <li>Describe la acción correctiva tomada y el responsable de ejecutarla.</li>
-          <li>Pulsa <b>Guardar levantamiento</b> — el reporte pasa a estado resuelto.</li>
-          <li>Usa <b>Exportar CSV</b> para descargar el detalle de todos los levantamientos.</li>
+          <li>Pulsa <b>Guardar levantamiento</b> — el reporte pasa a estado <b>Levantado</b>.</li>
+          <li>Usa <b>Ver informe</b> / <b>Descargar</b> en cualquier reporte, pendiente o ya levantado.</li>
+          <li>Solo un <b>administrador</b> puede <b>Eliminar</b> un reporte o <b>Reabrir</b> uno ya levantado.</li>
         </ol>
       </div>
 
@@ -2025,8 +2026,30 @@
           <li>Describe qué pasó, cuándo ocurrió y cómo se detectó.</li>
           <li>Selecciona el acto o condición causante (o detállalo si eliges "Otro").</li>
           <li>Adjunta evidencia fotográfica si está disponible y pulsa <b>Registrar reporte</b>.</li>
-          <li>Desde las otras pestañas puedes revisar el historial y las acciones correctivas de cada caso.</li>
+          <li>Desde la pestaña <b>Informes</b> revisa el historial, las acciones correctivas de cada caso, y usa <b>Ver informe</b> / <b>Descargar</b> para cada uno.</li>
         </ol>
+      </div>
+
+      <div class="help-block">
+        <h4>📋 Designación de Tareas</h4>
+        <p>Permite a Jefatura y Coordinadores asignar tareas a su equipo, y a Supervisores/Backoffice recibirlas y darles cierre. Cada tarea envía una notificación push al destinatario cuando se asigna, cuando está por vencer y cuando se finaliza.</p>
+        <ol class="help-steps">
+          <li>Desde <b>Jefatura</b> o <b>Coordinador · Asignar Tareas</b>, completa título, destinatario, descripción, prioridad y fecha límite, y pulsa <b>Asignar tarea</b>.</li>
+          <li>Marca la casilla <b>Tarea semanal</b> si en vez de una fecha puntual quieres que la persona reporte avance todos los días (lunes a sábado, domingo opcional) durante una semana completa. El campo de fecha pasa a pedir "Semana": elige cualquier día de esa semana, no hace falta que sea justo el lunes — la app calcula sola el lunes de inicio y el domingo de cierre.</li>
+          <li>El destinatario ve sus tareas en <b>Tareas</b> (vista Supervisor/Backoffice):
+            <ul style="margin-top:6px;">
+              <li>Tarea normal: pulsa <b>Marcar como finalizada</b>, adjunta un archivo (Excel, Word o PDF) o una foto como sustento, agrega un comentario opcional, y guarda.</li>
+              <li>Tarea semanal: pulsa <b>Registrar avance de hoy</b> cada día para dejar una nota (y opcionalmente un archivo o foto). La tira de 7 días muestra en verde lo ya reportado, en rojo lo que venció sin reportar, y en azul el día de hoy. La tarea se cierra sola el lunes siguiente con lo reportado hasta ese momento.</li>
+            </ul>
+          </li>
+          <li>Quien asignó la tarea puede <b>Editar</b> o <b>Cancelar</b> mientras siga pendiente, y usar <b>Ver informe</b> para revisar el detalle o el historial de avances una vez cerrada.</li>
+          <li>El Coordinador también puede <b>Delegar</b> una tarea recibida de Jefatura a uno de sus propios supervisores.</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h4>📦 Inventario (en desarrollo)</h4>
+        <p><b>Auditoría Shortpick</b> tiene ya una vista de trabajo (importar reportes del WMS, resumen y conciliación de faltantes) pero todavía funciona con datos de ejemplo mientras se confirma el diseño final. <b>Auditoría Bultos Perdidos</b> y <b>Auditoría Sin Ubicación</b> aún no están construidos. Si necesitas alguno de estos módulos antes de tiempo, avisa al equipo para priorizarlo.</p>
       </div>
 
       <div class="help-block">
@@ -2034,6 +2057,8 @@
         <ul class="help-steps">
           <li><b>Cambiar Tema</b>: alterna entre modo claro y oscuro desde la tarjeta de cuenta.</li>
           <li><b>Ver evidencias</b>: haz clic en cualquier imagen adjunta a un reporte para verla en tamaño completo.</li>
+          <li><b>Ver informe / Descargar</b>: disponible en RACS-Levantamiento, Comportamental, Accidentes/Incidentes y Tareas, para revisar o imprimir/guardar en PDF el detalle de cualquier registro.</li>
+          <li><b>Notificaciones</b>: la app avisa por notificación push cuando te asignan una tarea, cuando está por vencer y cuando se finaliza. Acepta el permiso de notificaciones la primera vez que se pida.</li>
           <li><b>Exportar CSV</b>: disponible en los módulos con listado, para descargar la información a Excel.</li>
           <li><b>Cerrar Sesión</b>: cierra tu sesión de forma segura desde la tarjeta de cuenta.</li>
         </ul>
