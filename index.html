@@ -522,6 +522,7 @@
     font-weight:700;
     font-size:13px;
   }
+  .toggle-btn.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
   .toggle-btn.sel-acto.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
   .toggle-btn.sel-cond.active{border-color:var(--orange);color:var(--amber-text);background:var(--orange-tint);}
 
@@ -588,6 +589,26 @@
     text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;
     border:1px dashed var(--border);border-radius:10px;background:var(--panel-alt);
   }
+
+  .conc-card-list{display:flex;flex-direction:column;gap:12px;}
+  .conc-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;
+  }
+  .conc-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+  .conc-card-title{font-weight:700;color:var(--text);font-size:14px;line-height:1.4;}
+  .conc-card-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:12px;
+  }
+  @media (max-width:520px){ .conc-card-grid{grid-template-columns:1fr;} }
+  .conc-card-grid .cg-item b{
+    display:block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:1px;
+  }
+  .conc-card-grid .cg-item span{font-size:13px;color:var(--text);word-break:break-word;}
+  .conc-card-actions{margin-top:14px;display:flex;justify-content:flex-end;}
+  .conc-card-actions .btn{width:100%;}
+  @media (min-width:521px){ .conc-card-actions .btn{width:auto;} }
 
   .pending-card{
     position:relative;
@@ -1533,6 +1554,7 @@
       <div class="tab-bar" id="sp-tabs">
         <button type="button" class="tab-btn active" data-tab="auditoria">Auditoría</button>
         <button type="button" class="tab-btn" data-tab="conciliacion">Conciliación <span class="tab-count" id="sp-tab-count-conciliacion">0</span></button>
+        <button type="button" class="tab-btn" data-tab="historial">Historial</button>
       </div>
 
       <div id="sp-tab-auditoria">
@@ -1632,7 +1654,7 @@
       <!-- Conciliación Shortpick: pestaña aparte dentro del mismo panel, no un módulo distinto -->
       <div id="sp-tab-conciliacion" style="display:none;">
       <span id="conc-count" style="display:none;"></span>
-      <p class="section-desc">Verifica físicamente cada faltante reportado por el WMS: sube una foto del producto encontrado e indica si recuperaste la cantidad completa o solo una parte. Solo lo encontrado se resta del valorizado como "conciliado".</p>
+      <p class="section-desc">Verifica físicamente cada faltante reportado por el WMS e indica si recuperaste la cantidad completa o solo una parte. La foto solo hace falta si lo encontraste en una ubicación distinta a la indicada. Solo lo encontrado se resta del valorizado como "conciliado" — una vez verificado, el registro pasa a <b>Historial</b>.</p>
 
       <div class="stats-row stats-row-3" style="margin-top:18px;">
         <div class="stat-card">
@@ -1649,12 +1671,37 @@
         </div>
       </div>
 
-      <div class="table-wrap" style="margin-top:18px;">
-        <table class="data-table" id="conc-table">
-          <thead><tr><th>Fe y Hr Crea</th><th>Cod Alternat</th><th>Descripción</th><th>Ubicación</th><th>Cant. WMS</th><th>Estado</th><th>Cant. encontrada</th><th>Evidencia</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <div class="conc-card-list" id="conc-list" style="margin-top:18px;"></div>
       </div>
+
+      <!-- Historial de conciliado: registros ya verificados, con filtros -->
+      <div id="sp-tab-historial" style="display:none;">
+      <p class="section-desc">Historial de faltantes ya verificados en <b>Conciliación</b>, con filtros para ubicarlos rápido.</p>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="hist-f-semana"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Sub Área</label>
+          <select id="hist-f-subarea"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Estado</label>
+          <select id="hist-f-estado">
+            <option value="">Todos</option>
+            <option value="completo">Completo</option>
+            <option value="parcial">Parcial</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
+          <label>Buscar</label>
+          <input type="text" id="hist-f-buscar" placeholder="Código de barras, código, producto, ubicación…">
+        </div>
+      </div>
+
+      <div class="conc-card-list" id="hist-list" style="margin-top:18px;"></div>
       </div>
     </section>
 
@@ -2110,17 +2157,8 @@
       <div class="mrow"><b>Cantidad faltante (WMS)</b><span id="conc-modal-cantidad"></span></div>
 
       <div class="field" style="margin-top:16px;">
-        <label>Foto del producto encontrado</label>
-        <label class="import-drop" for="conc-foto" id="conc-drop-foto" style="padding:14px;">
-          <input type="file" accept="image/*" capture="environment" id="conc-foto" hidden>
-          <span class="import-drop-icon">📷</span>
-          <span class="import-drop-hint" id="conc-foto-name">Toca para tomar una foto o elegir un archivo</span>
-        </label>
-      </div>
-
-      <div class="field">
         <label>¿Encontró la totalidad del producto?</label>
-        <div class="toggle-group">
+        <div class="toggle-group" id="conc-cantidad-toggle">
           <button type="button" class="toggle-btn" id="conc-btn-completo" data-val="completo">Sí, completo</button>
           <button type="button" class="toggle-btn" id="conc-btn-parcial" data-val="parcial">No, fue parcial</button>
         </div>
@@ -2130,6 +2168,23 @@
         <label>Cantidad encontrada</label>
         <input type="number" id="conc-cantidad-encontrada" min="0" step="1">
         <div class="hint" id="conc-cantidad-hint"></div>
+      </div>
+
+      <div class="field">
+        <label>¿Dónde lo encontró?</label>
+        <div class="toggle-group" id="conc-ubicacion-toggle">
+          <button type="button" class="toggle-btn" id="conc-btn-misma" data-val="misma">En la ubicación indicada</button>
+          <button type="button" class="toggle-btn" id="conc-btn-otra" data-val="otra">En otra ubicación</button>
+        </div>
+      </div>
+
+      <div class="field" id="conc-foto-wrap" style="display:none;">
+        <label>Foto de evidencia</label>
+        <label class="import-drop" for="conc-foto" id="conc-drop-foto" style="padding:14px;">
+          <input type="file" accept="image/*" capture="environment" id="conc-foto" hidden>
+          <span class="import-drop-icon">📷</span>
+          <span class="import-drop-hint" id="conc-foto-name">Toca para tomar una foto o elegir un archivo</span>
+        </label>
       </div>
 
       <span class="login-error" id="conc-modal-error"></span>
@@ -2795,16 +2850,16 @@ function concValorConciliadoRow(row){
 }
 
 const spData = [
-  {id:1,  fecha:"2026-05-21 21:44:19", codAlternat:"137684", desc:"CICATRICURE CR ACQUA DEFENS NOCH PTEX50G", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:2,  fecha:"2026-05-21 21:03:08", codAlternat:"101825", desc:"CLARITROMICINA PTG. 500MG TAB CJAX100UND", ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:3,  fecha:"2026-05-20 09:12:41", codAlternat:"131851", desc:"SKALA CR TRAT KERATINA PTE 1 KG",          ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"P150198765432", unajust:-14, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:4,  fecha:"2026-05-20 10:47:03", codAlternat:"130233", desc:"CHICCO TIJERA ,PROTECTOR 0, UNIDAD",       ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      orden:"TXF0201122334", unajust:-2,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:5,  fecha:"2026-05-21 14:30:55", codAlternat:"139175", desc:"CLUNY BODY LOT FCOX200ML, KISS ME",        ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  orden:"Q020345566778", unajust:-1,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:6,  fecha:"2026-05-21 19:05:12", codAlternat:"140524", desc:"LIFE F. MEN TINT 35ML CX2U, #03 DARK BRO", ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           orden:"Q240456677889", unajust:-6,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:7,  fecha:"2026-05-19 16:22:37", codAlternat:"136222", desc:"CEFALOGEN 1 GR IM FCO VIAL (D)",           ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      orden:"Q210567788990", unajust:-3,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:8,  fecha:"2026-05-19 08:50:19", codAlternat:"106210", desc:"NOVACILINA 500MG COP REC CJAX7UND",        ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         orden:"TXD0678899001", unajust:-8,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
-  {id:9,  fecha:"2026-05-21 22:18:44", codAlternat:"103759", desc:"GILL.MACH3 REP.AFEI CJAX2UND",             ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"P210789900112", unajust:-5,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
-  {id:10, fecha:"2026-05-20 13:04:27", codAlternat:"138154", desc:"BABARIA LECHE LIMP ROSA MOSQ FCO 300ML",   ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"ZZZ0890011223", unajust:-4,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:1,  fecha:"2026-05-21 21:44:19", codAlternat:"137684", codigoBarras:"7501234567890", producto:"Cicatricure Crema Acqua Defense Noche",     desc:"CICATRICURE CR ACQUA DEFENS NOCH PTEX50G", ubicacion:"EB-04-08-30-04", subarea:"EB",     turno:"Noche",   responsable:"Mario Torres",        supervisor:"Clinton Huere",         orden:"QRE0126794639", unajust:-10, semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:2,  fecha:"2026-05-21 21:03:08", codAlternat:"101825", codigoBarras:"7501234567906", producto:"Claritromicina 500mg",                      desc:"CLARITROMICINA PTG. 500MG TAB CJAX100UND", ubicacion:"EA-03-10-50-03", subarea:"SDA",    turno:"Tarde",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"Q690183345521", unajust:-2,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:3,  fecha:"2026-05-20 09:12:41", codAlternat:"131851", codigoBarras:"7891350123456", producto:"Skala Crema Tratamiento Keratina",          desc:"SKALA CR TRAT KERATINA PTE 1 KG",          ubicacion:"EA-06-44-20-02", subarea:"EA",     turno:"Mañana",  responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"P150198765432", unajust:-14, semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:4,  fecha:"2026-05-20 10:47:03", codAlternat:"130233", codigoBarras:"8058664123456", producto:"Chicco Tijera con Protector",               desc:"CHICCO TIJERA ,PROTECTOR 0, UNIDAD",       ubicacion:"EA-06-36-30-06", subarea:"EST1",   turno:"Mañana",  responsable:"Rosa Delgado",        supervisor:"Elizabet Salinas",      orden:"TXF0201122334", unajust:-2,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:5,  fecha:"2026-05-21 14:30:55", codAlternat:"139175", codigoBarras:"7501029876543", producto:"Cluny Body Lotion Kiss Me",                 desc:"CLUNY BODY LOT FCOX200ML, KISS ME",        ubicacion:"EB-02-09-20-03", subarea:"EST2",   turno:"Tarde",   responsable:"Jorge Núñez",         supervisor:"Nancy Elena Bautista",  orden:"Q020345566778", unajust:-1,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:6,  fecha:"2026-05-21 19:05:12", codAlternat:"140524", codigoBarras:"7501122334455", producto:"Life Color Men Tinte #03 Dark Brown",       desc:"LIFE F. MEN TINT 35ML CX2U, #03 DARK BRO", ubicacion:"SDA-01-14-10-02", subarea:"SDA",    turno:"Noche",   responsable:"Luis Suyón",          supervisor:"José Lavado",           orden:"Q240456677889", unajust:-6,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:7,  fecha:"2026-05-19 16:22:37", codAlternat:"136222", codigoBarras:"7501987654321", producto:"Cefalogen 1g Vial IM",                      desc:"CEFALOGEN 1 GR IM FCO VIAL (D)",           ubicacion:"DISTRI-02-05-01", subarea:"DISTRI", turno:"Tarde",   responsable:"Ana Castillo",        supervisor:"Elizabet Salinas",      orden:"Q210567788990", unajust:-3,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:8,  fecha:"2026-05-19 08:50:19", codAlternat:"106210", codigoBarras:"7501765432198", producto:"Novacilina 500mg Comprimidos",              desc:"NOVACILINA 500MG COP REC CJAX7UND",        ubicacion:"EB-03-11-40-01", subarea:"EB",     turno:"Mañana",  responsable:"Pedro Ríos",          supervisor:"Clinton Huere",         orden:"TXD0678899001", unajust:-8,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
+  {id:9,  fecha:"2026-05-21 22:18:44", codAlternat:"103759", codigoBarras:"7500435127890", producto:"Gillette Mach3 Repuestos x2",               desc:"GILL.MACH3 REP.AFEI CJAX2UND",             ubicacion:"EA-04-22-15-03", subarea:"EA",     turno:"Noche",   responsable:"Diana Rojas",         supervisor:"José Lavado",           orden:"P210789900112", unajust:-5,  semana:"SEM 21", estado:"SHORT PICK ACTIVO"},
+  {id:10, fecha:"2026-05-20 13:04:27", codAlternat:"138154", codigoBarras:"8410412345678", producto:"Babaria Leche Limpiadora Rosa Mosqueta",    desc:"BABARIA LECHE LIMP ROSA MOSQ FCO 300ML",   ubicacion:"EST1-01-03-08",  subarea:"EST1",   turno:"Tarde",   responsable:"Kevin Salas",         supervisor:"Elizabet Salinas",      orden:"ZZZ0890011223", unajust:-4,  semana:"SEM 20", estado:"SHORT PICK ACTIVO"},
 ];
 
 function spRenderFilters(){
@@ -2918,9 +2973,20 @@ function concEstadoBadge(v){
   return '<span class="estado-badge parcial">Parcial</span>';
 }
 
-function spRenderConc(){
-  const rowsSorted = [...spData].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+/* Tarjeta compacta reutilizada por Conciliación (pendientes) e Historial (verificados) —
+   pensada para verse bien apilada en una sola columna en el celular. */
+function concCardCampos(r){
+  const cantWms = Math.abs(r.unajust);
+  return `
+    <div class="cg-item"><b>Código de barras</b><span>${escapeHtml(r.codigoBarras || "—")}</span></div>
+    <div class="cg-item"><b>Código alternativo</b><span>${escapeHtml(r.codAlternat)}</span></div>
+    <div class="cg-item"><b>Producto</b><span>${escapeHtml(r.producto || r.desc)}</span></div>
+    <div class="cg-item"><b>Descripción</b><span>${escapeHtml(r.desc)}</span></div>
+    <div class="cg-item"><b>Ubicación</b><span>${escapeHtml(r.ubicacion)}</span></div>
+    <div class="cg-item"><b>Cantidad</b><span>${cantWms} ${cantWms===1 ? "unidad" : "unidades"}</span></div>`;
+}
 
+function spRenderConc(){
   let pendientes = 0, verificados = 0, valorConciliado = 0;
   spData.forEach(r=>{
     if(verificaciones[r.id]) verificados++; else pendientes++;
@@ -2932,27 +2998,74 @@ function spRenderConc(){
   document.getElementById("conc-stat-verificados").textContent = verificados;
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
 
-  const tbody = document.querySelector("#conc-table tbody");
-  tbody.innerHTML = rowsSorted.map(r=>{
-    const v = verificaciones[r.id];
-    const cantWms = Math.abs(r.unajust);
-    return `
-    <tr>
-      <td>${escapeHtml(r.fecha)}</td>
-      <td>${escapeHtml(r.codAlternat)}</td>
-      <td>${escapeHtml(r.desc)}</td>
-      <td>${escapeHtml(r.ubicacion)}</td>
-      <td class="num">${cantWms}</td>
-      <td>${concEstadoBadge(v)}</td>
-      <td class="num">${v ? v.cantidadEncontrada : "—"}</td>
-      <td>${v && v.fotoNombre ? "📎 " + escapeHtml(v.fotoNombre) : "—"}</td>
-      <td><button type="button" class="btn btn-ghost conc-verificar-btn" data-id="${r.id}" style="padding:6px 12px;font-size:11.5px;">${v ? "Editar" : "Verificar"}</button></td>
-    </tr>`;
-  }).join("");
+  const rowsPendientes = spData.filter(r=> !verificaciones[r.id]).sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  const list = document.getElementById("conc-list");
+  list.innerHTML = rowsPendientes.length ? rowsPendientes.map(r=> `
+    <div class="conc-card">
+      <div class="conc-card-top">
+        <span class="conc-card-title">${escapeHtml(r.producto || r.desc)}</span>
+        ${concEstadoBadge(null)}
+      </div>
+      <div class="conc-card-grid">${concCardCampos(r)}</div>
+      <div class="conc-card-actions">
+        <button type="button" class="btn btn-primary conc-verificar-btn" data-id="${r.id}">Verificar</button>
+      </div>
+    </div>`).join("") : `<div class="empty">No hay faltantes pendientes de verificar.</div>`;
 
-  tbody.querySelectorAll(".conc-verificar-btn").forEach(btn=>{
+  list.querySelectorAll(".conc-verificar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> concOpenModal(Number(btn.dataset.id)));
   });
+}
+
+function histPopulateFiltros(){
+  const selSem = document.getElementById("hist-f-semana");
+  const selSub = document.getElementById("hist-f-subarea");
+  if(!selSem || !selSub || selSem.dataset.filled) return;
+  const semanas = [...new Set(spData.map(r=>r.semana))].sort();
+  const subareas = [...new Set(spData.map(r=>r.subarea))].sort();
+  semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSem.appendChild(o); });
+  subareas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSub.appendChild(o); });
+  selSem.dataset.filled = "1";
+}
+
+function spRenderHistorial(){
+  histPopulateFiltros();
+  const fSemana = document.getElementById("hist-f-semana").value;
+  const fSubarea = document.getElementById("hist-f-subarea").value;
+  const fEstado = document.getElementById("hist-f-estado").value;
+  const fBuscar = document.getElementById("hist-f-buscar").value.trim().toLowerCase();
+
+  let rows = spData.filter(r=> verificaciones[r.id]);
+  if(fSemana) rows = rows.filter(r=> r.semana === fSemana);
+  if(fSubarea) rows = rows.filter(r=> r.subarea === fSubarea);
+  if(fEstado) rows = rows.filter(r=> verificaciones[r.id].estado === fEstado);
+  if(fBuscar){
+    rows = rows.filter(r=> [r.codigoBarras, r.codAlternat, r.producto, r.desc, r.ubicacion]
+      .some(campo => (campo || "").toLowerCase().includes(fBuscar)));
+  }
+  rows.sort((a,b)=> (verificaciones[b.id].fecha || "").localeCompare(verificaciones[a.id].fecha || ""));
+
+  const list = document.getElementById("hist-list");
+  list.innerHTML = rows.length ? rows.map(r=>{
+    const v = verificaciones[r.id];
+    const ubicacionTexto = v.otraUbicacion ? "Encontrado en otra ubicación" : "Encontrado en la ubicación indicada";
+    return `
+    <div class="conc-card">
+      <div class="conc-card-top">
+        <span class="conc-card-title">${escapeHtml(r.producto || r.desc)}</span>
+        ${concEstadoBadge(v)}
+      </div>
+      <div class="conc-card-grid">
+        ${concCardCampos(r)}
+        <div class="cg-item"><b>Verificado el</b><span>${formatDate((v.fecha||"").slice(0,10))}</span></div>
+        <div class="cg-item"><b>Cant. encontrada</b><span>${v.cantidadEncontrada}</span></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span>${escapeHtml(ubicacionTexto)}</span>
+        ${v.fotoNombre ? `<span class="evidencia-chip">📎 ${escapeHtml(v.fotoNombre)}</span>` : ""}
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty">No hay verificaciones que coincidan con el filtro.</div>`;
 }
 
 let concCurrentRowId = null;
@@ -2963,7 +3076,7 @@ function concOpenModal(rowId){
   concCurrentRowId = rowId;
   const cantWms = Math.abs(row.unajust);
 
-  document.getElementById("conc-modal-producto").textContent = row.codAlternat + " — " + row.desc;
+  document.getElementById("conc-modal-producto").textContent = row.codAlternat + " — " + (row.producto || row.desc);
   document.getElementById("conc-modal-ubicacion").textContent = row.ubicacion;
   document.getElementById("conc-modal-cantidad").textContent = cantWms + (cantWms===1 ? " unidad" : " unidades");
   document.getElementById("conc-cantidad-hint").textContent = "Máximo " + cantWms + " unidades";
@@ -2976,6 +3089,7 @@ function concOpenModal(rowId){
   document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("conc-cantidad-wrap").style.display = "none";
   document.getElementById("conc-cantidad-encontrada").value = "";
+  document.getElementById("conc-foto-wrap").style.display = "none";
 
   const existing = verificaciones[rowId];
   if(existing){
@@ -2985,6 +3099,12 @@ function concOpenModal(rowId){
       document.getElementById("conc-btn-parcial").classList.add("active");
       document.getElementById("conc-cantidad-wrap").style.display = "block";
       document.getElementById("conc-cantidad-encontrada").value = existing.cantidadEncontrada;
+    }
+    if(existing.otraUbicacion){
+      document.getElementById("conc-btn-otra").classList.add("active");
+      document.getElementById("conc-foto-wrap").style.display = "block";
+    }else{
+      document.getElementById("conc-btn-misma").classList.add("active");
     }
   }
   document.getElementById("conc-modal").classList.add("show");
@@ -3005,9 +3125,14 @@ document.getElementById("conc-foto").addEventListener("change", (e)=>{
 
 document.querySelectorAll("#conc-modal .toggle-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
-    document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
+    const grupo = btn.closest(".toggle-group");
+    grupo.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
-    document.getElementById("conc-cantidad-wrap").style.display = btn.dataset.val === "parcial" ? "block" : "none";
+    if(grupo.id === "conc-cantidad-toggle"){
+      document.getElementById("conc-cantidad-wrap").style.display = btn.dataset.val === "parcial" ? "block" : "none";
+    }else if(grupo.id === "conc-ubicacion-toggle"){
+      document.getElementById("conc-foto-wrap").style.display = btn.dataset.val === "otra" ? "block" : "none";
+    }
   });
 });
 
@@ -3018,12 +3143,12 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
   const row = spData.find(r=>r.id === concCurrentRowId);
   const cantWms = Math.abs(row.unajust);
 
-  const activeBtn = document.querySelector("#conc-modal .toggle-btn.active");
-  if(!activeBtn){
+  const activeCantidadBtn = document.querySelector("#conc-cantidad-toggle .toggle-btn.active");
+  if(!activeCantidadBtn){
     errorEl.textContent = "Indica si encontró la totalidad del producto o fue parcial.";
     return;
   }
-  const estado = activeBtn.dataset.val;
+  const estado = activeCantidadBtn.dataset.val;
   let cantidadEncontrada = cantWms;
   if(estado === "parcial"){
     cantidadEncontrada = parseInt(document.getElementById("conc-cantidad-encontrada").value, 10);
@@ -3033,21 +3158,36 @@ document.getElementById("conc-guardar-btn").addEventListener("click", ()=>{
     }
   }
 
-  const fotoInput = document.getElementById("conc-foto");
-  const previa = verificaciones[concCurrentRowId];
-  const fotoNombre = fotoInput.files[0] ? fotoInput.files[0].name : (previa ? previa.fotoNombre : "");
-  if(!fotoNombre){
-    errorEl.textContent = "Sube una foto del producto encontrado.";
+  const activeUbicacionBtn = document.querySelector("#conc-ubicacion-toggle .toggle-btn.active");
+  if(!activeUbicacionBtn){
+    errorEl.textContent = "Indica si lo encontró en la ubicación indicada o en otra.";
     return;
   }
+  const otraUbicacion = activeUbicacionBtn.dataset.val === "otra";
 
-  verificaciones[concCurrentRowId] = { estado, cantidadEncontrada, fotoNombre, fecha: new Date().toISOString() };
+  const fotoInput = document.getElementById("conc-foto");
+  const previa = verificaciones[concCurrentRowId];
+  let fotoNombre = fotoInput.files[0] ? fotoInput.files[0].name : (previa ? previa.fotoNombre : "");
+  if(otraUbicacion && !fotoNombre){
+    errorEl.textContent = "Sube una foto del producto encontrado en otra ubicación.";
+    return;
+  }
+  if(!otraUbicacion) fotoNombre = "";
+
+  verificaciones[concCurrentRowId] = { estado, cantidadEncontrada, otraUbicacion, fotoNombre, fecha: new Date().toISOString() };
   concCloseModal();
   spRenderConc();
+  spRenderHistorial();
   spRender();
 });
 
+document.getElementById("hist-f-semana").addEventListener("change", spRenderHistorial);
+document.getElementById("hist-f-subarea").addEventListener("change", spRenderHistorial);
+document.getElementById("hist-f-estado").addEventListener("change", spRenderHistorial);
+document.getElementById("hist-f-buscar").addEventListener("input", spRenderHistorial);
+
 spRenderConc();
+spRenderHistorial();
 
 /* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ----
    Los roles y el organigrama (Jefatura/Coordinador/Supervisor, quién reporta a quién)
@@ -3346,6 +3486,8 @@ document.addEventListener("click", (e)=>{
   else if(barra.id === "sp-tabs"){
     document.getElementById("sp-tab-auditoria").style.display = btn.dataset.tab === "auditoria" ? "" : "none";
     document.getElementById("sp-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
+    document.getElementById("sp-tab-historial").style.display = btn.dataset.tab === "historial" ? "" : "none";
+    if(btn.dataset.tab === "historial") spRenderHistorial();
   }
   else if(barra.id === "help-tabs"){
     document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
