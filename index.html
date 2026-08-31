@@ -1592,6 +1592,25 @@
         <div class="import-status" id="sp-import-status" style="display:none;"></div>
       </div>
 
+      <div class="import-card" id="sp-costos-admin" style="display:none;">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">💲 Actualizar catálogo de costos</div>
+            <div class="import-card-sub">Solo administradores. Sube la hoja VALOR de tu plantilla (columnas COD_PRODUCTO, PRODUCTO, COSTO, FAMILIA) para refrescar los costos usados en "Valorizado". No borra los códigos ya cargados, solo agrega o actualiza.</div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="sp-costos-import-btn" disabled>Actualizar catálogo</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="sp-file-costos" id="sp-drop-costos">
+            <input type="file" id="sp-file-costos" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">💲</span>
+            <span class="import-drop-title">Hoja VALOR (catálogo de costos)</span>
+            <span class="import-drop-hint" id="sp-file-costos-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="sp-costos-import-status" style="display:none;"></div>
+      </div>
+
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
         <div class="field" style="min-width:170px;margin-bottom:0;">
           <label>Semana</label>
@@ -1652,9 +1671,9 @@
       <div class="help-tip" style="margin-top:18px;max-width:640px;">
         <span class="ic">📌</span>
         <div>
-          Los registros que importes o concilies aquí ya quedan guardados de verdad (Supabase), a partir de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). El archivo "Estado de pedidos" todavía no se cruza automáticamente con los ajustes — avísanos si necesitas esa validación.
-          <div style="margin-top:8px;">* <b>Proceso</b> no viene del WMS: se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
-          <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (tabla VALOR) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
+          Los registros que importes o concilies aquí ya quedan guardados de verdad (Supabase), a partir de la estructura de tu plantilla SP_DIARIO (hojas Data Short pick → Filtro → Resumen SP). Al importar, cada pedido se cruza con "Estado de pedidos" y se le asigna su estado más reciente (según Fe y Hr Crea).
+          <div style="margin-top:8px;">* <b>Sub Área / Turno / Responsable / Supervisor</b> se calculan igual que tu plantilla a partir de la Ubicación y la hora, si el archivo no los trae ya calculados. <b>Proceso</b> se calcula igual que en tu hoja Filtro — Sub Proceso = primeros 3 caracteres de Nro Orden, y Proceso = BUSCARV(Sub Proceso, TB_PROCESO).</div>
+          <div style="margin-top:8px;">** <b>Valorizado</b> = Costo del producto (catálogo real, actualizable abajo) × Un Ajust — igual que tu fórmula. Es editable fila por fila por si hay una variación frente al costo de la tabla.</div>
           <div style="margin-top:8px;">🔗 El <b>Valor conciliado</b> ya no sale de un cálculo automático: ahora viene de lo que se verifica físicamente en la pestaña <b>Conciliación</b>, arriba — solo cuenta la cantidad realmente encontrada.</div>
         </div>
       </div>
@@ -3239,25 +3258,71 @@ const TB_PROCESO = {QRE:"B2B", P15:"B2C", TXF:"B2C", TXD:"B2C", Q69:"B2B", P21:"
 function spSubProceso(orden){ return (orden || "").slice(0, 3); }
 function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
 
-/* Costos reales tomados de tu hoja VALOR (Cod Alternat -> Costo unitario).
-   Valorizado = Costo(Cod Alternat) x |Un Ajust| — igual que tu fórmula BUSCARV(...VALOR...)*Un Ajust */
-const VALOR_COSTOS = {
-  "137684": 38.07,    // CICATRICURE CR ACQUA DEFENS NOCH PTEX50G
-  "101825": 55.08,    // CLARITROMICINA PTG. 500MG TAB CJAX100UND
-  "131851": 9.33,     // SKALA CR TRAT KERATINA PTE 1 KG
-  "130233": 24.83,    // CHICCO TIJERA ,PROTECTOR 0, UNIDAD
-  "139175": 2.52,     // CLUNY BODY LOT FCOX200ML, KISS ME
-  "140524": 28.65,    // LIFE F. MEN TINT 35ML CX2U, #03 DARK BRO
-  "136222": 13.21,    // CEFALOGEN 1 GR IM FCO VIAL (D)
-  "106210": 36.76,    // NOVACILINA 500MG COP REC CJAX7UND
-  "103759": 13.47,    // GILL.MACH3 REP.AFEI CJAX2UND
-  "138154": 9.61,     // BABARIA LECHE LIMP ROSA MOSQ FCO 300ML
-};
-function spCosto(codAlternat){ return VALOR_COSTOS[codAlternat] || 0; }
+/* Catálogo de costos real (tabla ssoma_sp_costos, poblada desde la hoja VALOR de tu
+   plantilla). Valorizado = Costo(Cod Alternat) x |Un Ajust| — igual que tu fórmula
+   BUSCARV(...VALOR...)*Un Ajust. Se recarga en spLoadData() y se puede actualizar desde
+   la app (solo administradores) con "Actualizar catálogo de costos". */
+let costosMap = {};
+async function spCargarCostos(){
+  const { data, error } = await sb.from("ssoma_sp_costos").select("cod_alternat, costo");
+  if(error){ console.error("No se pudo cargar el catálogo de costos:", error.message); return; }
+  costosMap = {};
+  (data || []).forEach(c => { costosMap[c.cod_alternat] = Number(c.costo) || 0; });
+}
+function spCosto(codAlternat){ return costosMap[codAlternat] || 0; }
 function spValorizado(row){
   if(row.valorizado !== undefined && row.valorizado !== null) return row.valorizado;
   return spCosto(row.codAlternat) * Math.abs(row.unajust);
 }
+
+/* Sub Área / Área / Turno / Responsable / Supervisor: en el export crudo del WMS
+   (Data Short pick) estas columnas NO vienen — solo están en la hoja "maestra" ya
+   procesada. Se calculan igual que las fórmulas reales de tu plantilla, a partir de
+   Ubicación (hoja Areas: SUBAREA_AREA) y Fe y Hr Modif. */
+const SUBAREA_AREA = {
+  EB: "Knnap 2do piso", DISTRI2: "Estanteri 2do piso", EA: "Knnap 1er piso",
+  EST1: "Estanteri 1er piso", EST2: "Estanteri 2do piso", MZ2: "Mezamine",
+  DISTRI: "Estanteri 1er piso", TF: "Farma", MZ1: "Mezamine", MM: "Muestra Medica", DA: "Reserva",
+};
+/* Roster de supervisores por Sub Área-Turno (hoja Areas: tabla TURNO_1). Tu plantilla
+   también tiene una tabla TURNO_2 (rotación quincenal) que hoy no usamos porque no hay
+   forma de saber, solo con el archivo, cuál de las dos está vigente — avísanos cuándo
+   toca rotar y la cambiamos. */
+const TURNO_1_SUPERVISOR = {
+  "EST1-Noche":"Andres Salas", "DISTRI2-Noche":"Andres Salas", "EB-Noche":"Clinton Huere",
+  "DISTRI-Noche":"Andres Salas", "EST2-Noche":"Andres Salas", "SDA-Noche":"Clinton Huere",
+  "EA-Noche":"Clinton Huere", "EB-Tarde":"José Lavado", "SDA-Tarde":"José Lavado",
+  "EST2-Tarde":"Elizabet Salinas", "EA-Tarde":"José Lavado", "DISTRI2-Tarde":"Elizabet Salinas",
+  "EA-Mañana":"Roberto Huincho", "EB-Mañana":"Roberto Huincho", "EST1-Tarde":"Elizabet Salinas",
+  "DISTRI-Tarde":"Elizabet Salinas", "EST1-Mañana":"Andres Salas", "DISTRI-Mañana":"Andres Salas",
+  "EST2-Mañana":"Andres Salas", "DISTRI2-Mañana":"Andres Salas", "SDA-Mañana":"Roberto Huincho",
+  "MZ1-Tarde":"Astocongo",
+};
+function spSubArea2(ubicacion){
+  const i = (ubicacion || "").indexOf("-");
+  return i > 0 ? ubicacion.slice(0, i) : (ubicacion || "");
+}
+function spPasillo(ubicacion){
+  const i = (ubicacion || "").indexOf("-");
+  return i > 0 ? ubicacion.slice(i + 1, i + 3) : "";
+}
+function spArea(subArea2){ return SUBAREA_AREA[subArea2] || null; }
+function spSubArea(ubicacion){
+  const subArea2 = spSubArea2(ubicacion);
+  const area = spArea(subArea2);
+  const pasillo = spPasillo(ubicacion);
+  if(area === "Knnap 1er piso" && subArea2 === "EA" && pasillo !== "05" && pasillo !== "06") return "SDA";
+  return subArea2 || null;
+}
+function spTurnoDeHora(fecha){
+  if(!(fecha instanceof Date) || isNaN(fecha.getTime())) return null;
+  const hhmm = String(fecha.getHours()).padStart(2, "0") + ":" + String(fecha.getMinutes()).padStart(2, "0");
+  if(hhmm >= "07:00" && hhmm <= "12:15") return "Mañana";
+  if(hhmm > "12:15" && hhmm <= "21:15") return "Tarde";
+  return "Noche";
+}
+function spResponsable(subArea, turno){ return (subArea && turno) ? (subArea + "-" + turno) : null; }
+function spSupervisor(responsable){ return responsable ? (TURNO_1_SUPERVISOR[responsable] || null) : null; }
 
 /* ---- Conciliación Shortpick: verificación física por fila (persistida en
    ssoma_sp_verificaciones) ----
@@ -3306,6 +3371,7 @@ function spPopulateFiltros(){
 /* Carga registros + verificaciones reales desde Supabase y vuelve a pintar
    Auditoría, Conciliación e Historial. */
 async function spLoadData(){
+  await spCargarCostos();
   const { data: registrosData, error: regError } = await sb.from("ssoma_sp_registros").select("*").order("fecha", { ascending: false });
   if(regError){ console.error("No se pudieron cargar los registros de Short Pick:", regError.message); return; }
   spData = (registrosData || []).map(r => ({
@@ -3341,6 +3407,8 @@ function spFilteredData(){
 }
 
 function spRender(){
+  const costosCard = document.getElementById("sp-costos-admin");
+  if(costosCard) costosCard.style.display = esAdmin() ? "" : "none";
   const rows = spFilteredData();
   document.getElementById("sp-count").textContent = rows.length + (rows.length===1 ? " registro" : " registros");
   document.getElementById("sp-stat-registros").textContent = rows.length;
@@ -4761,6 +4829,9 @@ async function trLoadUsuarios(){
    Jefatura -> Jefatura · Asignar Tareas, Coordinador -> Coordinador · Asignar Tareas,
    Supervisor -> Tareas, SSOMA -> el grupo SSOMA completo. Sin rol mapeado -> nada. */
 function aplicarVisibilidadNav(){
+  const costosCard = document.getElementById("sp-costos-admin");
+  if(costosCard) costosCard.style.display = esAdmin() ? "" : "none";
+
   // Sin puesto mapeado (jefatura/coordinador/supervisor/ssoma) pero con rol "operador"
   // en Adecco KPI -> por defecto ve Inventario (personal operativo de almacén).
   const seccion = esAdmin() ? "admin" : (miUsuario && miUsuario.rol_tarea
@@ -5843,17 +5914,34 @@ async function spImportarRegistros(file, estadoPorOrden){
     const unajustRaw = spBuscaCampo(fila, ["Un Ajust","Un. Ajust","Unidades Ajustadas","Cantidad"]);
     const orden = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim() || null;
     const estadoPedido = orden && estadoPorOrden && estadoPorOrden[orden] ? estadoPorOrden[orden].estado : null;
+    const ubicacion = String(spBuscaCampo(fila, ["Ubicación","Ubicacion"])).trim();
+    /* Sub Área/Turno/Responsable/Supervisor: se usan si vienen en el archivo (export ya
+       procesado); si no (export crudo del WMS), se calculan a partir de Ubicación y
+       Fe y Hr Modif, igual que las fórmulas de tu plantilla. */
+    const subareaArchivo = String(spBuscaCampo(fila, ["Sub Área","Sub Area","SubArea"])).trim();
+    const subarea = subareaArchivo || spSubArea(ubicacion);
+    const turnoArchivo = String(spBuscaCampo(fila, ["Turno"])).trim();
+    let turno = turnoArchivo || null;
+    if(!turno){
+      const modifRaw = spBuscaCampo(fila, ["Fe y Hr Modif"]);
+      const modifDt = modifRaw instanceof Date ? modifRaw : (modifRaw ? new Date(modifRaw) : null);
+      turno = spTurnoDeHora(modifDt);
+    }
+    const responsableArchivo = String(spBuscaCampo(fila, ["Responsable"])).trim();
+    const responsable = responsableArchivo || spResponsable(subarea, turno);
+    const supervisorArchivo = String(spBuscaCampo(fila, ["Supervisor"])).trim();
+    const supervisor = supervisorArchivo || spSupervisor(responsable);
     return {
       fecha: fechaDt.toISOString(),
       cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
       codigo_barras: String(spBuscaCampo(fila, ["Producto","Código de Barras","Codigo de Barras","EAN","Serie"])).trim() || null,
       producto: String(spBuscaCampo(fila, ["Nombre Producto"])).trim() || null,
       descripcion: String(spBuscaCampo(fila, ["Descripción","Descripcion","Desc"])).trim(),
-      ubicacion: String(spBuscaCampo(fila, ["Ubicación","Ubicacion"])).trim(),
-      subarea: String(spBuscaCampo(fila, ["Sub Área","Sub Area","SubArea"])).trim() || null,
-      turno: String(spBuscaCampo(fila, ["Turno"])).trim() || null,
-      responsable: String(spBuscaCampo(fila, ["Responsable"])).trim() || null,
-      supervisor: String(spBuscaCampo(fila, ["Supervisor"])).trim() || null,
+      ubicacion,
+      subarea: subarea || null,
+      turno: turno || null,
+      responsable: responsable || null,
+      supervisor: supervisor || null,
       orden,
       un_ajust: parseInt(unajustRaw, 10) || 0,
       semana: spSemanaDeFecha(fechaDt),
@@ -5893,6 +5981,55 @@ document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
   statusEl.style.display = "block";
   btn.textContent = originalLabel;
   spUpdateImportState();
+});
+
+/* Actualizar catálogo de costos (ssoma_sp_costos) desde la hoja VALOR de la plantilla:
+   columnas COD_PRODUCTO, PRODUCTO, COSTO, FAMILIA. Upsert en lotes desde el navegador. */
+document.getElementById("sp-file-costos").addEventListener("change", ()=>{
+  const f = document.getElementById("sp-file-costos").files[0];
+  document.getElementById("sp-file-costos-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sp-drop-costos").classList.toggle("filled", !!f);
+  document.getElementById("sp-costos-import-btn").disabled = !f;
+});
+document.getElementById("sp-costos-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Actualizando…";
+  const statusEl = document.getElementById("sp-costos-import-status");
+  statusEl.style.display = "none";
+  try{
+    const file = document.getElementById("sp-file-costos").files[0];
+    const filas = await spParseWorkbookFile(file);
+    const costos = filas.map(fila=>({
+      cod_alternat: String(spBuscaCampo(fila, ["COD_PRODUCTO","Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
+      producto: String(spBuscaCampo(fila, ["PRODUCTO","Producto"])).trim() || null,
+      costo: parseFloat(spBuscaCampo(fila, ["COSTO","Costo"])) || 0,
+      familia: String(spBuscaCampo(fila, ["FAMILIA","Familia"])).trim() || null,
+    })).filter(c => c.cod_alternat);
+    if(!costos.length){
+      statusEl.textContent = "⚠️ No se encontraron filas válidas (revisa que tenga columnas COD_PRODUCTO, PRODUCTO, COSTO, FAMILIA).";
+    }else{
+      const LOTE = 500;
+      let importados = 0;
+      for(let i = 0; i < costos.length; i += LOTE){
+        const lote = costos.slice(i, i + LOTE);
+        const { error } = await sb.from("ssoma_sp_costos").upsert(lote, { onConflict: "cod_alternat" });
+        if(error){ throw new Error(error.message); }
+        importados += lote.length;
+        statusEl.style.display = "block";
+        statusEl.textContent = `Actualizando… ${importados}/${costos.length}`;
+      }
+      await spCargarCostos();
+      spRender(); spRenderConc(); spRenderHistorial();
+      statusEl.textContent = `✅ Catálogo actualizado: ${importados} códigos.`;
+    }
+  }catch(err){
+    statusEl.textContent = "❌ No se pudo actualizar el catálogo: " + err.message;
+  }
+  statusEl.style.display = "block";
+  btn.textContent = originalLabel;
+  document.getElementById("sp-costos-import-btn").disabled = !document.getElementById("sp-file-costos").files[0];
 });
 
 // toggle acto/condicion
