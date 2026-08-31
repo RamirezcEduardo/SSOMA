@@ -406,6 +406,14 @@
     margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;
     background:var(--green-tint,rgba(22,163,74,.1));color:var(--green);border:1px solid var(--green);
   }
+  .import-status.error{
+    background:var(--red-tint,rgba(227,30,36,.1));color:var(--red-dark);border:1px solid var(--red);
+  }
+  .bolsa-stat-clickable{cursor:pointer;transition:box-shadow .15s ease;}
+  .bolsa-stat-clickable:hover{box-shadow:0 0 0 2px var(--red-tint);}
+  .bolsa-info-ic{color:var(--muted);font-size:10.5px;font-weight:700;}
+  .bolsa-stat-explain{font-size:12px;line-height:1.5;color:var(--muted);margin-top:0;max-height:0;overflow:hidden;transition:max-height .2s ease, margin-top .2s ease;}
+  .bolsa-stat-clickable.open .bolsa-stat-explain{margin-top:10px;max-height:200px;}
   /* Tareas semanales: tira de días L-D (tarjeta del supervisor y mini versión en tablas) */
   .week-strip{display:flex;gap:6px;margin:12px 0 4px;}
   .day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 3px 6px;border-radius:9px;border:1.5px solid transparent;min-width:0;}
@@ -1124,13 +1132,14 @@
       <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="false" style="margin-top:10px;">
         <span class="navgroup-icon">📦</span>
         <span class="navgroup-title">Inventario</span>
-        <span class="navgroup-count" id="navgroup-inventario-count">3</span>
+        <span class="navgroup-count" id="navgroup-inventario-count">4</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-inventario-body">
         <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag">Activo</span></button>
-        <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag pending">Próximamente</span></button>
-        <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximamente</span></button>
+        <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="inventario-bolsa"><span class="dot" style="background:#CA8A04;"></span><span class="label">Control de Bolsa</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -1705,33 +1714,375 @@
       </div>
     </section>
 
-    <!-- INVENTARIO · AUDITORÍA BULTOS PERDIDOS (placeholder) -->
+    <!-- INVENTARIO · AUDITORÍA BULTOS PERDIDOS (conectado a Supabase: ssoma_bp_registros / ssoma_bp_verificaciones) -->
     <section class="panel" id="panel-inventario-bultos-perdidos">
       <div class="section-head">
         <h2 class="section-title">Inventario — Auditoría Bultos Perdidos</h2>
-        <span class="count-pill">Próximamente</span>
+        <span class="count-pill" id="bp-count">0 casos</span>
       </div>
-      <p class="section-desc">Registro y seguimiento de bultos extraviados en el flujo de despacho. Este módulo está en construcción.</p>
-      <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
-        <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
-        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
-        <div style="font-size:12.5px;color:var(--muted);">Cuéntame qué datos necesitas registrar (guía/bulto, cliente, fecha, estado, etc.) y armo el formulario.</div>
+      <p class="section-desc">Casos "Perdido ERU" de tu tracker de Pendientes de Operación. Se concilian buscando el Nro LPN en Historial Inventario — si reaparece con movimiento después de la fecha de pérdida, es evidencia de que no se perdió.</p>
+
+      <div class="tab-bar" id="bp-tabs">
+        <button type="button" class="tab-btn active" data-tab="casos">Casos</button>
+        <button type="button" class="tab-btn" data-tab="conciliacion">Conciliación <span class="tab-count" id="bp-tab-count-conciliacion">0</span></button>
+        <button type="button" class="tab-btn" data-tab="historial">Historial</button>
+      </div>
+
+      <div id="bp-tab-casos">
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Importar Pendientes de Operación</div>
+            <div class="import-card-sub">El archivo que comparten a diario — hoja "Bultos Pendientes". Solo se toman los casos con Proceso = Perdido ERU.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bp-import-btn" disabled>Importar y calcular</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bp-file" id="bp-drop">
+            <input type="file" id="bp-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Pendientes de Operación</span>
+            <span class="import-drop-hint" id="bp-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="bp-import-status" style="display:none;"></div>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="bp-f-semana"><option value="">Todas</option></select>
+        </div>
+      </div>
+
+      <div class="stats-row" style="margin-top:18px;">
+        <div class="stat-card">
+          <div class="stat-label">Casos perdidos</div>
+          <div class="stat-value" id="bp-stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valorizado en juego</div>
+          <div class="stat-value" id="bp-stat-valorizado" style="color:var(--red);">S/ 0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ubicados (resueltos)</div>
+          <div class="stat-value" id="bp-stat-ubicados" style="color:var(--green);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valorizado recuperado</div>
+          <div class="stat-value" id="bp-stat-recuperado" style="color:var(--green);">S/ 0.00</div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:18px;">
+        <table class="data-table" id="bp-table">
+          <thead><tr><th>Fecha</th><th>Semana</th><th>Nro LPN</th><th>Producto</th><th>Ubic. Anterior</th><th>Responsable</th><th>Valorizado (S/)</th><th>Estado</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="help-tip" style="margin-top:18px;max-width:680px;">
+        <span class="ic">📌</span>
+        <div>
+          Los casos que importes o concilies aquí quedan guardados de verdad (Supabase).
+          <div style="margin-top:8px;">Verifica cada caso desde la pestaña <b>Conciliación</b> — una vez conciliado pasa a <b>Historial</b>, y es lo que después usa Control de Bolsa para disputar el motivo AJUSTE PERDIDO del auditor.</div>
+          <div style="margin-top:8px;">⚠️ Los casos de posible <b>sobre-envío</b> (a Punta Negra o una tienda) no se verifican acá todavía — esos se revisan a mano en Ordenes Cabecera, quedó pendiente definir ese cruce con el equipo.</div>
+        </div>
+      </div>
+      </div>
+
+      <!-- Conciliación Bultos Perdidos: pestaña aparte dentro del mismo panel, no un módulo distinto -->
+      <div id="bp-tab-conciliacion" style="display:none;">
+        <p class="section-desc">Busca el Nro LPN en Historial Inventario del WMS. Si reaparece con movimiento después de la fecha de pérdida, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
+
+        <div class="stats-row stats-row-3" style="margin-top:18px;">
+          <div class="stat-card">
+            <div class="stat-label">Pendientes de verificar</div>
+            <div class="stat-value" id="bp-conc-stat-pendientes" style="color:#B45309;">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ubicados</div>
+            <div class="stat-value" id="bp-conc-stat-ubicados" style="color:#16A34A;">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Valorizado recuperado</div>
+            <div class="stat-value" id="bp-conc-stat-valor">S/ 0.00</div>
+          </div>
+        </div>
+
+        <div class="conc-card-list" id="bp-conc-list" style="margin-top:18px;"><div class="empty">No hay casos pendientes de verificar.</div></div>
+      </div>
+
+      <!-- Historial de conciliado: casos ya verificados, con filtros -->
+      <div id="bp-tab-historial" style="display:none;">
+        <p class="section-desc">Historial de casos ya verificados en <b>Conciliación</b>, con filtros para ubicarlos rápido.</p>
+
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <div class="field" style="min-width:170px;margin-bottom:0;">
+            <label>Semana</label>
+            <select id="bp-hist-f-semana"><option value="">Todas</option></select>
+          </div>
+          <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
+            <label>Buscar</label>
+            <input type="text" id="bp-hist-f-buscar" placeholder="Código de barras, código, producto, LPN…">
+          </div>
+        </div>
+
+        <div class="conc-card-list" id="bp-hist-list" style="margin-top:18px;"><div class="empty">No hay verificaciones que coincidan con el filtro.</div></div>
       </div>
     </section>
 
-    <!-- INVENTARIO · AUDITORÍA SIN UBICACIÓN (placeholder) -->
+    <!-- INVENTARIO · AUDITORÍA SIN UBICACIÓN (conectado a Supabase: ssoma_su_registros / ssoma_su_verificaciones) -->
     <section class="panel" id="panel-inventario-sin-ubicacion">
       <div class="section-head">
         <h2 class="section-title">Inventario — Auditoría Sin Ubicación</h2>
-        <span class="count-pill">Próximamente</span>
+        <span class="count-pill" id="su-count">0 casos</span>
       </div>
-      <p class="section-desc">Registro de mercadería detectada sin ubicación asignada en el almacén. Este módulo está en construcción.</p>
-      <div class="stat-card" style="max-width:420px;margin-top:18px;padding:28px 22px;text-align:center;">
-        <div style="font-size:32px;line-height:1;margin-bottom:10px;">📦</div>
-        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Módulo en construcción</div>
-        <div style="font-size:12.5px;color:var(--muted);">Cuéntame qué datos necesitas registrar (SKU, cantidad, zona encontrada, responsable, etc.) y armo el formulario.</div>
+      <p class="section-desc">Mercadería en la ubicación especial "SIN-UBICACION-..." de tu WMS. Se concilia buscando el Cod Alternat en Historial Inventario — si tiene una ubicación real asignada (Ubic Activo), es evidencia de que sí está ubicada.</p>
+
+      <div class="tab-bar" id="su-tabs">
+        <button type="button" class="tab-btn active" data-tab="casos">Casos</button>
+        <button type="button" class="tab-btn" data-tab="conciliacion">Conciliación <span class="tab-count" id="su-tab-count-conciliacion">0</span></button>
+        <button type="button" class="tab-btn" data-tab="historial">Historial</button>
+      </div>
+
+      <div id="su-tab-casos">
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Importar Sin Ubicación</div>
+            <div class="import-card-sub">Tu archivo semanal (hoja DATA) — el listado crudo de LPN en ubicación especial.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="su-import-btn" disabled>Importar y calcular</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="su-file" id="su-drop">
+            <input type="file" id="su-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📍</span>
+            <span class="import-drop-title">Sin Ubicación (hoja DATA)</span>
+            <span class="import-drop-hint" id="su-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="su-import-status" style="display:none;"></div>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="su-f-semana"><option value="">Todas</option></select>
+        </div>
+      </div>
+
+      <div class="stats-row" style="margin-top:18px;">
+        <div class="stat-card">
+          <div class="stat-label">Casos pendientes</div>
+          <div class="stat-value" id="su-stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valorizado en juego</div>
+          <div class="stat-value" id="su-stat-valorizado" style="color:var(--red);">S/ 0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ubicados (resueltos)</div>
+          <div class="stat-value" id="su-stat-ubicados" style="color:var(--green);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valorizado recuperado</div>
+          <div class="stat-value" id="su-stat-recuperado" style="color:var(--green);">S/ 0.00</div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:18px;">
+        <table class="data-table" id="su-table">
+          <thead><tr><th>Fecha</th><th>Semana</th><th>Nro LPN</th><th>Producto</th><th>Cant.</th><th>Valorizado (S/)</th><th>Estado</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="help-tip" style="margin-top:18px;max-width:680px;">
+        <span class="ic">📌</span>
+        <div>
+          Los casos que importes o concilies aquí quedan guardados de verdad (Supabase) — reemplaza tu hoja BITACORA en Excel.
+          <div style="margin-top:8px;">Verifica cada caso desde la pestaña <b>Conciliación</b> — una vez conciliado pasa a <b>Historial</b>, y es lo que Control de Bolsa usa para disputar el motivo AJUSTE SIN UBICACION del auditor.</div>
+        </div>
+      </div>
+      </div>
+
+      <!-- Conciliación Sin Ubicación: pestaña aparte dentro del mismo panel, no un módulo distinto -->
+      <div id="su-tab-conciliacion" style="display:none;">
+        <p class="section-desc">Busca el Cod Alternat en Historial Inventario del WMS. Si tiene una ubicación real asignada (Ubic Activo), anótala con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
+
+        <div class="stats-row stats-row-3" style="margin-top:18px;">
+          <div class="stat-card">
+            <div class="stat-label">Pendientes de buscar</div>
+            <div class="stat-value" id="su-conc-stat-pendientes" style="color:#B45309;">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ubicados</div>
+            <div class="stat-value" id="su-conc-stat-ubicados" style="color:#16A34A;">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Valorizado recuperado</div>
+            <div class="stat-value" id="su-conc-stat-valor">S/ 0.00</div>
+          </div>
+        </div>
+
+        <div class="conc-card-list" id="su-conc-list" style="margin-top:18px;"><div class="empty">No hay casos pendientes de buscar.</div></div>
+      </div>
+
+      <!-- Historial de conciliado: casos ya verificados, con filtros -->
+      <div id="su-tab-historial" style="display:none;">
+        <p class="section-desc">Historial de casos ya verificados en <b>Conciliación</b> — tu bitácora, con filtros para ubicarlos rápido.</p>
+
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <div class="field" style="min-width:170px;margin-bottom:0;">
+            <label>Semana</label>
+            <select id="su-hist-f-semana"><option value="">Todas</option></select>
+          </div>
+          <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
+            <label>Buscar</label>
+            <input type="text" id="su-hist-f-buscar" placeholder="Código de barras, código, producto, LPN…">
+          </div>
+        </div>
+
+        <div class="conc-card-list" id="su-hist-list" style="margin-top:18px;"><div class="empty">No hay verificaciones que coincidan con el filtro.</div></div>
       </div>
     </section>
+
+    <!-- INVENTARIO · CONTROL DE BOLSA -->
+    <section class="panel" id="panel-inventario-bolsa">
+      <div class="section-head">
+        <h2 class="section-title">Inventario — Control de Bolsa</h2>
+        <span class="count-pill" id="bolsa-count">0 líneas</span>
+      </div>
+      <p class="section-desc">Cruza tus ajustes de inventario (WMS) contra el reporte oficial de diferencias que manda el área auditora, aplica la regla Considerar/No considerar, y lleva las disputas de cada línea para reducir lo que te descuentan cada trimestre.</p>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Importar reportes del trimestre</div>
+            <div class="import-card-sub">Sube el archivo del área auditora (Dif CD) y tu export interno del WMS — la app cruza ambos y arma la cascada sola.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bolsa-import-btn" disabled>Importar y calcular</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bolsa-file-auditoria" id="bolsa-drop-auditoria">
+            <input type="file" id="bolsa-file-auditoria" accept=".xlsx,.xls,.xlsb,.csv" hidden>
+            <span class="import-drop-icon">🧮</span>
+            <span class="import-drop-title">Reporte de diferencias (auditoría)</span>
+            <span class="import-drop-hint" id="bolsa-file-auditoria-name">Arrastra el archivo o haz clic para elegirlo</span>
+            <span class="import-drop-hint" style="font-size:11px;">Lo que te manda el área auditora — ej. "Dif Santa Anita"</span>
+          </label>
+          <label class="import-drop" for="bolsa-file-wms" id="bolsa-drop-wms">
+            <input type="file" id="bolsa-file-wms" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Ajustes de inventario (bruto WMS)</span>
+            <span class="import-drop-hint" id="bolsa-file-wms-name">Arrastra el archivo o haz clic para elegirlo</span>
+            <span class="import-drop-hint" style="font-size:11px;">El log crudo del WMS, sin procesar — la app calcula Motivo, Área, Origen y Valorizado sola</span>
+          </label>
+        </div>
+        <div class="import-status" id="bolsa-import-status" style="display:none;"></div>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="bolsa-f-semana"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:190px;margin-bottom:0;">
+          <label>Motivo OP</label>
+          <select id="bolsa-f-motivo"><option value="">Todos</option></select>
+        </div>
+      </div>
+
+      <div class="stats-row" style="margin-top:18px;">
+        <div class="stat-card bolsa-stat-clickable" data-explain="Suma de TODOS los montos que reporta la auditoría en el periodo filtrado — incluye motivos que sí cuentan y motivos que están excluidos por regla. Es el punto de partida de la cascada, antes de aplicar ningún filtro.">
+          <div class="stat-label">Total detectado (auditoría) <span class="bolsa-info-ic">ⓘ</span></div>
+          <div class="stat-value" id="bolsa-stat-total">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
+        </div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Motivos que la propia auditoría excluye del cobro (hoja &quot;No considerar&quot; del auditor — ej. CREACION SUIZO, OBSERVADO). Esto no se te descuenta, aunque aparezca en su reporte.">
+          <div class="stat-label">Excluido por regla <span class="bolsa-info-ic">ⓘ</span></div>
+          <div class="stat-value" id="bolsa-stat-excluido" style="color:var(--green);">S/ 0</div>
+          <div class="stat-sublabel">No considerar</div>
+          <div class="bolsa-stat-explain"></div>
+        </div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Lo que sí cuenta contra ti según la regla vigente del auditor (tabla ssoma_bolsa_reglas_considerar), antes de cualquier disputa. Si no haces nada, este es el monto que te van a cobrar.">
+          <div class="stat-label">Considera — bruto <span class="bolsa-info-ic">ⓘ</span></div>
+          <div class="stat-value" id="bolsa-stat-considera">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
+        </div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Suma de las líneas que marcaste como &quot;Descartada (ganada)&quot; en el detalle de abajo — el auditor las retiró y ya no se pagan. Sube cada vez que ganas una disputa.">
+          <div class="stat-label">Ganado en disputa <span class="bolsa-info-ic">ⓘ</span></div>
+          <div class="stat-value" id="bolsa-stat-disputa" style="color:var(--green);">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
+        </div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Considera — bruto, menos lo Ganado en disputa. Es el número que realmente te queda por pagar hoy — el que buscamos ir bajando con cada disputa ganada.">
+          <div class="stat-label">Neto final a pagar <span class="bolsa-info-ic">ⓘ</span></div>
+          <div class="stat-value" id="bolsa-stat-neto" style="color:var(--red);">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:22px;border:1px solid var(--orange);border-radius:10px;background:var(--orange-tint);padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="font-weight:700;font-size:13.5px;color:var(--amber-text);">⚠ Candidatos a disputa — revisar antes de que pasen a cobro</div>
+          <div style="font-size:12.5px;color:var(--muted);"><span id="bolsa-candidatos-count">0</span> líneas · S/ <span id="bolsa-candidatos-monto">0.00</span> en juego</div>
+        </div>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table class="data-table" id="bolsa-candidatos-table">
+            <thead><tr><th>Cod Producto</th><th>Producto</th><th>Motivo OP</th><th>Monto (S/)</th><th>Por qué</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="bolsa-motivo-toggle" aria-expanded="false">
+        Por Motivo OP · solo lo que Considera
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="bolsa-motivo-wrap">
+        <table class="data-table" id="bolsa-motivo-table">
+          <thead><tr><th>Tipo</th><th>Motivo OP</th><th>Monto reversado (S/)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="bolsa-familia-toggle" aria-expanded="false">
+        Por Familia · Controlados · Refrigerados · Supervisado
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="bolsa-familia-wrap">
+        <table class="data-table" id="bolsa-familia-table">
+          <thead><tr><th>Familia</th><th>Monto reversado (S/)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="bolsa-detalle-toggle" aria-expanded="false">
+        Detalle de líneas y disputas
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="bolsa-detalle-wrap">
+        <table class="data-table" id="bolsa-detalle-table">
+          <thead><tr><th>Fecha</th><th>Semana</th><th>Producto</th><th>Ubicación</th><th>Familia</th><th>Motivo OP</th><th>Monto (S/)</th><th>Estado</th><th>Sustento</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="help-tip" style="margin-top:18px;max-width:680px;">
+        <span class="ic">📌</span>
+        <div>
+Ya procesa los 2 Excel reales en el navegador (no hay datos de ejemplo) — pero todavía no escribe en Supabase, así que cada vez que recargues la página se vacía y hay que volver a importar.
+          <div style="margin-top:8px;">La regla <b>Considerar / No considerar</b> es la que ya aplica el área auditora — se aplica tal cual sobre lo que subas para armar la cascada de arriba.</div>
+          <div style="margin-top:8px;">📦 El casillero "Ajustes de inventario" solo necesita el <b>bruto del WMS</b> (sin Motivo/Área/Origen/Valorizado calculados) — la app calcula el Motivo con las reglas de la hoja Motivos de tu Plantilla CD 9053.</div>
+          <div style="margin-top:8px;">🔗 El auditor cobra lo que <b>no encontró</b> (lo asume perdido). Si tu WMS registra un ajuste <b>positivo</b> (sí se encontró) del mismo SKU en esa semana, esa línea se marca sola como <b>"En disputa"</b> al importar — es tu evidencia para decir "no me cobres esto". Sin ese registro no se marca nada: no hay con qué sustentar la disputa.</div>
+          <div style="margin-top:8px;">⚠️ Pendiente de conectar a Supabase: el <b>Valorizado</b> del bruto del WMS (necesita el maestro de 45,385 SKU con costo/proveedor, muy pesado para cargarlo en el navegador) y guardar el historial entre sesiones.</div>
+          <div style="margin-top:8px;">Usa <b>Disputar</b> / <b>Descartar</b> / <b>Aceptar</b> por fila para ver cómo cambia la cascada — es lo que reduce el "Neto final a pagar".</div>
+        </div>
+      </div>
+    </section>
+
 
     <!-- DESIGNACIÓN DE TAREAS · VISTA JEFATURA -->
     <section class="panel" id="panel-tareas-jefatura">
@@ -2192,6 +2543,76 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="bp-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>Conciliar bulto perdido</h3>
+      <button class="modal-close" id="bp-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mrow"><b>Producto</b><span id="bp-modal-producto"></span></div>
+      <div class="mrow"><b>Nro LPN</b><span id="bp-modal-lpn"></span></div>
+      <div class="mrow"><b>Ubicación anterior</b><span id="bp-modal-ubicacion"></span></div>
+      <div class="mrow"><b>Valorizado</b><span id="bp-modal-valorizado"></span></div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Foto de evidencia (Historial Inventario, ubicación, etc.)</label>
+        <label class="import-drop" for="bp-foto" id="bp-drop-foto" style="padding:14px;">
+          <input type="file" accept="image/*" capture="environment" id="bp-foto" hidden>
+          <span class="import-drop-icon">📷</span>
+          <span class="import-drop-hint" id="bp-foto-name">Toca para tomar una foto o elegir un archivo</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label>¿Qué encontraste en Historial Inventario?</label>
+        <textarea id="bp-modal-sustento" rows="3" placeholder="Ej. LPN reescaneado el 20/08 en EA-04-10, movimiento de reubicación"></textarea>
+        <div class="hint">Busca el Nro LPN en Historial Inventario — si reaparece con movimiento después de la fecha de pérdida, describe qué encontraste.</div>
+      </div>
+
+      <span class="login-error" id="bp-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="bp-guardar-btn" style="width:100%;margin-top:6px;">Guardar y marcar Ubicado</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="su-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>Conciliar Sin Ubicación</h3>
+      <button class="modal-close" id="su-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mrow"><b>Producto</b><span id="su-modal-producto"></span></div>
+      <div class="mrow"><b>Nro LPN</b><span id="su-modal-lpn"></span></div>
+      <div class="mrow"><b>Cantidad</b><span id="su-modal-cantidad"></span></div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Foto de la ubicación encontrada</label>
+        <label class="import-drop" for="su-foto" id="su-drop-foto" style="padding:14px;">
+          <input type="file" accept="image/*" capture="environment" id="su-foto" hidden>
+          <span class="import-drop-icon">📷</span>
+          <span class="import-drop-hint" id="su-foto-name">Toca para tomar una foto o elegir un archivo</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label>Ubicación encontrada (Ubic Activo)</label>
+        <input type="text" id="su-modal-ubicacion" placeholder="Ej. EST1-15-45-40-01">
+      </div>
+      <div class="field">
+        <label>Observación / sustento</label>
+        <textarea id="su-modal-sustento" rows="3" placeholder="Ej. quiebre reabasto"></textarea>
+      </div>
+
+      <span class="login-error" id="su-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="su-guardar-btn" style="width:100%;margin-top:6px;">Guardar y marcar Ubicado</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="modal-overlay" id="tarea-finalizar-modal">
   <div class="modal-box" style="max-width:440px;">
@@ -3241,6 +3662,1066 @@ document.getElementById("hist-f-subarea").addEventListener("change", spRenderHis
 document.getElementById("hist-f-estado").addEventListener("change", spRenderHistorial);
 document.getElementById("hist-f-buscar").addEventListener("input", spRenderHistorial);
 
+/* ---- Inventario · Control de Bolsa (import real de los 2 Excel, sin maqueta) ----
+   Fuente 1: el reporte de diferencias del área auditora (ej. "Dif Santa Anita"),
+   hoja con columnas FECHA/TIPO/MOTIVO OP/FAMILIA/UBICACIÓN/monto reversado/SEMANA.
+   Fuente 2: el bruto del WMS (Historial Inventario), sin procesar.
+   Las reglas de abajo (Considerar/No considerar, clasificación WMS) son las que ya
+   se sacaron de Plantilla CD 9053 y quedaron en las migraciones 0020/0021 — se
+   repiten aquí en JS porque todavía no hay conexión a Supabase para esta parte. */
+
+const BOLSA_REGLAS_CONSIDERA = {
+  "AJUSTE LPN|AJUSTE CARTONES": true,
+  "AJUSTE LPN|AJUSTE DROP": true,
+  "AJUSTE LPN|AJUSTE PERDIDO": true,
+  "AJUSTE LPN|VAS": true,
+  "AJUSTE LPN|CREA LPN VAS": true,
+  "AJUSTE LPN|AJUSTE B2B": true,
+  "AJUSTE LPN|CREA LPN MERMA": true,
+  "AJUSTE LPN|AJUSTE SIN UBICACION": true,
+  "AJUSTE LPN|CREACION LPN": true,
+  "AJUSTE LPN|AJUSTE TRASLADO": true,
+  "CONTEO CICLICO|AJUSTE ACTIVO": true,
+  "CONTEO CICLICO|AJUSTE RESERVA DETALLE LPN": true,
+  "CONTEO CICLICO|AJUSTE RESERVA LPN": true,
+  "CONTEO CICLICO|SHORTPICK": true,
+  "AJUSTE LPN|AJUSTE SIEMBRA": false,
+  "AJUSTE LPN|CREA LPN MULTISKU": false,
+  "AJUSTE LPN|CREACION SUIZO": false,
+  "AJUSTE LPN|OBSERVADO": false,
+  "CONTEO CICLICO|OBSERVADO": false,
+};
+/* true/false = regla conocida. undefined = motivo nuevo que el auditor no había usado antes:
+   se cuenta como "sí considera" por seguridad (mejor de más que ocultar un cobro real),
+   pero se marca para que lo revisen y agreguen la regla. */
+function bolsaConsidera(tipo, motivo){
+  const key = tipo + "|" + motivo;
+  return key in BOLSA_REGLAS_CONSIDERA ? BOLSA_REGLAS_CONSIDERA[key] : true;
+}
+function bolsaReglaConocida(tipo, motivo){ return (tipo + "|" + motivo) in BOLSA_REGLAS_CONSIDERA; }
+
+/* Clasificación del bruto WMS (hoja Motivos de Plantilla CD 9053). */
+const BOLSA_WMS_UBICACION_MOTIVO = {
+  "XX-SIN-UBIC-00": "AJUSTES SIN UBICACIÓN",
+  "XX-PERDIDO-00-00": "AJUSTE PERDIDO",
+  "XX-MERMA-OP-00": "AJUSTE MERMA",
+  "XX-REABAS-00-00": "AJUSTE REABASTO",
+  "XX-CART-EMPAC-NOUBICADO-IP6": "AJUSTES CARTONES IP6",
+  "XX-CART-EMPAC-NOUBICADO-WMS": "AJUSTES CARTONES WMS",
+  "XX-CART-EMPAC-NOUBICADO-WMS-MZ": "AJUSTES CARTONES LAVORO",
+  "XX-CART-EMPAC-LOCAL": "CARTONES EN LOCAL",
+  "XX-REG-DIF-00": "POR REVISAR",
+};
+const BOLSA_WMS_MOTIVO_ORIGEN = {
+  "CREACION LPN": "WMS", "CREACION LPN AUT": "AJUSTE IP6", "CREACION LPN VAS": "WMS",
+  "REGULARIZACION": "WMS", "AJUSTE CICLICO": "WMS", "AJUSTE LPN": "WMS",
+  "CREACION LPN MRM": "WMS", "CREACION MULTISKU": "WMS", "AJUSTE PERDIDO": "WMS",
+  "VAS": "AJUSTE IP6", "AFRAME": "AJUSTE IP6", "PTB": "AJUSTE IP6", "PP_CERO": "AJUSTE IP6",
+  "AJUSTE REABASTO": "WMS", "AJUSTES CARTONES WMS": "WMS", "AJUSTES CARTONES LAVORO": "WMS",
+  "REVISAR AJUSTE IP6": "AJUSTE IP6", "AJUSTES SIN UBICACIÓN": "WMS", "CREACION DE LPN CTR": "WMS",
+  "CC_IP6": "AJUSTE IP6", "SHORT PICK IP6": "AJUSTE IP6", "CARTONES EN LOCAL": "WMS",
+  "SHORT PICK": "WMS", "SOBRANTE": "AJUSTE IP6", "AJUSTE MERMA": "WMS",
+  "AJUSTE ACTIVO": "WMS", "AJUSTES CARTONES IP6": "WMS",
+};
+/* clave = "Historial de actividad||Nombre pantalla||Cod Razon" -> Motivo (68 combinaciones reales). */
+const BOLSA_WMS_CONSOLIDADO_MOTIVO = {
+  "17 - Inventory Adjusted post verifcation||RF_Modifica caja LPN||AJUSTE / CRUCE 0001": "AJUSTE / CRUCE 0001",
+  "17 - Inventory Adjusted post verifcation||RF_Modificar LPN||AJUSTE / CRUCE 0001": "AJUSTE / CRUCE 0001",
+  "29 - Create Allocatable Container||AUT Crea LPN||CONTEO CICLICO": "CREACION LPN AUT",
+  "29 - Create Allocatable Container||RF_Crea LPN MultiSku||CONTEO CICLICO": "CREACION MULTISKU",
+  "19 - Inventory Adjustment - Cycle Count Active||RF CC x Detalle LPNs CD14||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "39 - Caja Perdida x CC||RF_Conteo Ciclico de LPN||CONTEO CICLICO": "REGULARIZACION",
+  "19 - Inventory Adjustment - Cycle Count Active||Invent Activo||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "40 - Caja perdida||RF_Conteo Ciclico de LPN||CONTEO CICLICO": "REGULARIZACION",
+  "29 - Create Allocatable Container||RF_Crea LPN||CONTEO CICLICO": "CREACION LPN",
+  "19 - Inventory Adjustment - Cycle Count Active||RF_Conteo Ciclico de Unidades||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "17 - Inventory Adjusted post verifcation||Cajas||CONTEO CICLICO": "AJUSTE LPN",
+  "29 - Create Allocatable Container||MRM Crea LPN||CONTEO CICLICO": "CREACION LPN MRM",
+  "17 - Inventory Adjusted post verifcation||RF_Modifica caja LPN||CONTEO CICLICO": "AJUSTE LPN",
+  "29 - Create Allocatable Container||VAS Crea LPN||CONTEO CICLICO": "CREACION LPN VAS",
+  "40 - Caja perdida||RF_Conteo Ciclico de Unidades||CONTEO CICLICO": "REGULARIZACION",
+  "17 - Inventory Adjusted post verifcation||RF_Modificar LPN||CONTEO CICLICO": "AJUSTE LPN",
+  "19 - Inventory Adjustment - Cycle Count Active||RF_Conteo Ciclico de LPN||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "40 - Caja perdida||RF_Conteo Ciclico Num LPN's||CONTEO CICLICO": "REGULARIZACION",
+  "53 - Cycle Count - Reserve SKU Counted||RF_Conteo Ciclico de Unidades||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "53 - Cycle Count - Reserve SKU Counted||RF CC x Detalle LPNs CD14||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "19 - Inventory Adjustment - Cycle Count Active||RF CC Activo CD14||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "39 - Caja Perdida x CC||RF_Conteo Ciclico de Unidades||CONTEO CICLICO": "REGULARIZACION",
+  "19 - Inventory Adjustment - Cycle Count Active||Inventario Activo||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "40 - Caja perdida||RF CC x Detalle LPNs CD14||CONTEO CICLICO": "REGULARIZACION",
+  "39 - Caja Perdida x CC||RF CC x Detalle LPNs CD14||CONTEO CICLICO": "REGULARIZACION",
+  "40 - Caja perdida||Cycle Cnt {locn}||CONTEO CICLICO": "REGULARIZACION",
+  "19 - Inventory Adjustment - Cycle Count Active||RF CC por detalle||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "40 - Caja perdida||RF CC por detalle||CONTEO CICLICO": "REGULARIZACION",
+  "4 - Inventory Adjusted pre verification||RF_Crea LPN MultiSku||CONTEO CICLICO": "REVISAR CREACION",
+  "40 - Caja perdida||RF_CC_UNDS_CD12||CONTEO CICLICO": "REGULARIZACION",
+  "53 - Cycle Count - Reserve SKU Counted||RF_CC_UNDS_CD12||CONTEO CICLICO": "AJUSTE ACTIVO",
+  "39 - Caja Perdida x CC||RF_CC_UNDS_CD12||CONTEO CICLICO": "REGULARIZACION",
+  "4 - Inventory Adjusted pre verification||Cajas||CONTEO CICLICO": "AJUSTE PTA",
+  "52 - Audit Adjustment||RF_Auditar Carton||CONTEO CICLICO": "VAS",
+  "4 - Inventory Adjusted pre verification||calc_nbr_containers||CONTEO CICLICO": "AJUSTE PTA",
+  "39 - Caja Perdida x CC||RF_CC Ubic y LPN_RFC||CONTEO CICLICO": "REGULARIZACION",
+  "4 - Inventory Adjusted pre verification||AUT Crea LPN||CONTEO CICLICO": "REVISAR CREACION",
+  "4 - Inventory Adjusted pre verification||VAS Crea LPN||CONTEO CICLICO": "REVISAR CREACION",
+  "39 - Caja Perdida x CC||RF CC por detalle||CONTEO CICLICO": "REGULARIZACION",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||CONTEO CICLICO": "REVISAR UBICACIÓN",
+  "17 - Inventory Adjusted post verifcation||entity.iblpn.modify_item_qty||CONTEO CICLICO": "AJUSTE LPN",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||FALTA_VAS": "VAS",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||PP_CERO": "PP_CERO",
+  "4 - Inventory Adjusted pre verification||RF_Picking_Case_PN||SHORT PICK ACTIVO": "SHORT PICK",
+  "4 - Inventory Adjusted pre verification||RF_Picking_Case_AAA-LAC_PN||SHORT PICK ACTIVO": "SHORT PICK",
+  "40 - Caja perdida||Move LPN||SHORT PICK ACTIVO": "REGULARIZACION",
+  "40 - Caja perdida||RF_Move LPN AMR PLT||SHORT PICK ACTIVO": "REGULARIZACION",
+  "4 - Inventory Adjusted pre verification||RF_Picking_Case_Pañales_PN||SHORT PICK ACTIVO": "SHORT PICK",
+  "40 - Caja perdida||RF_Move LPN AAA||SHORT PICK ACTIVO": "REGULARIZACION",
+  "17 - Inventory Adjusted post verifcation||RF_Pick_Cart_AAA_LAC||SHORT PICK ACTIVO": "SHORT PICK",
+  "17 - Inventory Adjusted post verifcation||RF_Pick_Cart_Pañales PN||SHORT PICK ACTIVO": "SHORT PICK",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||SOBRANTE": "REVISAR UBICACIÓN",
+  "17 - Inventory Adjusted post verifcation||RF_Modifica caja LPN||SOBRANTE": "REVISAR AJUSTE LPN IP6",
+  "17 - Inventory Adjusted post verifcation||RF_Modificar LPN||SOBRANTE": "REVISAR AJUSTE LPN IP6",
+  "19 - Inventory Adjustment - Cycle Count Active||Invent Activo||SOBRANTE": "REVISAR AJUSTE IP6",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||FALTANTE": "REVISAR UBICACIÓN",
+  "17 - Inventory Adjusted post verifcation||RF_Modificar LPN||FALTANTE": "REVISAR AJUSTE LPN IP6",
+  "17 - Inventory Adjusted post verifcation||RF_Modifica caja LPN||FALTANTE": "REVISAR AJUSTE LPN IP6",
+  "19 - Inventory Adjustment - Cycle Count Active||Invent Activo||FALTANTE": "REVISAR AJUSTE IP6",
+  "19 - Inventory Adjustment - Cycle Count Active||Inventario Activo||FALTANTE": "REVISAR AJUSTE IP6",
+  "17 - Inventory Adjusted post verifcation||Cajas||FALTANTE": "REVISAR AJUSTE LPN IP6",
+  "17 - Inventory Adjusted post verifcation||Cajas||SOBRANTE": "REVISAR AJUSTE LPN IP6",
+  "40 - Caja perdida||RF_Picking_Case_PN||SHORT PICK ACTIVO": "REGULARIZACION",
+  "29 - Create Allocatable Container||CRT ENVIADO CREA LPN||CONTEO CICLICO": "CREACION DE LPN CTR",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||CC_IP6": "CC_IP6",
+  "4 - Inventory Adjusted pre verification||entity.location.update_active_inventory||SHORT PICK IP6": "SHORT PICK IP6",
+  "4 - Inventory Adjusted pre verification||RF_Picking_Case_QS||SHORT PICK ACTIVO": "SHORT PICK",
+  "4 - Inventory Adjusted pre verification||Cajas||FALTANTE": "REVISAR AJUSTE LPN IP6",
+};
+
+/* Los únicos "Historial de actividad" que representan un ajuste real de inventario
+   (verificado contra Motivos!D:E de Plantilla CD 9053) — todo lo demás (picking, empaque,
+   cambios de estado de orden, etc.) se descarta al importar el bruto del WMS. */
+const BOLSA_WMS_HISTORIALES_VALIDOS = new Set(["4", "17", "19", "29", "39", "40", "52", "53"]);
+
+function bolsaClasificarWms(row){
+  const motivo = BOLSA_WMS_UBICACION_MOTIVO[row.ubicacion]
+    || BOLSA_WMS_CONSOLIDADO_MOTIVO[[row.historial, row.pantalla, row.codRazon].join("||")]
+    || "SIN CLASIFICAR";
+  const origen = BOLSA_WMS_MOTIVO_ORIGEN[motivo] || "";
+  return { motivo, origen };
+}
+
+/* Excel serial / string / Date -> Date. Semana = número de semana ISO (lunes-domingo),
+   sin offset — verificado en vivo contra las fechas reales de tu Q3 2026 (SEM 27 =
+   29/06-05/07, SEM 28 = 06/07-12/07, SEM 33 = 10/08-16/08: la semana ISO calza exacto). */
+function bolsaToDate(v){
+  if(v instanceof Date) return isNaN(v) ? null : v;
+  if(typeof v === "number") return new Date(Math.round((v - 25569) * 86400 * 1000));
+  if(typeof v === "string" && v.trim()){ const d = new Date(v); return isNaN(d) ? null : d; }
+  return null;
+}
+function bolsaFechaLabel(date){ return date ? date.toISOString().slice(0,10) : ""; }
+function bolsaSemanaLabel(date){
+  if(!date) return "";
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const isoWeek = 1 + Math.round((d - firstThursday) / (7*24*3600*1000));
+  return "SEM " + isoWeek;
+}
+
+function bolsaNormalizeHeader(s){ return String(s == null ? "" : s).trim().toLowerCase(); }
+function bolsaFindCol(headerRow, candidates){
+  const normalized = headerRow.map(bolsaNormalizeHeader);
+  for(const cand of candidates){
+    const idx = normalized.indexOf(bolsaNormalizeHeader(cand));
+    if(idx !== -1) return idx;
+  }
+  return -1;
+}
+/* Recorre todas las hojas del libro y devuelve la primera que tenga TODAS las
+   columnas pedidas (por nombre, sin importar mayúsculas/tildes) — así no depende
+   de que la hoja se llame exactamente "Data". */
+function bolsaPickSheet(wb, requiredCandidateLists){
+  for(const name of wb.SheetNames){
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:true, defval:"", blankrows:false });
+    if(!json.length) continue;
+    const header = json[0];
+    const cols = {};
+    let ok = true;
+    for(const [key, cands] of Object.entries(requiredCandidateLists)){
+      const idx = bolsaFindCol(header, cands);
+      if(idx === -1){ ok = false; break; }
+      cols[key] = idx;
+    }
+    if(ok) return { sheetName: name, header, rows: json.slice(1), cols };
+  }
+  return null;
+}
+function bolsaReadWorkbook(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{ resolve(XLSX.read(e.target.result, { type:"array", cellDates:true })); }
+      catch(err){ reject(err); }
+    };
+    reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+let bolsaAuditLineas = [];
+let bolsaWmsLineas = [];
+let bolsaNextId = 1;
+
+function bolsaRenderFilters(){
+  const selSem = document.getElementById("bolsa-f-semana");
+  const selMot = document.getElementById("bolsa-f-motivo");
+  if(!selSem || !selMot) return;
+  const semanaActual = selSem.value, motivoActual = selMot.value;
+  selSem.innerHTML = '<option value="">Todas</option>';
+  selMot.innerHTML = '<option value="">Todos</option>';
+  const semanas = [...new Set(bolsaAuditLineas.map(r=>r.semana))].filter(Boolean).sort();
+  const motivos = [...new Set(bolsaAuditLineas.map(r=>r.motivo))].filter(Boolean).sort();
+  semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; selSem.appendChild(o); });
+  motivos.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m; selMot.appendChild(o); });
+  if(semanas.includes(semanaActual)) selSem.value = semanaActual;
+  if(motivos.includes(motivoActual)) selMot.value = motivoActual;
+}
+
+function bolsaFilteredLineas(){
+  const sem = document.getElementById("bolsa-f-semana").value;
+  const mot = document.getElementById("bolsa-f-motivo").value;
+  return bolsaAuditLineas.filter(r => (!sem || r.semana === sem) && (!mot || r.motivo === mot));
+}
+
+function bolsaEstadoBadge(estado){
+  if(estado === "en_disputa") return '<span class="estado-badge parcial">En disputa</span>';
+  if(estado === "descartado") return '<span class="estado-badge finalizado">Descartado (ganada)</span>';
+  if(estado === "aceptado") return '<span class="estado-badge tipo-accidente">Aceptado (cuenta)</span>';
+  return '<span class="estado-badge pendiente">Sin revisar</span>';
+}
+
+function bolsaRender(){
+  const rows = bolsaFilteredLineas();
+  document.getElementById("bolsa-count").textContent = rows.length + (rows.length===1 ? " línea" : " líneas");
+
+  const totalGeneral = bolsaAuditLineas.reduce((s,r)=>s+r.monto,0);
+  const totalExcluido = bolsaAuditLineas.filter(r=>!r.considera).reduce((s,r)=>s+r.monto,0);
+  const totalConsidera = bolsaAuditLineas.filter(r=>r.considera).reduce((s,r)=>s+r.monto,0);
+  const gananciaDisputa = bolsaAuditLineas.filter(r=>r.estado==="descartado").reduce((s,r)=>s+Math.abs(r.monto),0);
+  const netoFinal = totalConsidera + gananciaDisputa;
+
+  document.getElementById("bolsa-stat-total").textContent = "S/ " + totalGeneral.toFixed(2);
+  document.getElementById("bolsa-stat-excluido").textContent = "S/ " + totalExcluido.toFixed(2);
+  document.getElementById("bolsa-stat-considera").textContent = "S/ " + totalConsidera.toFixed(2);
+  document.getElementById("bolsa-stat-disputa").textContent = "S/ " + gananciaDisputa.toFixed(2);
+  document.getElementById("bolsa-stat-neto").textContent = "S/ " + netoFinal.toFixed(2);
+
+  const porMotivo = new Map();
+  bolsaAuditLineas.filter(r=>r.considera).forEach(r=>{
+    const key = r.tipo + "|" + r.motivo;
+    porMotivo.set(key, (porMotivo.get(key) || 0) + r.monto);
+  });
+  const motivoBody = document.querySelector("#bolsa-motivo-table tbody");
+  const motivosOrdenados = [...porMotivo.entries()].sort((a,b)=> a[1] - b[1]);
+  motivoBody.innerHTML = motivosOrdenados.length ? motivosOrdenados.map(([key, monto]) => {
+    const [tipo, motivo] = key.split("|");
+    return `
+    <tr>
+      <td>${escapeHtml(tipo)}</td>
+      <td>${escapeHtml(motivo)}</td>
+      <td class="num" style="color:${monto < 0 ? 'var(--red)' : 'var(--green)'};">${monto.toFixed(2)}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="3" style="text-align:center;color:var(--muted);">Importa el reporte de la auditoría para ver este desglose.</td></tr>`;
+
+  const porFamilia = new Map();
+  bolsaAuditLineas.filter(r=>r.considera).forEach(r=>{
+    porFamilia.set(r.familia || "(sin familia)", (porFamilia.get(r.familia || "(sin familia)") || 0) + r.monto);
+  });
+  const familiaBody = document.querySelector("#bolsa-familia-table tbody");
+  const familiasOrdenadas = [...porFamilia.entries()].sort((a,b)=> a[1] - b[1]);
+  familiaBody.innerHTML = familiasOrdenadas.length ? familiasOrdenadas.map(([familia, monto]) => `
+    <tr>
+      <td>${escapeHtml(familia)}</td>
+      <td class="num" style="color:${monto < 0 ? 'var(--red)' : 'var(--green)'};">${monto.toFixed(2)}</td>
+    </tr>`).join("") : `<tr><td colspan="2" style="text-align:center;color:var(--muted);">Importa el reporte de la auditoría para ver este desglose.</td></tr>`;
+
+  // Candidatos a disputa: lo que el cruce automático ya marcó, en su propia sección
+  // arriba del detalle completo, para que no se pierda entre el resto de líneas.
+  const candidatos = bolsaAuditLineas.filter(r => r.considera && (r.estado === "en_disputa" || r.reglaDesconocida));
+  const candidatosOrdenados = [...candidatos].sort((a,b)=> a.monto - b.monto);
+  const montoCandidatos = candidatos.reduce((s,r)=>s+Math.abs(r.monto),0);
+  document.getElementById("bolsa-candidatos-count").textContent = candidatos.length;
+  document.getElementById("bolsa-candidatos-monto").textContent = montoCandidatos.toFixed(2);
+  const candidatosBody = document.querySelector("#bolsa-candidatos-table tbody");
+  candidatosBody.innerHTML = candidatosOrdenados.length ? candidatosOrdenados.map(r => `
+    <tr>
+      <td>${escapeHtml(r.codProducto)}</td>
+      <td>${escapeHtml(r.producto)}</td>
+      <td>${escapeHtml(r.motivo)}</td>
+      <td class="num" style="color:var(--red);">${r.monto.toFixed(2)}</td>
+      <td style="font-size:12px;color:var(--muted);">${escapeHtml(r.sustento || (r.reglaDesconocida ? "Motivo no visto antes — confirmar si va en Considerar/No considerar." : ""))}</td>
+    </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;color:var(--muted);">Sin candidatos por ahora.</td></tr>`;
+
+  const detailBody = document.querySelector("#bolsa-detalle-table tbody");
+  const rowsSorted = [...rows].sort((a,b)=> a.monto - b.monto);
+  detailBody.innerHTML = rowsSorted.length ? rowsSorted.map(r => `
+    <tr>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.semana)}</td>
+      <td>${escapeHtml(r.codProducto)} · ${escapeHtml(r.producto)}</td>
+      <td>${escapeHtml(r.ubicacion)}</td>
+      <td>${escapeHtml(r.familia)}</td>
+      <td>${escapeHtml(r.motivo)}${r.reglaDesconocida ? ' <span title="Motivo no visto antes en la regla Considerar/No considerar — se contó como \'sí considera\' por seguridad, revisar." style="color:var(--orange);">⚠</span>' : ''}</td>
+      <td class="num" style="color:${r.monto < 0 ? 'var(--red)' : 'var(--green)'};">${r.monto.toFixed(2)}</td>
+      <td>${bolsaEstadoBadge(r.estado)}</td>
+      <td style="max-width:220px;white-space:normal;font-size:12px;color:var(--muted);">${escapeHtml(r.sustento || "—")}</td>
+      <td>
+        <select class="bolsa-estado-select" data-id="${r.id}" style="font-size:12px;padding:4px 6px;">
+          <option value="sin_revisar" ${r.estado==="sin_revisar"?"selected":""}>Sin revisar</option>
+          <option value="en_disputa" ${r.estado==="en_disputa"?"selected":""}>Disputar</option>
+          <option value="descartado" ${r.estado==="descartado"?"selected":""}>Descartar (ganada)</option>
+          <option value="aceptado" ${r.estado==="aceptado"?"selected":""}>Aceptar (cuenta)</option>
+        </select>
+      </td>
+    </tr>`).join("") : `<tr><td colspan="10" style="text-align:center;color:var(--muted);">Todavía no has importado nada — sube los 2 archivos arriba.</td></tr>`;
+
+  detailBody.querySelectorAll(".bolsa-estado-select").forEach(sel=>{
+    sel.addEventListener("change", (e)=>{
+      const id = Number(e.target.dataset.id);
+      const row = bolsaAuditLineas.find(r=>r.id === id);
+      if(row) row.estado = e.target.value;
+      bolsaRender();
+    });
+  });
+}
+
+bolsaRenderFilters();
+bolsaRender();
+document.getElementById("bolsa-f-semana").addEventListener("change", bolsaRender);
+document.getElementById("bolsa-f-motivo").addEventListener("change", bolsaRender);
+
+/* Clic en cada tarjeta del dashboard -> explica qué muestra y cómo se calcula. */
+document.querySelectorAll("#panel-inventario-bolsa .bolsa-stat-clickable").forEach(card=>{
+  const explainEl = card.querySelector(".bolsa-stat-explain");
+  explainEl.textContent = card.dataset.explain;
+  card.addEventListener("click", ()=>{
+    card.classList.toggle("open");
+  });
+});
+
+function bolsaUpdateImportState(){
+  const f1 = document.getElementById("bolsa-file-auditoria").files[0];
+  const f2 = document.getElementById("bolsa-file-wms").files[0];
+  document.getElementById("bolsa-file-auditoria-name").textContent = f1 ? f1.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bolsa-file-wms-name").textContent = f2 ? f2.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bolsa-drop-auditoria").classList.toggle("filled", !!f1);
+  document.getElementById("bolsa-drop-wms").classList.toggle("filled", !!f2);
+  document.getElementById("bolsa-import-btn").disabled = !(f1 && f2);
+}
+document.getElementById("bolsa-file-auditoria").addEventListener("change", bolsaUpdateImportState);
+document.getElementById("bolsa-file-wms").addEventListener("change", bolsaUpdateImportState);
+
+document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Importando y calculando…";
+  const statusEl = document.getElementById("bolsa-import-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const fileAuditoria = document.getElementById("bolsa-file-auditoria").files[0];
+    const fileWms = document.getElementById("bolsa-file-wms").files[0];
+
+    const [wbAuditoria, wbWms] = await Promise.all([bolsaReadWorkbook(fileAuditoria), bolsaReadWorkbook(fileWms)]);
+
+    const hojaAuditoria = bolsaPickSheet(wbAuditoria, {
+      fecha: ["FECHA"], tipo: ["TIPO"], motivoOp: ["MOTIVO OP"],
+      familia: ["FAMILIA"], monto: ["monto reversado"],
+    });
+    if(!hojaAuditoria) throw new Error(`No encontré en "${fileAuditoria.name}" una hoja con las columnas FECHA, TIPO, MOTIVO OP y monto reversado. Revisa que sea el reporte de diferencias tal como lo manda el auditor.`);
+
+    const hojaWms = bolsaPickSheet(wbWms, {
+      fecha: ["Fe y Hr Crea", "Fecha"], historial: ["Historial de actividad"],
+      pantalla: ["Nombre pantalla"], codRazon: ["Cod Razon"],
+      ubicacion: ["Ubicacion", "Ubicación"], codAlternat: ["Cod Alternat"], unAjust: ["Un Ajust"],
+    });
+    if(!hojaWms) throw new Error(`No encontré en "${fileWms.name}" una hoja con las columnas Fe y Hr Crea, Historial de actividad, Nombre pantalla, Cod Razon, Ubicacion, Cod Alternat y Un Ajust. Revisa que sea el export "Historial Inventario" del WMS, sin procesar.`);
+
+    // Columnas opcionales (no rompen el import si faltan — solo enriquecen el detalle).
+    const idxUbicacionAud = bolsaFindCol(hojaAuditoria.header, ["UBICACIÓN", "UBICACION"]);
+    const idxProductoAud = bolsaFindCol(hojaAuditoria.header, ["PRD_NAME_FULL", "PRODUCTO"]);
+    const idxCodProductoAud = bolsaFindCol(hojaAuditoria.header, ["PRD_LVL_NUMBER", "COD_PRODUCTO"]);
+    const idxSemanaAud = bolsaFindCol(hojaAuditoria.header, ["SEMANA"]);
+    const idxUsuarioWms = bolsaFindCol(hojaWms.header, ["Usuario creado"]);
+    const idxLpnWms = bolsaFindCol(hojaWms.header, ["Nro LPN"]);
+
+    bolsaAuditLineas = [];
+    let sinRegla = 0;
+    hojaAuditoria.rows.forEach(row => {
+      const tipo = row[hojaAuditoria.cols.tipo], motivoOp = row[hojaAuditoria.cols.motivoOp];
+      if(!tipo && !motivoOp) return; // fila en blanco (comunes al final de estos reportes)
+      const monto = parseFloat(row[hojaAuditoria.cols.monto]);
+      if(isNaN(monto)) return;
+      const fecha = bolsaToDate(row[hojaAuditoria.cols.fecha]);
+      const semana = (idxSemanaAud !== -1 && row[idxSemanaAud]) ? String(row[idxSemanaAud]) : bolsaSemanaLabel(fecha);
+      const considera = bolsaConsidera(tipo, motivoOp);
+      const reglaDesconocida = !bolsaReglaConocida(tipo, motivoOp);
+      if(reglaDesconocida) sinRegla++;
+      bolsaAuditLineas.push({
+        id: bolsaNextId++,
+        fecha: bolsaFechaLabel(fecha),
+        semana,
+        producto: idxProductoAud !== -1 ? String(row[idxProductoAud] || "") : "",
+        codProducto: idxCodProductoAud !== -1 ? String(row[idxCodProductoAud] || "") : "",
+        ubicacion: idxUbicacionAud !== -1 ? String(row[idxUbicacionAud] || "") : "",
+        familia: String(row[hojaAuditoria.cols.familia] || ""),
+        tipo: String(tipo || ""),
+        motivo: String(motivoOp || ""),
+        monto,
+        considera,
+        reglaDesconocida,
+        estado: "sin_revisar",
+        sustento: "",
+      });
+    });
+
+    bolsaWmsLineas = [];
+    let filasIgnoradasPorTipo = 0;
+    hojaWms.rows.forEach(row => {
+      const codAlternat = row[hojaWms.cols.codAlternat];
+      if(!codAlternat) return;
+      const unAjust = parseFloat(row[hojaWms.cols.unAjust]);
+      if(isNaN(unAjust) || unAjust === 0) return;
+      // El bruto trae de todo (picking, empaque, cambios de estado de orden...), no solo
+      // ajustes de inventario. Solo los 8 tipos de "Historial de actividad" de BOLSA_WMS_HISTORIALES_VALIDOS
+      // representan un ajuste real — el resto es ruido operativo y no cuenta como evidencia.
+      const historialRaw = String(row[hojaWms.cols.historial] || "");
+      const historialCodigo = (historialRaw.match(/^\s*(\d+)\s*-/) || [])[1];
+      if(!historialCodigo || !BOLSA_WMS_HISTORIALES_VALIDOS.has(historialCodigo)){ filasIgnoradasPorTipo++; return; }
+      const fecha = bolsaToDate(row[hojaWms.cols.fecha]);
+      const clasif = bolsaClasificarWms({
+        ubicacion: String(row[hojaWms.cols.ubicacion] || ""),
+        historial: String(row[hojaWms.cols.historial] || ""),
+        pantalla: String(row[hojaWms.cols.pantalla] || ""),
+        codRazon: String(row[hojaWms.cols.codRazon] || ""),
+      });
+      bolsaWmsLineas.push({
+        fecha: bolsaFechaLabel(fecha),
+        semana: bolsaSemanaLabel(fecha),
+        codProducto: String(codAlternat),
+        unAjust,
+        motivo: clasif.motivo,
+        origen: clasif.origen,
+        usuario: idxUsuarioWms !== -1 ? String(row[idxUsuarioWms] || "") : "",
+        nroLpn: idxLpnWms !== -1 ? String(row[idxLpnWms] || "") : "",
+      });
+    });
+
+    // Cruce: el auditor cobra lo que NO encontró (lo asume perdido). Para disputar hace falta
+    // evidencia de lo contrario: un ajuste POSITIVO en tu WMS para ese SKU+semana (sí se
+    // encontró/agregó cantidad). Ausencia de registro en el WMS NO es evidencia de nada —
+    // no se marca ninguna disputa automática en ese caso, porque no hay con qué sustentarla.
+    const evidenciaPositivaWms = new Map(); // "codProducto|semana" -> unidades encontradas
+    bolsaWmsLineas.forEach(r => {
+      if(r.unAjust > 0){
+        const key = r.codProducto + "|" + r.semana;
+        evidenciaPositivaWms.set(key, (evidenciaPositivaWms.get(key) || 0) + r.unAjust);
+      }
+    });
+    let conEvidencia = 0;
+    bolsaAuditLineas.forEach(r => {
+      if(!r.considera || !r.codProducto) return;
+      const unidadesEncontradas = evidenciaPositivaWms.get(r.codProducto + "|" + r.semana);
+      if(unidadesEncontradas){
+        r.estado = "en_disputa";
+        r.sustento = `Tu WMS registra +${unidadesEncontradas} unidades encontradas de este SKU en ${r.semana} — base para disputar este cobro.`;
+        conEvidencia++;
+      }
+    });
+
+    bolsaRenderFilters();
+    bolsaRender();
+
+    let msg = `✅ Importado: ${bolsaAuditLineas.length} líneas de auditoría (hoja "${hojaAuditoria.sheetName}") + ${bolsaWmsLineas.length} líneas de WMS válidas (hoja "${hojaWms.sheetName}"`;
+    if(filasIgnoradasPorTipo) msg += `, ${filasIgnoradasPorTipo} filas de picking/empaque ignoradas`;
+    msg += `). `;
+    msg += `${conEvidencia} con evidencia de haberse encontrado en tu WMS quedaron marcadas "En disputa". `;
+    if(sinRegla) msg += `${sinRegla} con motivo nuevo (⚠) — revisa si va en Considerar o No considerar.`;
+    statusEl.textContent = msg;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("bolsa-motivo-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+document.getElementById("bolsa-familia-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+document.getElementById("bolsa-detalle-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+
+
+/* ---- Inventario · Auditoría Bultos Perdidos (conectado a Supabase: ssoma_bp_registros / ssoma_bp_verificaciones) ----
+   Mismo patrón que Shortpick. Filtrado a Proceso = "Perdido ERU" al importar. Se concilia
+   buscando el Nro LPN en Historial Inventario: si reaparece con movimiento después de la
+   fecha de pérdida, se marca Ubicado con el sustento (foto opcional, no obligatoria). */
+let bpData = [];
+let bpVerificaciones = {};
+
+function bpFmtFecha(d){
+  const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
+  return `${y}-${mo}-${da}`;
+}
+async function bpLoadData(){
+  const { data, error } = await sb.from("ssoma_bp_registros").select("*").order("fecha", { ascending: false });
+  if(error){ console.error("No se pudieron cargar los casos de Bultos Perdidos:", error.message); return; }
+  bpData = (data || []).map(r => ({
+    id: r.id, fecha: bpFmtFecha(new Date(r.fecha)), nroLpn: r.nro_lpn, codAlternat: r.cod_alternat,
+    codigoBarras: r.codigo_barras, descripcion: r.descripcion, cantidad: r.cantidad,
+    ubicacionAnterior: r.ubicacion_anterior, area: r.area, familia: r.familia,
+    responsable: r.responsable, supervisor: r.supervisor, semana: r.semana, valorizado: r.valorizado,
+  }));
+
+  bpVerificaciones = {};
+  const ids = bpData.map(r=>r.id);
+  if(ids.length){
+    const { data: verData, error: verError } = await sb.from("ssoma_bp_verificaciones").select("*").in("registro_id", ids);
+    if(verError) console.error("No se pudieron cargar las verificaciones de Bultos Perdidos:", verError.message);
+    (verData || []).forEach(v=>{
+      bpVerificaciones[v.registro_id] = { sustento: v.sustento, fotoNombre: v.foto && v.foto.nombre ? v.foto.nombre : "", foto: v.foto || null, fecha: v.fecha };
+    });
+  }
+
+  const selSem = document.getElementById("bp-f-semana");
+  const selHistSem = document.getElementById("bp-hist-f-semana");
+  const semanas = [...new Set(bpData.map(r=>r.semana).filter(Boolean))].sort();
+  [selSem, selHistSem].forEach(sel=>{
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>';
+    semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; sel.appendChild(o); });
+    if(semanas.includes(current)) sel.value = current;
+  });
+
+  bpRender();
+  bpRenderConc();
+  bpRenderHistorial();
+}
+function bpFiltered(){
+  const sem = document.getElementById("bp-f-semana").value;
+  return bpData.filter(r => !sem || r.semana === sem);
+}
+function bpRender(){
+  const rows = bpFiltered();
+  document.getElementById("bp-count").textContent = rows.length + (rows.length===1 ? " caso" : " casos");
+  const perdidos = bpData.filter(r=>!bpVerificaciones[r.id]);
+  const ubicados = bpData.filter(r=>bpVerificaciones[r.id]);
+  document.getElementById("bp-stat-total").textContent = perdidos.length;
+  document.getElementById("bp-stat-valorizado").textContent = "S/ " + perdidos.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
+  document.getElementById("bp-stat-ubicados").textContent = ubicados.length;
+  document.getElementById("bp-stat-recuperado").textContent = "S/ " + ubicados.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
+
+  const body = document.querySelector("#bp-table tbody");
+  const sorted = [...rows].sort((a,b)=> (b.valorizado||0) - (a.valorizado||0));
+  body.innerHTML = sorted.length ? sorted.map(r => `
+    <tr>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.semana)}</td>
+      <td>${escapeHtml(r.nroLpn)}</td>
+      <td>${escapeHtml(r.codAlternat)} · ${escapeHtml(r.descripcion)}</td>
+      <td>${escapeHtml(r.ubicacionAnterior)}</td>
+      <td>${escapeHtml(r.responsable)}</td>
+      <td class="num">${(r.valorizado||0).toFixed(2)}</td>
+      <td>${bpVerificaciones[r.id] ? '<span class="estado-badge finalizado">Ubicado</span>' : '<span class="estado-badge pendiente">Perdido</span>'}</td>
+    </tr>`).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Sin casos para este filtro.</td></tr>`;
+}
+
+function bpCardCampos(r){
+  return `
+    <div class="cg-item"><b>Código de barras</b><span>${escapeHtml(r.codigoBarras || "—")}</span></div>
+    <div class="cg-item"><b>Código alternativo</b><span>${escapeHtml(r.codAlternat)}</span></div>
+    <div class="cg-item"><b>Nro LPN</b><span>${escapeHtml(r.nroLpn)}</span></div>
+    <div class="cg-item"><b>Descripción</b><span>${escapeHtml(r.descripcion)}</span></div>
+    <div class="cg-item"><b>Ubicación anterior</b><span>${escapeHtml(r.ubicacionAnterior || "—")}</span></div>
+    <div class="cg-item"><b>Valorizado</b><span>S/ ${(r.valorizado||0).toFixed(2)}</span></div>`;
+}
+function bpRenderConc(){
+  const pendientes = bpData.filter(r=> !bpVerificaciones[r.id]);
+  const ubicados = bpData.filter(r=> bpVerificaciones[r.id]);
+  document.getElementById("bp-tab-count-conciliacion").textContent = pendientes.length;
+  document.getElementById("bp-conc-stat-pendientes").textContent = pendientes.length;
+  document.getElementById("bp-conc-stat-ubicados").textContent = ubicados.length;
+  document.getElementById("bp-conc-stat-valor").textContent = "S/ " + ubicados.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
+
+  const rowsPendientes = [...pendientes].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  const list = document.getElementById("bp-conc-list");
+  list.innerHTML = rowsPendientes.length ? rowsPendientes.map(r=> `
+    <div class="conc-card">
+      <div class="conc-card-top">
+        <span class="conc-card-title">${escapeHtml(r.descripcion)}</span>
+        <span class="estado-badge pendiente">Perdido</span>
+      </div>
+      <div class="conc-card-grid">${bpCardCampos(r)}</div>
+      <div class="conc-card-actions">
+        <button type="button" class="btn btn-primary bp-verificar-btn" data-id="${r.id}">Conciliar</button>
+      </div>
+    </div>`).join("") : `<div class="empty">No hay casos pendientes de verificar.</div>`;
+  list.querySelectorAll(".bp-verificar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> bpOpenModal(Number(btn.dataset.id)));
+  });
+}
+function bpRenderHistorial(){
+  const fSemana = document.getElementById("bp-hist-f-semana").value;
+  const fBuscar = document.getElementById("bp-hist-f-buscar").value.trim().toLowerCase();
+  let rows = bpData.filter(r=> bpVerificaciones[r.id]);
+  if(fSemana) rows = rows.filter(r=> r.semana === fSemana);
+  if(fBuscar){
+    rows = rows.filter(r=> [r.codigoBarras, r.codAlternat, r.descripcion, r.nroLpn].some(c => (c||"").toLowerCase().includes(fBuscar)));
+  }
+  rows.sort((a,b)=> (bpVerificaciones[b.id].fecha||"").localeCompare(bpVerificaciones[a.id].fecha||""));
+
+  const list = document.getElementById("bp-hist-list");
+  list.innerHTML = rows.length ? rows.map(r=>{
+    const v = bpVerificaciones[r.id];
+    return `
+    <div class="conc-card">
+      <div class="conc-card-top">
+        <span class="conc-card-title">${escapeHtml(r.descripcion)}</span>
+        <span class="estado-badge finalizado">Ubicado</span>
+      </div>
+      <div class="conc-card-grid">
+        ${bpCardCampos(r)}
+        <div class="cg-item"><b>Verificado el</b><span>${formatDate((v.fecha||"").slice(0,10))}</span></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span>${escapeHtml(v.sustento)}</span>
+        ${v.fotoNombre ? `<span class="evidencia-chip">📎 ${escapeHtml(v.fotoNombre)}</span>` : ""}
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty">No hay verificaciones que coincidan con el filtro.</div>`;
+}
+bpLoadData();
+document.getElementById("bp-f-semana").addEventListener("change", bpRender);
+document.getElementById("bp-hist-f-semana").addEventListener("change", bpRenderHistorial);
+document.getElementById("bp-hist-f-buscar").addEventListener("input", bpRenderHistorial);
+
+function bpUpdateImportState(){
+  const f = document.getElementById("bp-file").files[0];
+  document.getElementById("bp-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bp-drop").classList.toggle("filled", !!f);
+  document.getElementById("bp-import-btn").disabled = !f;
+}
+document.getElementById("bp-file").addEventListener("change", bpUpdateImportState);
+
+/* Import real: hoja "Bultos Pendientes" de Pendientes de Operación. Los encabezados reales
+   están en la fila 3 (las primeras 2 son segmentadores del Excel), y solo se toman los casos
+   con Proceso = "Perdido ERU" — esa misma hoja trae Drop/Averías/Canjes/Sempar/Por Ubicar/
+   Sin Ubicación, que no son de este módulo. */
+async function bpImportarRegistros(file){
+  const filas = await spParseWorkbookFile(file, { sheetName: "Bultos Pendientes", headerRow: 3 });
+  const actorId = miUsuario ? miUsuario.id : null;
+  const registros = filas
+    .filter(fila => String(spBuscaCampo(fila, ["Proceso"])).trim().toLowerCase() === "perdido eru")
+    .map(fila=>{
+      const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
+      let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
+      if(isNaN(fechaDt.getTime())) fechaDt = new Date();
+      const caducidadRaw = spBuscaCampo(fila, ["Fecha de Caducidad"]);
+      const caducidadDt = caducidadRaw instanceof Date ? caducidadRaw : (caducidadRaw ? new Date(caducidadRaw) : null);
+      const valTot = spBuscaCampo(fila, ["Val tot"]);
+      return {
+        fecha: fechaDt.toISOString(),
+        nro_lpn: String(spBuscaCampo(fila, ["Nro LPN"])).trim(),
+        cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat"])).trim(),
+        codigo_barras: String(spBuscaCampo(fila, ["Producto"])).trim() || null,
+        descripcion: String(spBuscaCampo(fila, ["Descripcion","Descripción"])).trim(),
+        cantidad: parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0,
+        ubicacion_anterior: String(spBuscaCampo(fila, ["Ubicación Anterior","Ubicacion Anterior"])).trim() || null,
+        area: String(spBuscaCampo(fila, ["Área","Area"])).trim() || null,
+        familia: String(spBuscaCampo(fila, ["Familia"])).trim() || null,
+        responsable: String(spBuscaCampo(fila, ["Responsable"])).trim() || null,
+        supervisor: String(spBuscaCampo(fila, ["Supervisor"])).trim() || null,
+        semana: String(spBuscaCampo(fila, ["Sem","Semana"])).trim() || null,
+        nro_lote: String(spBuscaCampo(fila, ["Nro de lote"])).trim() || null,
+        fecha_caducidad: caducidadDt && !isNaN(caducidadDt.getTime()) ? bpFmtFecha(caducidadDt) : null,
+        nro_oc: String(spBuscaCampo(fila, ["Nro OC"])).trim() || null,
+        usuario_recepcion: String(spBuscaCampo(fila, ["Usuario de recepción","Usuario de recepcion"])).trim() || null,
+        valorizado: valTot === "" ? null : parseFloat(valTot),
+        creado_por_id: actorId,
+      };
+    }).filter(r => r.nro_lpn && r.cod_alternat);
+  if(!registros.length) return { count: 0, error: null };
+  const { error } = await sb.from("ssoma_bp_registros").insert(registros);
+  return { count: registros.length, error };
+}
+
+document.getElementById("bp-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget; const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Importando y calculando…";
+  const statusEl = document.getElementById("bp-import-status");
+  statusEl.style.display = "none";
+  try{
+    const file = document.getElementById("bp-file").files[0];
+    const { count, error } = await bpImportarRegistros(file);
+    if(error){
+      statusEl.textContent = "❌ No se pudo importar: " + error.message;
+    }else if(count === 0){
+      statusEl.textContent = '⚠️ No se encontraron casos con Proceso = "Perdido ERU" en el archivo.';
+    }else{
+      await bpLoadData();
+      statusEl.textContent = `✅ Importados ${count} casos "Perdido ERU".`;
+    }
+  }catch(err){
+    statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
+  }
+  statusEl.style.display = "block";
+  btn.textContent = original;
+  bpUpdateImportState();
+});
+
+let bpCurrentId = null;
+function bpOpenModal(id){
+  const row = bpData.find(r=>r.id === id);
+  if(!row) return;
+  bpCurrentId = id;
+  document.getElementById("bp-modal-producto").textContent = row.codAlternat + " — " + row.descripcion;
+  document.getElementById("bp-modal-lpn").textContent = row.nroLpn;
+  document.getElementById("bp-modal-ubicacion").textContent = row.ubicacionAnterior || "—";
+  document.getElementById("bp-modal-valorizado").textContent = "S/ " + (row.valorizado||0).toFixed(2);
+  const existing = bpVerificaciones[id];
+  document.getElementById("bp-modal-sustento").value = existing ? existing.sustento : "";
+  document.getElementById("bp-modal-error").textContent = "";
+  document.getElementById("bp-foto").value = "";
+  document.getElementById("bp-foto-name").textContent = existing && existing.fotoNombre ? existing.fotoNombre : "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("bp-drop-foto").classList.toggle("filled", !!(existing && existing.fotoNombre));
+  document.getElementById("bp-modal").classList.add("show");
+}
+function bpCloseModal(){
+  document.getElementById("bp-modal").classList.remove("show");
+  bpCurrentId = null;
+}
+document.getElementById("bp-modal-close").addEventListener("click", bpCloseModal);
+document.getElementById("bp-modal").addEventListener("click", (e)=>{ if(e.target.id === "bp-modal") bpCloseModal(); });
+document.getElementById("bp-foto").addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  document.getElementById("bp-foto-name").textContent = f ? f.name : "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("bp-drop-foto").classList.toggle("filled", !!f);
+});
+document.getElementById("bp-guardar-btn").addEventListener("click", async ()=>{
+  const errorEl = document.getElementById("bp-modal-error");
+  const sustento = document.getElementById("bp-modal-sustento").value.trim();
+  if(!sustento){ errorEl.textContent = "Describe qué encontraste en Historial Inventario."; return; }
+  errorEl.textContent = "";
+
+  const guardarBtn = document.getElementById("bp-guardar-btn");
+  const originalLabel = guardarBtn.textContent;
+  guardarBtn.disabled = true;
+  guardarBtn.textContent = "Guardando…";
+
+  const fotoFile = document.getElementById("bp-foto").files[0];
+  const previa = bpVerificaciones[bpCurrentId];
+  const persistir = async (fotoJson) => {
+    const actorId = miUsuario ? miUsuario.id : null;
+    const { error } = await sb.from("ssoma_bp_verificaciones").upsert({
+      registro_id: bpCurrentId, sustento, foto: fotoJson,
+      verificado_por_id: actorId, fecha: new Date().toISOString(),
+    }, { onConflict: "registro_id" });
+    guardarBtn.disabled = false;
+    guardarBtn.textContent = originalLabel;
+    if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+    bpCloseModal();
+    await bpLoadData();
+  };
+  if(fotoFile){
+    accReadFileAsDataUrl(fotoFile, dataUrl => persistir({ nombre: fotoFile.name, tipo: fotoFile.type, contenido: dataUrl }));
+  }else{
+    await persistir(previa ? previa.foto : null);
+  }
+});
+
+
+/* ---- Inventario · Auditoría Sin Ubicación (conectado a Supabase: ssoma_su_registros / ssoma_su_verificaciones) ----
+   Mismo patrón. Se concilia buscando el Cod Alternat en Historial Inventario: si tiene una
+   ubicación real (Ubic Activo, no la especial "SIN-UBICACION-..."), es evidencia de que sí
+   está ubicada — reemplaza tu hoja BITACORA en Excel. */
+let suData = [];
+let suVerificaciones = {};
+
+async function suLoadData(){
+  const { data, error } = await sb.from("ssoma_su_registros").select("*").order("fecha_crea", { ascending: false });
+  if(error){ console.error("No se pudieron cargar los casos de Sin Ubicación:", error.message); return; }
+  suData = (data || []).map(r => ({
+    id: r.id, fecha: bpFmtFecha(new Date(r.fecha_crea)), nroLpn: r.nro_lpn, codAlternat: r.cod_alternat,
+    codigoBarras: r.codigo_barras, descripcion: r.descripcion, ubicacion: r.ubicacion, cantidad: r.cantidad,
+    area: r.area, semana: r.semana, mes: r.mes, motivo: r.motivo, valorizado: r.valorizado,
+  }));
+
+  suVerificaciones = {};
+  const ids = suData.map(r=>r.id);
+  if(ids.length){
+    const { data: verData, error: verError } = await sb.from("ssoma_su_verificaciones").select("*").in("registro_id", ids);
+    if(verError) console.error("No se pudieron cargar las verificaciones de Sin Ubicación:", verError.message);
+    (verData || []).forEach(v=>{
+      suVerificaciones[v.registro_id] = { ubicacionEncontrada: v.ubicacion_encontrada, sustento: v.sustento, fotoNombre: v.foto && v.foto.nombre ? v.foto.nombre : "", foto: v.foto || null, fecha: v.fecha };
+    });
+  }
+
+  const selSem = document.getElementById("su-f-semana");
+  const selHistSem = document.getElementById("su-hist-f-semana");
+  const semanas = [...new Set(suData.map(r=>r.semana).filter(Boolean))].sort();
+  [selSem, selHistSem].forEach(sel=>{
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>';
+    semanas.forEach(s=>{ const o=document.createElement("option"); o.value=s; o.textContent=s; sel.appendChild(o); });
+    if(semanas.includes(current)) sel.value = current;
+  });
+
+  suRender();
+  suRenderConc();
+  suRenderHistorial();
+}
+function suFiltered(){
+  const sem = document.getElementById("su-f-semana").value;
+  return suData.filter(r => !sem || r.semana === sem);
+}
+function suRender(){
+  const rows = suFiltered();
+  document.getElementById("su-count").textContent = rows.length + (rows.length===1 ? " caso" : " casos");
+  const pendientes = suData.filter(r=>!suVerificaciones[r.id]);
+  const ubicados = suData.filter(r=>suVerificaciones[r.id]);
+  document.getElementById("su-stat-total").textContent = pendientes.length;
+  document.getElementById("su-stat-valorizado").textContent = "S/ " + pendientes.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
+  document.getElementById("su-stat-ubicados").textContent = ubicados.length;
+  document.getElementById("su-stat-recuperado").textContent = "S/ " + ubicados.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
+
+  const body = document.querySelector("#su-table tbody");
+  const sorted = [...rows].sort((a,b)=> (b.valorizado||0) - (a.valorizado||0));
+  body.innerHTML = sorted.length ? sorted.map(r => `
+    <tr>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.semana)}</td>
+      <td>${escapeHtml(r.nroLpn)}</td>
+      <td>${escapeHtml(r.codAlternat)} · ${escapeHtml(r.descripcion)}</td>
+      <td class="num">${r.cantidad}</td>
+      <td class="num">${(r.valorizado||0).toFixed(2)}</td>
+      <td>${suVerificaciones[r.id] ? '<span class="estado-badge finalizado">Ubicado</span>' : '<span class="estado-badge pendiente">Por buscar</span>'}</td>
+    </tr>`).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);">Sin casos para este filtro.</td></tr>`;
+}
+
+function suCardCampos(r){
+  return `
+    <div class="cg-item"><b>Código de barras</b><span>${escapeHtml(r.codigoBarras || "—")}</span></div>
+    <div class="cg-item"><b>Código alternativo</b><span>${escapeHtml(r.codAlternat)}</span></div>
+    <div class="cg-item"><b>Nro LPN</b><span>${escapeHtml(r.nroLpn)}</span></div>
+    <div class="cg-item"><b>Descripción</b><span>${escapeHtml(r.descripcion)}</span></div>
+    <div class="cg-item"><b>Ubicación especial</b><span>${escapeHtml(r.ubicacion)}</span></div>
+    <div class="cg-item"><b>Cantidad</b><span>${r.cantidad}</span></div>`;
+}
+function suRenderConc(){
+  const pendientes = suData.filter(r=> !suVerificaciones[r.id]);
+  const ubicados = suData.filter(r=> suVerificaciones[r.id]);
+  document.getElementById("su-tab-count-conciliacion").textContent = pendientes.length;
+  document.getElementById("su-conc-stat-pendientes").textContent = pendientes.length;
+  document.getElementById("su-conc-stat-ubicados").textContent = ubicados.length;
+  document.getElementById("su-conc-stat-valor").textContent = "S/ " + ubicados.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
+
+  const rowsPendientes = [...pendientes].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  const list = document.getElementById("su-conc-list");
+  list.innerHTML = rowsPendientes.length ? rowsPendientes.map(r=> `
+    <div class="conc-card">
+      <div class="conc-card-top">
+        <span class="conc-card-title">${escapeHtml(r.descripcion)}</span>
+        <span class="estado-badge pendiente">Por buscar</span>
+      </div>
+      <div class="conc-card-grid">${suCardCampos(r)}</div>
+      <div class="conc-card-actions">
+        <button type="button" class="btn btn-primary su-verificar-btn" data-id="${r.id}">Conciliar</button>
+      </div>
+    </div>`).join("") : `<div class="empty">No hay casos pendientes de buscar.</div>`;
+  list.querySelectorAll(".su-verificar-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> suOpenModal(Number(btn.dataset.id)));
+  });
+}
+function suRenderHistorial(){
+  const fSemana = document.getElementById("su-hist-f-semana").value;
+  const fBuscar = document.getElementById("su-hist-f-buscar").value.trim().toLowerCase();
+  let rows = suData.filter(r=> suVerificaciones[r.id]);
+  if(fSemana) rows = rows.filter(r=> r.semana === fSemana);
+  if(fBuscar){
+    rows = rows.filter(r=> [r.codigoBarras, r.codAlternat, r.descripcion, r.nroLpn].some(c => (c||"").toLowerCase().includes(fBuscar)));
+  }
+  rows.sort((a,b)=> (suVerificaciones[b.id].fecha||"").localeCompare(suVerificaciones[a.id].fecha||""));
+
+  const list = document.getElementById("su-hist-list");
+  list.innerHTML = rows.length ? rows.map(r=>{
+    const v = suVerificaciones[r.id];
+    return `
+    <div class="conc-card">
+      <div class="conc-card-top">
+        <span class="conc-card-title">${escapeHtml(r.descripcion)}</span>
+        <span class="estado-badge finalizado">Ubicado</span>
+      </div>
+      <div class="conc-card-grid">
+        ${suCardCampos(r)}
+        <div class="cg-item"><b>Ubicación encontrada</b><span>${escapeHtml(v.ubicacionEncontrada)}</span></div>
+        <div class="cg-item"><b>Verificado el</b><span>${formatDate((v.fecha||"").slice(0,10))}</span></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span>${escapeHtml(v.sustento)}</span>
+        ${v.fotoNombre ? `<span class="evidencia-chip">📎 ${escapeHtml(v.fotoNombre)}</span>` : ""}
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty">No hay verificaciones que coincidan con el filtro.</div>`;
+}
+suLoadData();
+document.getElementById("su-f-semana").addEventListener("change", suRender);
+document.getElementById("su-hist-f-semana").addEventListener("change", suRenderHistorial);
+document.getElementById("su-hist-f-buscar").addEventListener("input", suRenderHistorial);
+
+function suUpdateImportState(){
+  const f = document.getElementById("su-file").files[0];
+  document.getElementById("su-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("su-drop").classList.toggle("filled", !!f);
+  document.getElementById("su-import-btn").disabled = !f;
+}
+document.getElementById("su-file").addEventListener("change", suUpdateImportState);
+
+/* Import real: hoja "DATA" de tu archivo semanal de Sin Ubicación (encabezados en fila 1). */
+async function suImportarRegistros(file){
+  const filas = await spParseWorkbookFile(file, { sheetName: "DATA" });
+  const actorId = miUsuario ? miUsuario.id : null;
+  const registros = filas.map(fila=>{
+    const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
+    let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
+    if(isNaN(fechaDt.getTime())) fechaDt = new Date();
+    const valorizado = spBuscaCampo(fila, ["Valorizado"]);
+    return {
+      fecha_crea: fechaDt.toISOString(),
+      nro_lpn: String(spBuscaCampo(fila, ["Nro LPN"])).trim(),
+      cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat"])).trim(),
+      codigo_barras: String(spBuscaCampo(fila, ["Producto"])).trim() || null,
+      descripcion: String(spBuscaCampo(fila, ["Descripcion","Descripción"])).trim(),
+      ubicacion: String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim(),
+      cantidad: parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0,
+      area: String(spBuscaCampo(fila, ["Área","Area"])).trim() || null,
+      semana: String(spBuscaCampo(fila, ["SEM","Semana"])).trim() || null,
+      mes: String(spBuscaCampo(fila, ["Mes"])).trim() || null,
+      motivo: String(spBuscaCampo(fila, ["Motivo"])).trim() || null,
+      valorizado: valorizado === "" ? null : parseFloat(valorizado),
+      creado_por_id: actorId,
+    };
+  }).filter(r => r.nro_lpn && r.cod_alternat);
+  if(!registros.length) return { count: 0, error: null };
+  const { error } = await sb.from("ssoma_su_registros").insert(registros);
+  return { count: registros.length, error };
+}
+
+document.getElementById("su-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget; const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Importando y calculando…";
+  const statusEl = document.getElementById("su-import-status");
+  statusEl.style.display = "none";
+  try{
+    const file = document.getElementById("su-file").files[0];
+    const { count, error } = await suImportarRegistros(file);
+    if(error){
+      statusEl.textContent = "❌ No se pudo importar: " + error.message;
+    }else if(count === 0){
+      statusEl.textContent = "⚠️ No se encontraron filas válidas en el archivo (revisa que tenga columnas de Cod Alternat y Nro LPN).";
+    }else{
+      await suLoadData();
+      statusEl.textContent = `✅ Importados ${count} casos de Sin Ubicación.`;
+    }
+  }catch(err){
+    statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
+  }
+  statusEl.style.display = "block";
+  btn.textContent = original;
+  suUpdateImportState();
+});
+
+let suCurrentId = null;
+function suOpenModal(id){
+  const row = suData.find(r=>r.id === id);
+  if(!row) return;
+  suCurrentId = id;
+  document.getElementById("su-modal-producto").textContent = row.codAlternat + " — " + row.descripcion;
+  document.getElementById("su-modal-lpn").textContent = row.nroLpn;
+  document.getElementById("su-modal-cantidad").textContent = row.cantidad;
+  const existing = suVerificaciones[id];
+  document.getElementById("su-modal-ubicacion").value = existing ? existing.ubicacionEncontrada : "";
+  document.getElementById("su-modal-sustento").value = existing ? existing.sustento : "";
+  document.getElementById("su-modal-error").textContent = "";
+  document.getElementById("su-foto").value = "";
+  document.getElementById("su-foto-name").textContent = existing && existing.fotoNombre ? existing.fotoNombre : "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("su-drop-foto").classList.toggle("filled", !!(existing && existing.fotoNombre));
+  document.getElementById("su-modal").classList.add("show");
+}
+function suCloseModal(){
+  document.getElementById("su-modal").classList.remove("show");
+  suCurrentId = null;
+}
+document.getElementById("su-modal-close").addEventListener("click", suCloseModal);
+document.getElementById("su-modal").addEventListener("click", (e)=>{ if(e.target.id === "su-modal") suCloseModal(); });
+document.getElementById("su-foto").addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  document.getElementById("su-foto-name").textContent = f ? f.name : "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("su-drop-foto").classList.toggle("filled", !!f);
+});
+document.getElementById("su-guardar-btn").addEventListener("click", async ()=>{
+  const errorEl = document.getElementById("su-modal-error");
+  const ubic = document.getElementById("su-modal-ubicacion").value.trim();
+  const sustento = document.getElementById("su-modal-sustento").value.trim();
+  if(!ubic){ errorEl.textContent = "Anota la ubicación (Ubic Activo) que encontraste."; return; }
+  if(!sustento){ errorEl.textContent = "Agrega una observación/sustento."; return; }
+  errorEl.textContent = "";
+
+  const guardarBtn = document.getElementById("su-guardar-btn");
+  const originalLabel = guardarBtn.textContent;
+  guardarBtn.disabled = true;
+  guardarBtn.textContent = "Guardando…";
+
+  const fotoFile = document.getElementById("su-foto").files[0];
+  const previa = suVerificaciones[suCurrentId];
+  const persistir = async (fotoJson) => {
+    const actorId = miUsuario ? miUsuario.id : null;
+    const { error } = await sb.from("ssoma_su_verificaciones").upsert({
+      registro_id: suCurrentId, ubicacion_encontrada: ubic, sustento, foto: fotoJson,
+      verificado_por_id: actorId, fecha: new Date().toISOString(),
+    }, { onConflict: "registro_id" });
+    guardarBtn.disabled = false;
+    guardarBtn.textContent = originalLabel;
+    if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+    suCloseModal();
+    await suLoadData();
+  };
+  if(fotoFile){
+    accReadFileAsDataUrl(fotoFile, dataUrl => persistir({ nombre: fotoFile.name, tipo: fotoFile.type, contenido: dataUrl }));
+  }else{
+    await persistir(previa ? previa.foto : null);
+  }
+});
+
+
+
 /* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ----
    Los roles y el organigrama (Jefatura/Coordinador/Supervisor, quién reporta a quién)
    se toman directo de Adecco KPI (b2c_users.puesto + manager_id) vía la función
@@ -3540,6 +5021,18 @@ document.addEventListener("click", (e)=>{
     document.getElementById("sp-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
     document.getElementById("sp-tab-historial").style.display = btn.dataset.tab === "historial" ? "" : "none";
     if(btn.dataset.tab === "historial") spRenderHistorial();
+  }
+  else if(barra.id === "bp-tabs"){
+    document.getElementById("bp-tab-casos").style.display = btn.dataset.tab === "casos" ? "" : "none";
+    document.getElementById("bp-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
+    document.getElementById("bp-tab-historial").style.display = btn.dataset.tab === "historial" ? "" : "none";
+    if(btn.dataset.tab === "historial") bpRenderHistorial();
+  }
+  else if(barra.id === "su-tabs"){
+    document.getElementById("su-tab-casos").style.display = btn.dataset.tab === "casos" ? "" : "none";
+    document.getElementById("su-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
+    document.getElementById("su-tab-historial").style.display = btn.dataset.tab === "historial" ? "" : "none";
+    if(btn.dataset.tab === "historial") suRenderHistorial();
   }
   else if(barra.id === "help-tabs"){
     document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
@@ -4282,7 +5775,11 @@ function spUpdateImportState(){
 document.getElementById("sp-file-adjust").addEventListener("change", spUpdateImportState);
 document.getElementById("sp-file-orders").addEventListener("change", spUpdateImportState);
 
-async function spParseWorkbookFile(file){
+/* opts.sheetName: nombre exacto de hoja a usar (si no, la primera). opts.headerRow: en
+   qué fila (1-indexed) están los encabezados reales (si no, fila 1) — hace falta para
+   hojas tipo "Bultos Pendientes" que traen 2 filas de segmentadores antes del encabezado. */
+async function spParseWorkbookFile(file, opts){
+  opts = opts || {};
   let bytes = new Uint8Array(await file.arrayBuffer());
   const esZip = bytes[0] === 0x50 && bytes[1] === 0x4B; // PK.. = xlsx/xls binario real (Excel), no tocar
   const tieneBom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
@@ -4297,8 +5794,10 @@ async function spParseWorkbookFile(file){
     bytes = combinado;
   }
   const wb = XLSX.read(bytes.buffer, { type: "array", cellDates: true });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  const sheetName = opts.sheetName && wb.SheetNames.includes(opts.sheetName) ? opts.sheetName : wb.SheetNames[0];
+  const sheet = wb.Sheets[sheetName];
+  const range = opts.headerRow && opts.headerRow > 1 ? opts.headerRow - 1 : undefined;
+  return XLSX.utils.sheet_to_json(sheet, { defval: "", range });
 }
 function spBuscaCampo(fila, alias){
   const claves = Object.keys(fila);
