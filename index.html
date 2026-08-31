@@ -1598,7 +1598,10 @@
             <div class="import-card-title">💲 Actualizar catálogo de costos</div>
             <div class="import-card-sub">Solo administradores. Sube el tarifario (columnas COD_ALTERNO, PRODUCTO, COSTO, FAMILIA) para agregar productos nuevos o actualizar precios — aplica a todo Inventario (Shortpick, Bultos Perdidos, Sin Ubicación). No borra los códigos ya cargados, solo agrega o actualiza.</div>
           </div>
-          <button type="button" class="btn btn-ghost" id="sp-costos-import-btn" disabled>Actualizar catálogo</button>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button type="button" class="btn btn-ghost" id="sp-costos-plantilla-btn">📥 Descargar plantilla</button>
+            <button type="button" class="btn btn-ghost" id="sp-costos-import-btn" disabled>Actualizar catálogo</button>
+          </div>
         </div>
         <div class="import-drop-row">
           <label class="import-drop" for="sp-file-costos" id="sp-drop-costos">
@@ -6459,6 +6462,18 @@ document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
 /* Actualizar catálogo de costos (ssoma_sp_costos) desde el tarifario (mismos encabezados que
    VALOR_3108.xlsx): COD_ALTERNO, PRODUCTO, COSTO, FAMILIA. Upsert en lotes desde el navegador —
    un Cod Alternat que no exista se agrega, uno que ya exista se actualiza (precio/nombre/familia). */
+document.getElementById("sp-costos-plantilla-btn").addEventListener("click", ()=>{
+  descargarCsv(
+    "plantilla_tarifario.csv",
+    [
+      { header: "COD_ALTERNO", get: r => r.COD_ALTERNO },
+      { header: "PRODUCTO", get: r => r.PRODUCTO },
+      { header: "COSTO", get: r => r.COSTO },
+      { header: "FAMILIA", get: r => r.FAMILIA },
+    ],
+    [{ COD_ALTERNO: "121868003", PRODUCTO: "GLADE GEL AROMAT.LTAX70G, LIMON", COSTO: "3.20", FAMILIA: "PERFUMERIA" }]
+  );
+});
 document.getElementById("sp-file-costos").addEventListener("change", ()=>{
   const f = document.getElementById("sp-file-costos").files[0];
   document.getElementById("sp-file-costos-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
