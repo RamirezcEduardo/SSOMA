@@ -1611,7 +1611,7 @@
         <div class="import-status" id="sp-costos-import-status" style="display:none;"></div>
       </div>
 
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;align-items:flex-end;">
         <div class="field" style="min-width:170px;margin-bottom:0;">
           <label>Semana</label>
           <select id="sp-f-semana"><option value="">Todas</option></select>
@@ -1620,6 +1620,7 @@
           <label>Sub Área</label>
           <select id="sp-f-subarea"><option value="">Todas</option></select>
         </div>
+        <button type="button" class="btn btn-ghost" id="sp-export-btn" style="margin-left:auto;">📤 Exportar</button>
       </div>
 
       <div class="stats-row" style="margin-top:18px;">
@@ -1699,7 +1700,11 @@
         </div>
       </div>
 
-      <div class="conc-card-list" id="conc-list" style="margin-top:18px;"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+        <button type="button" class="btn btn-ghost" id="conc-export-btn">📤 Exportar pendientes</button>
+      </div>
+
+      <div class="conc-card-list" id="conc-list" style="margin-top:10px;"></div>
       </div>
 
       <!-- Historial de conciliado: registros ya verificados, con filtros -->
@@ -1727,6 +1732,7 @@
           <label>Buscar</label>
           <input type="text" id="hist-f-buscar" placeholder="Código de barras, código, producto, ubicación…">
         </div>
+        <button type="button" class="btn btn-ghost" id="hist-export-btn" style="align-self:flex-end;">📤 Exportar</button>
       </div>
 
       <div class="conc-card-list" id="hist-list" style="margin-top:18px;"></div>
@@ -1797,11 +1803,12 @@
         <div class="import-status" id="bp-wms-import-status" style="display:none;"></div>
       </div>
 
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;align-items:flex-end;">
         <div class="field" style="min-width:130px;margin-bottom:0;">
           <label>Semana</label>
           <select id="bp-f-semana"><option value="">Todas</option></select>
         </div>
+        <button type="button" class="btn btn-ghost" id="bp-export-btn" style="margin-left:auto;">📤 Exportar</button>
       </div>
 
       <div class="stats-row" style="margin-top:18px;">
@@ -1860,7 +1867,11 @@
           </div>
         </div>
 
-        <div class="conc-card-list" id="bp-conc-list" style="margin-top:18px;"><div class="empty">No hay casos pendientes de verificar.</div></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+          <button type="button" class="btn btn-ghost" id="bp-conc-export-btn">📤 Exportar pendientes</button>
+        </div>
+
+        <div class="conc-card-list" id="bp-conc-list" style="margin-top:10px;"><div class="empty">No hay casos pendientes de verificar.</div></div>
       </div>
 
       <!-- Historial de conciliado: casos ya verificados, con filtros -->
@@ -1880,6 +1891,7 @@
             <label>Buscar</label>
             <input type="text" id="bp-hist-f-buscar" placeholder="Código de barras, código, producto, LPN…">
           </div>
+          <button type="button" class="btn btn-ghost" id="bp-hist-export-btn" style="align-self:flex-end;">📤 Exportar</button>
         </div>
 
         <div class="conc-card-list" id="bp-hist-list" style="margin-top:18px;"><div class="empty">No hay verificaciones que coincidan con el filtro.</div></div>
@@ -1920,11 +1932,12 @@
         <div class="import-status" id="su-import-status" style="display:none;"></div>
       </div>
 
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;align-items:flex-end;">
         <div class="field" style="min-width:130px;margin-bottom:0;">
           <label>Semana</label>
           <select id="su-f-semana"><option value="">Todas</option></select>
         </div>
+        <button type="button" class="btn btn-ghost" id="su-export-btn" style="margin-left:auto;">📤 Exportar</button>
       </div>
 
       <div class="stats-row" style="margin-top:18px;">
@@ -1981,7 +1994,11 @@
           </div>
         </div>
 
-        <div class="conc-card-list" id="su-conc-list" style="margin-top:18px;"><div class="empty">No hay casos pendientes de buscar.</div></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+          <button type="button" class="btn btn-ghost" id="su-conc-export-btn">📤 Exportar pendientes</button>
+        </div>
+
+        <div class="conc-card-list" id="su-conc-list" style="margin-top:10px;"><div class="empty">No hay casos pendientes de buscar.</div></div>
       </div>
 
       <!-- Historial de conciliado: casos ya verificados, con filtros -->
@@ -1997,6 +2014,7 @@
             <label>Buscar</label>
             <input type="text" id="su-hist-f-buscar" placeholder="Código de barras, código, producto, LPN…">
           </div>
+          <button type="button" class="btn btn-ghost" id="su-hist-export-btn" style="align-self:flex-end;">📤 Exportar</button>
         </div>
 
         <div class="conc-card-list" id="su-hist-list" style="margin-top:18px;"><div class="empty">No hay verificaciones que coincidan con el filtro.</div></div>
@@ -2669,6 +2687,34 @@ Ya procesa los 2 Excel reales en el navegador (no hay datos de ejemplo) — pero
   </div>
 </div>
 
+<!-- Exportar a CSV: modal genérico reutilizado por Auditoría/Conciliación/Historial de
+     Shortpick, Bultos Perdidos y Sin Ubicación. Exporta lo que ya está filtrado en la
+     pestaña, y deja elegir además un rango de fechas (opcional) para acotar más. -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-head">
+      <h3 id="export-modal-title">Exportar</h3>
+      <button class="modal-close" id="export-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" id="export-modal-desc" style="margin-bottom:16px;">Se exporta lo que ves en esta pestaña con los filtros activos. Si quieres acotar más, elige un rango de fechas.</p>
+      <div style="display:flex;gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Desde</label>
+          <input type="date" id="export-f-desde">
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Hasta</label>
+          <input type="date" id="export-f-hasta">
+        </div>
+      </div>
+      <div id="export-modal-count" style="font-size:12.5px;color:var(--muted);margin:2px 0 14px;"></div>
+      <span class="login-error" id="export-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="export-modal-btn" style="width:100%;">Descargar CSV</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="modal-overlay" id="tarea-finalizar-modal">
   <div class="modal-box" style="max-width:440px;">
@@ -3287,6 +3333,67 @@ allNavgroupToggles.forEach(navgroupToggle=>{
   });
 });
 
+/* ---- Exportar a CSV (compartido por Shortpick/Bultos Perdidos/Sin Ubicación) ----
+   Cada botón "Exportar" abre este modal pasándole las filas YA filtradas de su pestaña
+   (respeta los filtros activos ahí) más las columnas a exportar; el modal deja acotar
+   además por un rango de fechas opcional antes de descargar el CSV. */
+let exportModalConfig = null;
+function csvEscape(v){
+  const s = v === null || v === undefined ? "" : String(v);
+  return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function descargarCsv(nombreArchivo, columnas, filas){
+  const encabezado = columnas.map(c => csvEscape(c.header)).join(";");
+  const cuerpo = filas.map(r => columnas.map(c => csvEscape(c.get(r))).join(";")).join("\n");
+  const csv = "﻿" + encabezado + (cuerpo ? "\n" + cuerpo : "");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+/* config = { titulo, obtenerFilas: () => filas ya filtradas por la pestaña,
+   campoFecha: fila => "YYYY-MM-DD" (o null si no aplica el rango), columnas, nombreArchivo } */
+function abrirExportModal(config){
+  exportModalConfig = config;
+  document.getElementById("export-modal-title").textContent = "Exportar — " + config.titulo;
+  document.getElementById("export-f-desde").value = "";
+  document.getElementById("export-f-hasta").value = "";
+  document.getElementById("export-modal-error").textContent = "";
+  exportActualizarConteo();
+  document.getElementById("export-modal").classList.add("show");
+}
+function exportFilasFiltradas(){
+  if(!exportModalConfig) return [];
+  const desde = document.getElementById("export-f-desde").value;
+  const hasta = document.getElementById("export-f-hasta").value;
+  let filas = exportModalConfig.obtenerFilas();
+  if(desde) filas = filas.filter(r => { const f = exportModalConfig.campoFecha(r); return !f || f >= desde; });
+  if(hasta) filas = filas.filter(r => { const f = exportModalConfig.campoFecha(r); return !f || f <= hasta; });
+  return filas;
+}
+function exportActualizarConteo(){
+  const n = exportFilasFiltradas().length;
+  document.getElementById("export-modal-count").textContent = n + (n === 1 ? " fila lista para exportar." : " filas listas para exportar.");
+}
+function cerrarExportModal(){
+  document.getElementById("export-modal").classList.remove("show");
+  exportModalConfig = null;
+}
+document.getElementById("export-modal-close").addEventListener("click", cerrarExportModal);
+document.getElementById("export-modal").addEventListener("click", (e)=>{ if(e.target.id === "export-modal") cerrarExportModal(); });
+document.getElementById("export-f-desde").addEventListener("change", exportActualizarConteo);
+document.getElementById("export-f-hasta").addEventListener("change", exportActualizarConteo);
+document.getElementById("export-modal-btn").addEventListener("click", ()=>{
+  const filas = exportFilasFiltradas();
+  if(!filas.length){ document.getElementById("export-modal-error").textContent = "No hay filas para exportar con estos filtros."; return; }
+  descargarCsv(exportModalConfig.nombreArchivo, exportModalConfig.columnas, filas);
+  cerrarExportModal();
+});
+
 /* ---- Inventario · Auditoría Shortpick (conectado a Supabase: ssoma_sp_registros) ---- */
 /* "Proceso" no viene directo del WMS: se calcula igual que en la hoja Filtro
    -> Sub Proceso = primeros 3 caracteres de Nro Orden
@@ -3587,7 +3694,7 @@ function spRenderConc(){
   });
 }
 
-function spRenderHistorial(){
+function spHistorialFiltrado(){
   const fSemana = document.getElementById("hist-f-semana").value;
   const fSubarea = document.getElementById("hist-f-subarea").value;
   const fEstado = document.getElementById("hist-f-estado").value;
@@ -3602,7 +3709,10 @@ function spRenderHistorial(){
       .some(campo => (campo || "").toLowerCase().includes(fBuscar)));
   }
   rows.sort((a,b)=> (verificaciones[b.id].fecha || "").localeCompare(verificaciones[a.id].fecha || ""));
-
+  return rows;
+}
+function spRenderHistorial(){
+  const rows = spHistorialFiltrado();
   const list = document.getElementById("hist-list");
   list.innerHTML = rows.length ? rows.map(r=>{
     const v = verificaciones[r.id];
@@ -3766,6 +3876,69 @@ document.getElementById("hist-f-semana").addEventListener("change", spRenderHist
 document.getElementById("hist-f-subarea").addEventListener("change", spRenderHistorial);
 document.getElementById("hist-f-estado").addEventListener("change", spRenderHistorial);
 document.getElementById("hist-f-buscar").addEventListener("input", spRenderHistorial);
+
+/* Exportar — Auditoría / Conciliación / Historial de Shortpick */
+const SP_COLUMNAS_AUDITORIA = [
+  { header: "Fecha", get: r => r.fecha },
+  { header: "Código alternativo", get: r => r.codAlternat },
+  { header: "Código de barras", get: r => r.codigoBarras },
+  { header: "Descripción", get: r => r.desc },
+  { header: "Ubicación", get: r => r.ubicacion },
+  { header: "Sub Área", get: r => r.subarea },
+  { header: "Turno", get: r => r.turno },
+  { header: "Responsable", get: r => r.responsable },
+  { header: "Supervisor", get: r => r.supervisor },
+  { header: "Nro Orden", get: r => r.orden },
+  { header: "Proceso", get: r => spProceso(r.orden) },
+  { header: "Un Ajust", get: r => r.unajust },
+  { header: "Valorizado", get: r => spValorizado(r).toFixed(2) },
+  { header: "Semana", get: r => r.semana },
+  { header: "Estado", get: r => r.estado },
+];
+document.getElementById("sp-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Auditoría Shortpick",
+    obtenerFilas: () => spFilteredData(),
+    campoFecha: r => (r.fecha || "").slice(0, 10),
+    columnas: SP_COLUMNAS_AUDITORIA,
+    nombreArchivo: "shortpick_auditoria.csv",
+  });
+});
+const SP_COLUMNAS_CONCILIACION = [
+  { header: "Fecha", get: r => r.fecha },
+  { header: "Código de barras", get: r => r.codigoBarras },
+  { header: "Código alternativo", get: r => r.codAlternat },
+  { header: "Producto", get: r => r.producto || r.desc },
+  { header: "Descripción", get: r => r.desc },
+  { header: "Ubicación", get: r => r.ubicacion },
+  { header: "Cantidad", get: r => Math.abs(r.unajust) },
+  { header: "Semana", get: r => r.semana },
+];
+document.getElementById("conc-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Conciliación Shortpick (pendientes)",
+    obtenerFilas: () => spData.filter(r => !verificaciones[r.id]),
+    campoFecha: r => (r.fecha || "").slice(0, 10),
+    columnas: SP_COLUMNAS_CONCILIACION,
+    nombreArchivo: "shortpick_conciliacion_pendientes.csv",
+  });
+});
+const SP_COLUMNAS_HISTORIAL = [
+  ...SP_COLUMNAS_CONCILIACION,
+  { header: "Estado verificación", get: r => verificaciones[r.id] ? verificaciones[r.id].estado : "" },
+  { header: "Cant. encontrada", get: r => verificaciones[r.id] ? verificaciones[r.id].cantidadEncontrada : "" },
+  { header: "Otra ubicación", get: r => verificaciones[r.id] && verificaciones[r.id].otraUbicacion ? "Sí" : "No" },
+  { header: "Verificado el", get: r => (verificaciones[r.id] ? verificaciones[r.id].fecha : "").slice(0, 10) },
+];
+document.getElementById("hist-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Historial Shortpick",
+    obtenerFilas: () => spHistorialFiltrado(),
+    campoFecha: r => (verificaciones[r.id] ? verificaciones[r.id].fecha : "").slice(0, 10),
+    columnas: SP_COLUMNAS_HISTORIAL,
+    nombreArchivo: "shortpick_historial.csv",
+  });
+});
 
 /* ---- Inventario · Control de Bolsa (import real de los 2 Excel, sin maqueta) ----
    Fuente 1: el reporte de diferencias del área auditora (ej. "Dif Santa Anita"),
@@ -4431,7 +4604,7 @@ function bpRenderConc(){
     btn.addEventListener("click", ()=> bpOpenModal(Number(btn.dataset.id)));
   });
 }
-function bpRenderHistorial(){
+function bpHistorialFiltrado(){
   const fDia = document.getElementById("bp-hist-f-dia").value;
   const fSemana = document.getElementById("bp-hist-f-semana").value;
   const fBuscar = document.getElementById("bp-hist-f-buscar").value.trim().toLowerCase();
@@ -4442,7 +4615,10 @@ function bpRenderHistorial(){
     rows = rows.filter(r=> [r.codigoBarras, r.codAlternat, r.descripcion, r.nroLpn].some(c => (c||"").toLowerCase().includes(fBuscar)));
   }
   rows.sort((a,b)=> (bpVerificaciones[b.id].fecha||"").localeCompare(bpVerificaciones[a.id].fecha||""));
-
+  return rows;
+}
+function bpRenderHistorial(){
+  const rows = bpHistorialFiltrado();
   const list = document.getElementById("bp-hist-list");
   list.innerHTML = rows.length ? rows.map(r=>{
     const v = bpVerificaciones[r.id];
@@ -4468,6 +4644,57 @@ document.getElementById("bp-f-semana").addEventListener("change", bpRender);
 document.getElementById("bp-hist-f-dia").addEventListener("change", bpRenderHistorial);
 document.getElementById("bp-hist-f-semana").addEventListener("change", bpRenderHistorial);
 document.getElementById("bp-hist-f-buscar").addEventListener("input", bpRenderHistorial);
+
+/* Exportar — Casos / Conciliación / Historial de Bultos Perdidos */
+const BP_COLUMNAS_CASOS = [
+  { header: "Fecha", get: r => r.fecha },
+  { header: "Semana", get: r => r.semana },
+  { header: "Nro LPN", get: r => r.nroLpn },
+  { header: "Código alternativo", get: r => r.codAlternat },
+  { header: "Código de barras", get: r => r.codigoBarras },
+  { header: "Descripción", get: r => r.descripcion },
+  { header: "Ubicación", get: r => r.ubicacion },
+  { header: "Ubicación anterior", get: r => r.ubicacionAnterior },
+  { header: "Proceso", get: r => r.proceso },
+  { header: "Categoría", get: r => r.categoria === "consulta_reinyectado" ? "Consulta Reinyectado" : "Normal" },
+  { header: "Responsable", get: r => r.responsable },
+  { header: "Supervisor", get: r => r.supervisor },
+  { header: "Valorizado", get: r => (r.valorizado||0).toFixed(2) },
+  { header: "Estado", get: r => bpVerificaciones[r.id] ? "Conciliado" : (r.categoria === "consulta_reinyectado" ? "Consulta Reinyectado" : "Pendiente") },
+];
+document.getElementById("bp-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bultos Perdidos — Casos",
+    obtenerFilas: () => bpFiltered(),
+    campoFecha: r => (r.fecha || "").slice(0, 10),
+    columnas: BP_COLUMNAS_CASOS,
+    nombreArchivo: "bultos_perdidos_casos.csv",
+  });
+});
+document.getElementById("bp-conc-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bultos Perdidos — Conciliación (pendientes)",
+    obtenerFilas: () => bpData.filter(r => !bpVerificaciones[r.id]),
+    campoFecha: r => (r.fecha || "").slice(0, 10),
+    columnas: BP_COLUMNAS_CASOS,
+    nombreArchivo: "bultos_perdidos_pendientes.csv",
+  });
+});
+const BP_COLUMNAS_HISTORIAL = [
+  ...BP_COLUMNAS_CASOS,
+  { header: "Motivo de conciliación", get: r => bpVerificaciones[r.id] ? bpVerificaciones[r.id].sustento : "" },
+  { header: "Conciliado el", get: r => (bpVerificaciones[r.id] ? bpVerificaciones[r.id].fecha : "").slice(0, 10) },
+];
+document.getElementById("bp-hist-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bultos Perdidos — Historial",
+    obtenerFilas: () => bpHistorialFiltrado(),
+    campoFecha: r => (bpVerificaciones[r.id] ? bpVerificaciones[r.id].fecha : "").slice(0, 10),
+    columnas: BP_COLUMNAS_HISTORIAL,
+    nombreArchivo: "bultos_perdidos_historial.csv",
+  });
+});
+
 document.getElementById("bp-lpn-copy-btn").addEventListener("click", async ()=>{
   const btn = document.getElementById("bp-lpn-copy-btn");
   const texto = document.getElementById("bp-lpn-list").value;
@@ -4807,7 +5034,7 @@ function suRenderConc(){
     btn.addEventListener("click", ()=> suOpenModal(Number(btn.dataset.id)));
   });
 }
-function suRenderHistorial(){
+function suHistorialFiltrado(){
   const fSemana = document.getElementById("su-hist-f-semana").value;
   const fBuscar = document.getElementById("su-hist-f-buscar").value.trim().toLowerCase();
   let rows = suData.filter(r=> suVerificaciones[r.id]);
@@ -4816,7 +5043,10 @@ function suRenderHistorial(){
     rows = rows.filter(r=> [r.codigoBarras, r.codAlternat, r.descripcion, r.nroLpn].some(c => (c||"").toLowerCase().includes(fBuscar)));
   }
   rows.sort((a,b)=> (suVerificaciones[b.id].fecha||"").localeCompare(suVerificaciones[a.id].fecha||""));
-
+  return rows;
+}
+function suRenderHistorial(){
+  const rows = suHistorialFiltrado();
   const list = document.getElementById("su-hist-list");
   list.innerHTML = rows.length ? rows.map(r=>{
     const v = suVerificaciones[r.id];
@@ -4842,6 +5072,56 @@ suLoadData();
 document.getElementById("su-f-semana").addEventListener("change", suRender);
 document.getElementById("su-hist-f-semana").addEventListener("change", suRenderHistorial);
 document.getElementById("su-hist-f-buscar").addEventListener("input", suRenderHistorial);
+
+/* Exportar — Casos / Conciliación / Historial de Sin Ubicación */
+const SU_COLUMNAS_CASOS = [
+  { header: "Fecha", get: r => r.fecha },
+  { header: "Semana", get: r => r.semana },
+  { header: "Mes", get: r => r.mes },
+  { header: "Nro LPN", get: r => r.nroLpn },
+  { header: "Código alternativo", get: r => r.codAlternat },
+  { header: "Código de barras", get: r => r.codigoBarras },
+  { header: "Descripción", get: r => r.descripcion },
+  { header: "Ubicación especial", get: r => r.ubicacion },
+  { header: "Área", get: r => r.area },
+  { header: "Motivo", get: r => r.motivo },
+  { header: "Cantidad", get: r => r.cantidad },
+  { header: "Valorizado", get: r => (r.valorizado||0).toFixed(2) },
+  { header: "Estado", get: r => suVerificaciones[r.id] ? "Ubicado" : "Por buscar" },
+];
+document.getElementById("su-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Sin Ubicación — Casos",
+    obtenerFilas: () => suFiltered(),
+    campoFecha: r => (r.fecha || "").slice(0, 10),
+    columnas: SU_COLUMNAS_CASOS,
+    nombreArchivo: "sin_ubicacion_casos.csv",
+  });
+});
+document.getElementById("su-conc-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Sin Ubicación — Conciliación (pendientes)",
+    obtenerFilas: () => suData.filter(r => !suVerificaciones[r.id]),
+    campoFecha: r => (r.fecha || "").slice(0, 10),
+    columnas: SU_COLUMNAS_CASOS,
+    nombreArchivo: "sin_ubicacion_pendientes.csv",
+  });
+});
+const SU_COLUMNAS_HISTORIAL = [
+  ...SU_COLUMNAS_CASOS,
+  { header: "Ubicación encontrada", get: r => suVerificaciones[r.id] ? suVerificaciones[r.id].ubicacionEncontrada : "" },
+  { header: "Sustento", get: r => suVerificaciones[r.id] ? suVerificaciones[r.id].sustento : "" },
+  { header: "Verificado el", get: r => (suVerificaciones[r.id] ? suVerificaciones[r.id].fecha : "").slice(0, 10) },
+];
+document.getElementById("su-hist-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Sin Ubicación — Historial",
+    obtenerFilas: () => suHistorialFiltrado(),
+    campoFecha: r => (suVerificaciones[r.id] ? suVerificaciones[r.id].fecha : "").slice(0, 10),
+    columnas: SU_COLUMNAS_HISTORIAL,
+    nombreArchivo: "sin_ubicacion_historial.csv",
+  });
+});
 
 function suUpdateImportState(){
   const f = document.getElementById("su-file").files[0];
