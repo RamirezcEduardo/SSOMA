@@ -1596,7 +1596,7 @@
         <div class="import-card-head">
           <div>
             <div class="import-card-title">💲 Actualizar catálogo de costos</div>
-            <div class="import-card-sub">Solo administradores. Sube la hoja VALOR de tu plantilla (columnas COD_PRODUCTO, PRODUCTO, COSTO, FAMILIA) para refrescar los costos usados en "Valorizado". No borra los códigos ya cargados, solo agrega o actualiza.</div>
+            <div class="import-card-sub">Solo administradores. Sube el tarifario (columnas COD_ALTERNO, PRODUCTO, COSTO, FAMILIA) para agregar productos nuevos o actualizar precios — aplica a todo Inventario (Shortpick, Bultos Perdidos, Sin Ubicación). No borra los códigos ya cargados, solo agrega o actualiza.</div>
           </div>
           <button type="button" class="btn btn-ghost" id="sp-costos-import-btn" disabled>Actualizar catálogo</button>
         </div>
@@ -6456,8 +6456,9 @@ document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
   spUpdateImportState();
 });
 
-/* Actualizar catálogo de costos (ssoma_sp_costos) desde la hoja VALOR de la plantilla:
-   columnas COD_PRODUCTO, PRODUCTO, COSTO, FAMILIA. Upsert en lotes desde el navegador. */
+/* Actualizar catálogo de costos (ssoma_sp_costos) desde el tarifario (mismos encabezados que
+   VALOR_3108.xlsx): COD_ALTERNO, PRODUCTO, COSTO, FAMILIA. Upsert en lotes desde el navegador —
+   un Cod Alternat que no exista se agrega, uno que ya exista se actualiza (precio/nombre/familia). */
 document.getElementById("sp-file-costos").addEventListener("change", ()=>{
   const f = document.getElementById("sp-file-costos").files[0];
   document.getElementById("sp-file-costos-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
@@ -6475,13 +6476,13 @@ document.getElementById("sp-costos-import-btn").addEventListener("click", async 
     const file = document.getElementById("sp-file-costos").files[0];
     const filas = await spParseWorkbookFile(file);
     const costos = filas.map(fila=>({
-      cod_alternat: String(spBuscaCampo(fila, ["COD_PRODUCTO","Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
+      cod_alternat: String(spBuscaCampo(fila, ["COD_ALTERNO","COD_PRODUCTO","Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
       producto: String(spBuscaCampo(fila, ["PRODUCTO","Producto"])).trim() || null,
       costo: parseFloat(spBuscaCampo(fila, ["COSTO","Costo"])) || 0,
       familia: String(spBuscaCampo(fila, ["FAMILIA","Familia"])).trim() || null,
     })).filter(c => c.cod_alternat);
     if(!costos.length){
-      statusEl.textContent = "⚠️ No se encontraron filas válidas (revisa que tenga columnas COD_PRODUCTO, PRODUCTO, COSTO, FAMILIA).";
+      statusEl.textContent = "⚠️ No se encontraron filas válidas (revisa que tenga columnas COD_ALTERNO, PRODUCTO, COSTO, FAMILIA).";
     }else{
       const LOTE = 500;
       let importados = 0;
