@@ -4545,7 +4545,7 @@ function bpRenderLpnCard(){
   const hay = lpns.length > 0 || bpData.length > 0;
   card.style.display = hay ? "" : "none";
   if(wmsCard) wmsCard.style.display = hay ? "" : "none";
-  document.getElementById("bp-lpn-list").value = lpns.join(", ");
+  document.getElementById("bp-lpn-list").value = lpns.join(",");
 }
 function bpRender(){
   bpRenderLpnCard();
