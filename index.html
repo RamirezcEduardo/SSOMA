@@ -4723,6 +4723,7 @@ document.getElementById("bp-file").addEventListener("change", bpUpdateImportStat
    Se salta cualquier Nro LPN que ya esté cargado, para poder reimportar DATA LATAM día a día
    sin duplicar casos que siguen pendientes de una carga anterior. */
 async function bpImportarRegistros(file){
+  await spCargarCostos();
   const filas = await spParseWorkbookFile(file);
   const actorId = miUsuario ? miUsuario.id : null;
   const lpnExistentes = new Set(bpData.map(r => r.nroLpn));
@@ -4746,14 +4747,20 @@ async function bpImportarRegistros(file){
       const ubicacionNorm = bpNormaliza(ubicacion);
       const procesoNorm = bpNormaliza(proceso);
       const categoria = (ubicacionNorm === "CONTROL-INVENTARIO-01-01" && procesoNorm.includes("REINYECT")) ? "consulta_reinyectado" : "normal";
+      const codAlternat = String(spBuscaCampo(fila, ["Cod Alternat"])).trim();
+      const cantidad = parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0;
+      /* Si el archivo no trae Val tot, se calcula con el catálogo compartido de costos
+         (el mismo de Auditoría Shortpick) — el tarifario aplica a todo Inventario. */
+      const valorizadoArchivo = valTot === "" ? null : parseFloat(valTot);
+      const valorizado = valorizadoArchivo !== null && !isNaN(valorizadoArchivo) ? valorizadoArchivo : spCosto(codAlternat) * cantidad;
       return {
         nroLpn,
         fecha: fechaDt.toISOString(),
         nro_lpn: nroLpn,
-        cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat"])).trim(),
+        cod_alternat: codAlternat,
         codigo_barras: String(spBuscaCampo(fila, ["Producto"])).trim() || null,
         descripcion: String(spBuscaCampo(fila, ["Descripcion","Descripción"])).trim(),
-        cantidad: parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0,
+        cantidad,
         ubicacion_anterior: String(spBuscaCampo(fila, ["Ubicación Anterior","Ubicacion Anterior"])).trim() || null,
         ubicacion: ubicacion || null,
         proceso: proceso || null,
@@ -4768,7 +4775,7 @@ async function bpImportarRegistros(file){
         fecha_caducidad: caducidadDt && !isNaN(caducidadDt.getTime()) ? bpFmtFecha(caducidadDt) : null,
         nro_oc: String(spBuscaCampo(fila, ["Nro OC"])).trim() || null,
         usuario_recepcion: String(spBuscaCampo(fila, ["Usuario de recepción","Usuario de recepcion"])).trim() || null,
-        valorizado: valTot === "" ? null : parseFloat(valTot),
+        valorizado,
         creado_por_id: actorId,
       };
     })
@@ -5133,26 +5140,33 @@ document.getElementById("su-file").addEventListener("change", suUpdateImportStat
 
 /* Import real: hoja "DATA" de tu archivo semanal de Sin Ubicación (encabezados en fila 1). */
 async function suImportarRegistros(file){
+  await spCargarCostos();
   const filas = await spParseWorkbookFile(file, { sheetName: "DATA" });
   const actorId = miUsuario ? miUsuario.id : null;
   const registros = filas.map(fila=>{
     const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
     let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
     if(isNaN(fechaDt.getTime())) fechaDt = new Date();
-    const valorizado = spBuscaCampo(fila, ["Valorizado"]);
+    const codAlternat = String(spBuscaCampo(fila, ["Cod Alternat"])).trim();
+    const cantidad = parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0;
+    /* Si el archivo no trae Valorizado, se calcula con el catálogo compartido de costos
+       (el mismo de Auditoría Shortpick) — el tarifario aplica a todo Inventario. */
+    const valorizadoArchivo = spBuscaCampo(fila, ["Valorizado"]);
+    const valorizadoNum = valorizadoArchivo === "" ? null : parseFloat(valorizadoArchivo);
+    const valorizado = valorizadoNum !== null && !isNaN(valorizadoNum) ? valorizadoNum : spCosto(codAlternat) * cantidad;
     return {
       fecha_crea: fechaDt.toISOString(),
       nro_lpn: String(spBuscaCampo(fila, ["Nro LPN"])).trim(),
-      cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat"])).trim(),
+      cod_alternat: codAlternat,
       codigo_barras: String(spBuscaCampo(fila, ["Producto"])).trim() || null,
       descripcion: String(spBuscaCampo(fila, ["Descripcion","Descripción"])).trim(),
       ubicacion: String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim(),
-      cantidad: parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0,
+      cantidad,
       area: String(spBuscaCampo(fila, ["Área","Area"])).trim() || null,
       semana: String(spBuscaCampo(fila, ["SEM","Semana"])).trim() || null,
       mes: String(spBuscaCampo(fila, ["Mes"])).trim() || null,
       motivo: String(spBuscaCampo(fila, ["Motivo"])).trim() || null,
-      valorizado: valorizado === "" ? null : parseFloat(valorizado),
+      valorizado,
       creado_por_id: actorId,
     };
   }).filter(r => r.nro_lpn && r.cod_alternat);
