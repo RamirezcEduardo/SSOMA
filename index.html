@@ -1739,7 +1739,7 @@
         <h2 class="section-title">Inventario — Auditoría Bultos Perdidos</h2>
         <span class="count-pill" id="bp-count">0 casos</span>
       </div>
-      <p class="section-desc">Casos "Perdido ERU" de tu tracker de Pendientes de Operación. Se concilian buscando el Nro LPN en Historial Inventario — si reaparece con movimiento después de la fecha de pérdida, es evidencia de que no se perdió.</p>
+      <p class="section-desc">Casos candidatos a "Perdido" filtrados de DATA LATAM (zonas Drop, Control de Inventario 01-01, Sin Ubicación, Por ubicar). Se concilian cruzando el Nro LPN contra la caja del WMS: Ubicado o Cancelado se concilia solo, Perdido sigue pendiente.</p>
 
       <div class="tab-bar" id="bp-tabs">
         <button type="button" class="tab-btn active" data-tab="casos">Casos</button>
@@ -1751,20 +1751,50 @@
       <div class="import-card">
         <div class="import-card-head">
           <div>
-            <div class="import-card-title">📤 Importar Pendientes de Operación</div>
-            <div class="import-card-sub">El archivo que comparten a diario — hoja "Bultos Pendientes". Solo se toman los casos con Proceso = Perdido ERU.</div>
+            <div class="import-card-title">📤 Paso 1 · Importar DATA LATAM</div>
+            <div class="import-card-sub">Se filtra solo lo que corresponde: Ubicación en zonas Drop/Control de Inventario 01-01, o Proceso = Sin Ubicación/Por ubicar (sin importar la ubicación).</div>
           </div>
-          <button type="button" class="btn btn-primary" id="bp-import-btn" disabled>Importar y calcular</button>
+          <button type="button" class="btn btn-primary" id="bp-import-btn" disabled>Importar y filtrar</button>
         </div>
         <div class="import-drop-row">
           <label class="import-drop" for="bp-file" id="bp-drop">
             <input type="file" id="bp-file" accept=".xlsx,.xls,.csv" hidden>
             <span class="import-drop-icon">📦</span>
-            <span class="import-drop-title">Pendientes de Operación</span>
+            <span class="import-drop-title">DATA LATAM</span>
             <span class="import-drop-hint" id="bp-file-name">Arrastra el archivo o haz clic para elegirlo</span>
           </label>
         </div>
         <div class="import-status" id="bp-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="import-card" id="bp-lpn-card" style="display:none;">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📋 Lista de Nro LPN pendientes</div>
+            <div class="import-card-sub">Copia y pega esta lista en el WMS para buscar y descargar la data de cajas — es el archivo que subes en el Paso 2.</div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="bp-lpn-copy-btn">Copiar lista</button>
+        </div>
+        <textarea id="bp-lpn-list" readonly style="width:100%;min-height:70px;resize:vertical;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);"></textarea>
+      </div>
+
+      <div class="import-card" id="bp-wms-card" style="display:none;">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">🔄 Paso 2 · Cruzar con caja WMS</div>
+            <div class="import-card-sub">Sube la data de cajas que descargaste del WMS con la lista de arriba. Se cruza por Nro LPN: Ubicado o Cancelado → se concilia solo; Perdido → sigue pendiente.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bp-wms-import-btn" disabled>Cruzar y conciliar</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bp-file-wms" id="bp-drop-wms">
+            <input type="file" id="bp-file-wms" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">🧾</span>
+            <span class="import-drop-title">Caja WMS</span>
+            <span class="import-drop-hint" id="bp-file-wms-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="bp-wms-import-status" style="display:none;"></div>
       </div>
 
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
@@ -1804,7 +1834,8 @@
         <span class="ic">📌</span>
         <div>
           Los casos que importes o concilies aquí quedan guardados de verdad (Supabase).
-          <div style="margin-top:8px;">Verifica cada caso desde la pestaña <b>Conciliación</b> — una vez conciliado pasa a <b>Historial</b>, y es lo que después usa Control de Bolsa para disputar el motivo AJUSTE PERDIDO del auditor.</div>
+          <div style="margin-top:8px;">El Paso 2 (cruce con la caja WMS) concilia solo los casos donde el WMS marca Ubicado o Cancelado — el motivo queda registrado y visible en <b>Historial</b>. Si el WMS todavía dice Perdido, o el LPN no aparece en la caja, el caso sigue pendiente en <b>Conciliación</b>, donde también puedes conciliarlo a mano con sustento.</div>
+          <div style="margin-top:8px;">🔁 Los casos de <b>Control de Inventario 01-01</b> vinculados al proceso Reinyectado quedan pendientes pero catalogados como <b>consulta al área de Reinyectado</b>, no como un pendiente normal.</div>
           <div style="margin-top:8px;">⚠️ Los casos de posible <b>sobre-envío</b> (a Punta Negra o una tienda) no se verifican acá todavía — esos se revisan a mano en Ordenes Cabecera, quedó pendiente definir ese cruce con el equipo.</div>
         </div>
       </div>
@@ -1812,7 +1843,7 @@
 
       <!-- Conciliación Bultos Perdidos: pestaña aparte dentro del mismo panel, no un módulo distinto -->
       <div id="bp-tab-conciliacion" style="display:none;">
-        <p class="section-desc">Busca el Nro LPN en Historial Inventario del WMS. Si reaparece con movimiento después de la fecha de pérdida, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
+        <p class="section-desc">Los casos Ubicado/Cancelado del cruce con la caja WMS (Paso 2) se concilian solos. Lo que quede pendiente acá lo puedes conciliar a mano: busca el Nro LPN en Historial Inventario y, si reaparece con movimiento, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
 
         <div class="stats-row stats-row-3" style="margin-top:18px;">
           <div class="stat-card">
@@ -1837,6 +1868,10 @@
         <p class="section-desc">Historial de casos ya verificados en <b>Conciliación</b>, con filtros para ubicarlos rápido.</p>
 
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <div class="field" style="min-width:150px;margin-bottom:0;">
+            <label>Día</label>
+            <input type="date" id="bp-hist-f-dia">
+          </div>
           <div class="field" style="min-width:170px;margin-bottom:0;">
             <label>Semana</label>
             <select id="bp-hist-f-semana"><option value="">Todas</option></select>
@@ -2492,8 +2527,10 @@ Ya procesa los 2 Excel reales en el navegador (no hay datos de ejemplo) — pero
 
       <div class="help-tab-panel" id="help-tab-inventario" style="display:none;">
       <div class="help-block">
-        <h4>📦 Inventario (en desarrollo)</h4>
-        <p><b>Auditoría Shortpick</b> ya está conectada de verdad: puedes importar los reportes del WMS, conciliar faltantes y consultar el historial, y todo queda guardado. <b>Auditoría Bultos Perdidos</b> y <b>Auditoría Sin Ubicación</b> aún no están construidos. Si necesitas alguno de estos módulos antes de tiempo, avisa al equipo para priorizarlo.</p>
+        <h4>📦 Inventario</h4>
+        <p><b>Auditoría Shortpick</b>: importa los reportes del WMS, concilia faltantes y consulta el historial.</p>
+        <p><b>Auditoría Bultos Perdidos</b>: importa DATA LATAM (filtrado por Ubicación/Proceso), copia la lista de Nro LPN, sube la caja del WMS y se concilia sola cuando el WMS marca Ubicado o Cancelado — lo que sigue en Perdido queda pendiente para conciliar a mano.</p>
+        <p><b>Auditoría Sin Ubicación</b> y <b>Control de Bolsa</b> también están conectados de verdad — todo lo que importes o concilies en Inventario queda guardado.</p>
       </div>
       </div>
 
@@ -4249,11 +4286,26 @@ document.getElementById("bolsa-detalle-toggle").addEventListener("click", (e)=>{
 
 
 /* ---- Inventario · Auditoría Bultos Perdidos (conectado a Supabase: ssoma_bp_registros / ssoma_bp_verificaciones) ----
-   Mismo patrón que Shortpick. Filtrado a Proceso = "Perdido ERU" al importar. Se concilia
-   buscando el Nro LPN en Historial Inventario: si reaparece con movimiento después de la
-   fecha de pérdida, se marca Ubicado con el sustento (foto opcional, no obligatoria). */
+   Flujo real de 2 archivos: (1) DATA LATAM se importa filtrando por Ubicación (whitelist de
+   zonas Drop/Control de Inventario) o Proceso (Sin Ubicación/Por ubicar) — arma la lista de
+   Nro LPN candidatos a "Perdido" para buscar en el WMS; (2) se sube la caja del WMS y se
+   cruza por Nro LPN: Ubicado/Cancelado concilia solo, Perdido sigue pendiente. También se
+   puede conciliar a mano (sustento + foto opcional) para lo que no matchea. */
 let bpData = [];
 let bpVerificaciones = {};
+
+/* Whitelist real de Ubicación (zonas Drop + Control de Inventario 01-01) y de Proceso
+   (Sin Ubicación/Por ubicar, sin importar la ubicación) para decidir qué filas de DATA LATAM
+   entran como candidatas a "Perdido". Comparación sin tildes ni mayúsculas/minúsculas. */
+const BP_UBICACION_WHITELIST = new Set([
+  "DROP-ALMAC-MERC-CI", "DROP-ESTANT-MERC-CI", "DROP-KNAPP1-MERC-CI", "DROP-REAB-MERC-CI",
+  "DROP-REABAS-MERC-CI", "DROP-RECEP-MERC-CI", "DROP-SDA-MERC-CI",
+  "DROP-LI-DEV-INCIDENCIA-PICKING", "DROP-SLOTTING-0-0", "CONTROL-INVENTARIO-01-01",
+]);
+const BP_PROCESO_WHITELIST = new Set(["SIN UBICACION", "POR UBICAR"]);
+function bpNormaliza(s){
+  return String(s || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
 
 function bpFmtFecha(d){
   const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
@@ -4265,7 +4317,8 @@ async function bpLoadData(){
   bpData = (data || []).map(r => ({
     id: r.id, fecha: bpFmtFecha(new Date(r.fecha)), nroLpn: r.nro_lpn, codAlternat: r.cod_alternat,
     codigoBarras: r.codigo_barras, descripcion: r.descripcion, cantidad: r.cantidad,
-    ubicacionAnterior: r.ubicacion_anterior, area: r.area, familia: r.familia,
+    ubicacionAnterior: r.ubicacion_anterior, ubicacion: r.ubicacion, proceso: r.proceso,
+    estadoLatam: r.estado_latam, categoria: r.categoria || "normal", area: r.area, familia: r.familia,
     responsable: r.responsable, supervisor: r.supervisor, semana: r.semana, valorizado: r.valorizado,
   }));
 
@@ -4297,7 +4350,29 @@ function bpFiltered(){
   const sem = document.getElementById("bp-f-semana").value;
   return bpData.filter(r => !sem || r.semana === sem);
 }
+/* Badge de estado por fila: conciliado (con el motivo real), consulta a Reinyectado
+   (pendiente pero catalogado aparte), o pendiente normal. */
+function bpBadge(r){
+  const v = bpVerificaciones[r.id];
+  if(v) return '<span class="estado-badge finalizado" title="' + escapeHtml(v.sustento) + '">Conciliado</span>';
+  if(r.categoria === "consulta_reinyectado") return '<span class="estado-badge parcial">🔁 Consulta Reinyectado</span>';
+  return '<span class="estado-badge pendiente">Pendiente</span>';
+}
+function bpListaLpnPendientes(){
+  return bpData.filter(r => !bpVerificaciones[r.id]).map(r => r.nroLpn).filter(Boolean);
+}
+function bpRenderLpnCard(){
+  const lpns = bpListaLpnPendientes();
+  const card = document.getElementById("bp-lpn-card");
+  const wmsCard = document.getElementById("bp-wms-card");
+  if(!card) return;
+  const hay = lpns.length > 0 || bpData.length > 0;
+  card.style.display = hay ? "" : "none";
+  if(wmsCard) wmsCard.style.display = hay ? "" : "none";
+  document.getElementById("bp-lpn-list").value = lpns.join(", ");
+}
 function bpRender(){
+  bpRenderLpnCard();
   const rows = bpFiltered();
   document.getElementById("bp-count").textContent = rows.length + (rows.length===1 ? " caso" : " casos");
   const perdidos = bpData.filter(r=>!bpVerificaciones[r.id]);
@@ -4318,7 +4393,7 @@ function bpRender(){
       <td>${escapeHtml(r.ubicacionAnterior)}</td>
       <td>${escapeHtml(r.responsable)}</td>
       <td class="num">${(r.valorizado||0).toFixed(2)}</td>
-      <td>${bpVerificaciones[r.id] ? '<span class="estado-badge finalizado">Ubicado</span>' : '<span class="estado-badge pendiente">Perdido</span>'}</td>
+      <td>${bpBadge(r)}</td>
     </tr>`).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Sin casos para este filtro.</td></tr>`;
 }
 
@@ -4345,11 +4420,11 @@ function bpRenderConc(){
     <div class="conc-card">
       <div class="conc-card-top">
         <span class="conc-card-title">${escapeHtml(r.descripcion)}</span>
-        <span class="estado-badge pendiente">Perdido</span>
+        ${bpBadge(r)}
       </div>
       <div class="conc-card-grid">${bpCardCampos(r)}</div>
       <div class="conc-card-actions">
-        <button type="button" class="btn btn-primary bp-verificar-btn" data-id="${r.id}">Conciliar</button>
+        <button type="button" class="btn btn-primary bp-verificar-btn" data-id="${r.id}">Conciliar a mano</button>
       </div>
     </div>`).join("") : `<div class="empty">No hay casos pendientes de verificar.</div>`;
   list.querySelectorAll(".bp-verificar-btn").forEach(btn=>{
@@ -4357,9 +4432,11 @@ function bpRenderConc(){
   });
 }
 function bpRenderHistorial(){
+  const fDia = document.getElementById("bp-hist-f-dia").value;
   const fSemana = document.getElementById("bp-hist-f-semana").value;
   const fBuscar = document.getElementById("bp-hist-f-buscar").value.trim().toLowerCase();
   let rows = bpData.filter(r=> bpVerificaciones[r.id]);
+  if(fDia) rows = rows.filter(r=> (bpVerificaciones[r.id].fecha||"").slice(0,10) === fDia);
   if(fSemana) rows = rows.filter(r=> r.semana === fSemana);
   if(fBuscar){
     rows = rows.filter(r=> [r.codigoBarras, r.codAlternat, r.descripcion, r.nroLpn].some(c => (c||"").toLowerCase().includes(fBuscar)));
@@ -4373,11 +4450,11 @@ function bpRenderHistorial(){
     <div class="conc-card">
       <div class="conc-card-top">
         <span class="conc-card-title">${escapeHtml(r.descripcion)}</span>
-        <span class="estado-badge finalizado">Ubicado</span>
+        <span class="estado-badge finalizado">Conciliado</span>
       </div>
       <div class="conc-card-grid">
         ${bpCardCampos(r)}
-        <div class="cg-item"><b>Verificado el</b><span>${formatDate((v.fecha||"").slice(0,10))}</span></div>
+        <div class="cg-item"><b>Conciliado el</b><span>${formatDate((v.fecha||"").slice(0,10))}</span></div>
       </div>
       <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span>${escapeHtml(v.sustento)}</span>
@@ -4388,8 +4465,21 @@ function bpRenderHistorial(){
 }
 bpLoadData();
 document.getElementById("bp-f-semana").addEventListener("change", bpRender);
+document.getElementById("bp-hist-f-dia").addEventListener("change", bpRenderHistorial);
 document.getElementById("bp-hist-f-semana").addEventListener("change", bpRenderHistorial);
 document.getElementById("bp-hist-f-buscar").addEventListener("input", bpRenderHistorial);
+document.getElementById("bp-lpn-copy-btn").addEventListener("click", async ()=>{
+  const btn = document.getElementById("bp-lpn-copy-btn");
+  const texto = document.getElementById("bp-lpn-list").value;
+  try{
+    await navigator.clipboard.writeText(texto);
+    const original = btn.textContent;
+    btn.textContent = "¡Copiado!";
+    setTimeout(()=>{ btn.textContent = original; }, 1500);
+  }catch(err){
+    document.getElementById("bp-lpn-list").select();
+  }
+});
 
 function bpUpdateImportState(){
   const f = document.getElementById("bp-file").files[0];
@@ -4399,30 +4489,49 @@ function bpUpdateImportState(){
 }
 document.getElementById("bp-file").addEventListener("change", bpUpdateImportState);
 
-/* Import real: hoja "Bultos Pendientes" de Pendientes de Operación. Los encabezados reales
-   están en la fila 3 (las primeras 2 son segmentadores del Excel), y solo se toman los casos
-   con Proceso = "Perdido ERU" — esa misma hoja trae Drop/Averías/Canjes/Sempar/Por Ubicar/
-   Sin Ubicación, que no son de este módulo. */
+/* Import real: DATA LATAM (bruto), primera hoja, encabezados en fila 1. Solo entran las filas
+   con Ubicación en la whitelist de zonas Drop/Control de Inventario 01-01, o Proceso = Sin
+   Ubicación/Por ubicar (sin importar la ubicación). Control de Inventario 01-01 vinculado al
+   proceso Reinyectado se cataloga como "consulta_reinyectado" en vez de un pendiente normal.
+   Se salta cualquier Nro LPN que ya esté cargado, para poder reimportar DATA LATAM día a día
+   sin duplicar casos que siguen pendientes de una carga anterior. */
 async function bpImportarRegistros(file){
-  const filas = await spParseWorkbookFile(file, { sheetName: "Bultos Pendientes", headerRow: 3 });
+  const filas = await spParseWorkbookFile(file);
   const actorId = miUsuario ? miUsuario.id : null;
+  const lpnExistentes = new Set(bpData.map(r => r.nroLpn));
+  const vistosEnEsteArchivo = new Set();
   const registros = filas
-    .filter(fila => String(spBuscaCampo(fila, ["Proceso"])).trim().toLowerCase() === "perdido eru")
+    .filter(fila=>{
+      const ubicacion = bpNormaliza(spBuscaCampo(fila, ["Ubicacion","Ubicación"]));
+      const proceso = bpNormaliza(spBuscaCampo(fila, ["Proceso"]));
+      return BP_UBICACION_WHITELIST.has(ubicacion) || BP_PROCESO_WHITELIST.has(proceso);
+    })
     .map(fila=>{
       const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
       let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
       if(isNaN(fechaDt.getTime())) fechaDt = new Date();
-      const caducidadRaw = spBuscaCampo(fila, ["Fecha de Caducidad"]);
+      const caducidadRaw = spBuscaCampo(fila, ["Fecha de Caducidad","Fecha de caducidad"]);
       const caducidadDt = caducidadRaw instanceof Date ? caducidadRaw : (caducidadRaw ? new Date(caducidadRaw) : null);
       const valTot = spBuscaCampo(fila, ["Val tot"]);
+      const nroLpn = String(spBuscaCampo(fila, ["Nro LPN"])).trim();
+      const ubicacion = String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim();
+      const proceso = String(spBuscaCampo(fila, ["Proceso"])).trim();
+      const ubicacionNorm = bpNormaliza(ubicacion);
+      const procesoNorm = bpNormaliza(proceso);
+      const categoria = (ubicacionNorm === "CONTROL-INVENTARIO-01-01" && procesoNorm.includes("REINYECT")) ? "consulta_reinyectado" : "normal";
       return {
+        nroLpn,
         fecha: fechaDt.toISOString(),
-        nro_lpn: String(spBuscaCampo(fila, ["Nro LPN"])).trim(),
+        nro_lpn: nroLpn,
         cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat"])).trim(),
         codigo_barras: String(spBuscaCampo(fila, ["Producto"])).trim() || null,
         descripcion: String(spBuscaCampo(fila, ["Descripcion","Descripción"])).trim(),
         cantidad: parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0,
         ubicacion_anterior: String(spBuscaCampo(fila, ["Ubicación Anterior","Ubicacion Anterior"])).trim() || null,
+        ubicacion: ubicacion || null,
+        proceso: proceso || null,
+        estado_latam: String(spBuscaCampo(fila, ["Estado"])).trim() || null,
+        categoria,
         area: String(spBuscaCampo(fila, ["Área","Area"])).trim() || null,
         familia: String(spBuscaCampo(fila, ["Familia"])).trim() || null,
         responsable: String(spBuscaCampo(fila, ["Responsable"])).trim() || null,
@@ -4435,7 +4544,14 @@ async function bpImportarRegistros(file){
         valorizado: valTot === "" ? null : parseFloat(valTot),
         creado_por_id: actorId,
       };
-    }).filter(r => r.nro_lpn && r.cod_alternat);
+    })
+    .filter(r => r.nro_lpn && r.cod_alternat)
+    .filter(r => {
+      if(lpnExistentes.has(r.nroLpn) || vistosEnEsteArchivo.has(r.nroLpn)) return false;
+      vistosEnEsteArchivo.add(r.nroLpn);
+      return true;
+    })
+    .map(({ nroLpn, ...resto }) => resto);
   if(!registros.length) return { count: 0, error: null };
   const { error } = await sb.from("ssoma_bp_registros").insert(registros);
   return { count: registros.length, error };
@@ -4443,7 +4559,7 @@ async function bpImportarRegistros(file){
 
 document.getElementById("bp-import-btn").addEventListener("click", async (e)=>{
   const btn = e.currentTarget; const original = btn.textContent;
-  btn.disabled = true; btn.textContent = "Importando y calculando…";
+  btn.disabled = true; btn.textContent = "Importando y filtrando…";
   const statusEl = document.getElementById("bp-import-status");
   statusEl.style.display = "none";
   try{
@@ -4452,10 +4568,10 @@ document.getElementById("bp-import-btn").addEventListener("click", async (e)=>{
     if(error){
       statusEl.textContent = "❌ No se pudo importar: " + error.message;
     }else if(count === 0){
-      statusEl.textContent = '⚠️ No se encontraron casos con Proceso = "Perdido ERU" en el archivo.';
+      statusEl.textContent = "⚠️ No se encontraron filas nuevas que cumplan el filtro (Ubicación en la whitelist, o Proceso = Sin Ubicación/Por ubicar).";
     }else{
       await bpLoadData();
-      statusEl.textContent = `✅ Importados ${count} casos "Perdido ERU".`;
+      statusEl.textContent = `✅ Importados ${count} casos nuevos. Copia la lista de Nro LPN de abajo y súbela al WMS para el Paso 2.`;
     }
   }catch(err){
     statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
@@ -4463,6 +4579,69 @@ document.getElementById("bp-import-btn").addEventListener("click", async (e)=>{
   statusEl.style.display = "block";
   btn.textContent = original;
   bpUpdateImportState();
+});
+
+document.getElementById("bp-file-wms").addEventListener("change", ()=>{
+  const f = document.getElementById("bp-file-wms").files[0];
+  document.getElementById("bp-file-wms-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bp-drop-wms").classList.toggle("filled", !!f);
+  document.getElementById("bp-wms-import-btn").disabled = !f;
+});
+/* Cruce por Nro LPN con la caja del WMS: Ubicado/Cancelado concilia solo (queda el motivo
+   real registrado), Perdido (o el LPN no aparece en la caja) sigue pendiente. Nunca toca un
+   caso que ya esté conciliado (a mano o por un cruce anterior). */
+async function bpCruceWms(file){
+  const filas = await spParseWorkbookFile(file);
+  const estadoPorLpn = {};
+  filas.forEach(fila=>{
+    const lpn = String(spBuscaCampo(fila, ["Nro LPN"])).trim();
+    if(lpn) estadoPorLpn[lpn] = String(spBuscaCampo(fila, ["Estado"])).trim();
+  });
+  const actorId = miUsuario ? miUsuario.id : null;
+  const nuevos = [];
+  let revisados = 0;
+  bpData.forEach(r=>{
+    if(bpVerificaciones[r.id]) return;
+    const estadoWms = estadoPorLpn[r.nroLpn];
+    if(!estadoWms) return;
+    revisados++;
+    const clave = estadoWms.trim().toLowerCase();
+    if(clave === "ubicado" || clave === "cancelado"){
+      nuevos.push({
+        registro_id: r.id,
+        sustento: `Conciliado automáticamente por cruce con la caja WMS — Estado: ${estadoWms}.`,
+        foto: null,
+        verificado_por_id: actorId,
+        fecha: new Date().toISOString(),
+      });
+    }
+  });
+  if(!nuevos.length) return { revisados, conciliados: 0, error: null };
+  const { error } = await sb.from("ssoma_bp_verificaciones").upsert(nuevos, { onConflict: "registro_id" });
+  return { revisados, conciliados: nuevos.length, error };
+}
+document.getElementById("bp-wms-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget; const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Cruzando…";
+  const statusEl = document.getElementById("bp-wms-import-status");
+  statusEl.style.display = "none";
+  try{
+    const file = document.getElementById("bp-file-wms").files[0];
+    const { revisados, conciliados, error } = await bpCruceWms(file);
+    if(error){
+      statusEl.textContent = "❌ No se pudo cruzar: " + error.message;
+    }else if(revisados === 0){
+      statusEl.textContent = "⚠️ Ningún Nro LPN de la caja WMS coincide con los casos pendientes.";
+    }else{
+      await bpLoadData();
+      statusEl.textContent = `✅ Se cruzaron ${revisados} casos por Nro LPN — ${conciliados} conciliados (Ubicado/Cancelado). El resto sigue pendiente.`;
+    }
+  }catch(err){
+    statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
+  }
+  statusEl.style.display = "block";
+  btn.textContent = original;
+  document.getElementById("bp-wms-import-btn").disabled = !document.getElementById("bp-file-wms").files[0];
 });
 
 let bpCurrentId = null;
