@@ -1739,7 +1739,7 @@
         <h2 class="section-title">Inventario — Auditoría Bultos Perdidos</h2>
         <span class="count-pill" id="bp-count">0 casos</span>
       </div>
-      <p class="section-desc">Casos candidatos a "Perdido" filtrados de DATA LATAM (zonas Drop, Control de Inventario 01-01, Sin Ubicación, Por ubicar). Se concilian cruzando el Nro LPN contra la caja del WMS: Ubicado o Cancelado se concilia solo, Perdido sigue pendiente.</p>
+      <p class="section-desc">Casos candidatos a "Perdido" filtrados de DATA LATAM (zonas Drop, Control de Inventario 01-01, Sin Ubicación, Por ubicar). Se concilian cruzando el Nro LPN contra la caja del WMS: Ubicado, Cancelado o Consumido se concilia solo, Perdido sigue pendiente.</p>
 
       <div class="tab-bar" id="bp-tabs">
         <button type="button" class="tab-btn active" data-tab="casos">Casos</button>
@@ -1782,7 +1782,7 @@
         <div class="import-card-head">
           <div>
             <div class="import-card-title">🔄 Paso 2 · Cruzar con caja WMS</div>
-            <div class="import-card-sub">Sube la data de cajas que descargaste del WMS con la lista de arriba. Se cruza por Nro LPN: Ubicado o Cancelado → se concilia solo; Perdido → sigue pendiente.</div>
+            <div class="import-card-sub">Sube la data de cajas que descargaste del WMS con la lista de arriba. Se cruza por Nro LPN: Ubicado, Cancelado o Consumido → se concilia solo; Perdido → sigue pendiente.</div>
           </div>
           <button type="button" class="btn btn-primary" id="bp-wms-import-btn" disabled>Cruzar y conciliar</button>
         </div>
@@ -1834,7 +1834,7 @@
         <span class="ic">📌</span>
         <div>
           Los casos que importes o concilies aquí quedan guardados de verdad (Supabase).
-          <div style="margin-top:8px;">El Paso 2 (cruce con la caja WMS) concilia solo los casos donde el WMS marca Ubicado o Cancelado — el motivo queda registrado y visible en <b>Historial</b>. Si el WMS todavía dice Perdido, o el LPN no aparece en la caja, el caso sigue pendiente en <b>Conciliación</b>, donde también puedes conciliarlo a mano con sustento.</div>
+          <div style="margin-top:8px;">El Paso 2 (cruce con la caja WMS) concilia solo los casos donde el WMS marca Ubicado, Cancelado o Consumido — el motivo queda registrado y visible en <b>Historial</b>. Si el WMS todavía dice Perdido, o el LPN no aparece en la caja, el caso sigue pendiente en <b>Conciliación</b>, donde también puedes conciliarlo a mano con sustento.</div>
           <div style="margin-top:8px;">🔁 Los casos de <b>Control de Inventario 01-01</b> vinculados al proceso Reinyectado quedan pendientes pero catalogados como <b>consulta al área de Reinyectado</b>, no como un pendiente normal.</div>
           <div style="margin-top:8px;">⚠️ Los casos de posible <b>sobre-envío</b> (a Punta Negra o una tienda) no se verifican acá todavía — esos se revisan a mano en Ordenes Cabecera, quedó pendiente definir ese cruce con el equipo.</div>
         </div>
@@ -1843,7 +1843,7 @@
 
       <!-- Conciliación Bultos Perdidos: pestaña aparte dentro del mismo panel, no un módulo distinto -->
       <div id="bp-tab-conciliacion" style="display:none;">
-        <p class="section-desc">Los casos Ubicado/Cancelado del cruce con la caja WMS (Paso 2) se concilian solos. Lo que quede pendiente acá lo puedes conciliar a mano: busca el Nro LPN en Historial Inventario y, si reaparece con movimiento, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
+        <p class="section-desc">Los casos Ubicado/Cancelado/Consumido del cruce con la caja WMS (Paso 2) se concilian solos. Lo que quede pendiente acá lo puedes conciliar a mano: busca el Nro LPN en Historial Inventario y, si reaparece con movimiento, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
 
         <div class="stats-row stats-row-3" style="margin-top:18px;">
           <div class="stat-card">
@@ -2529,7 +2529,7 @@ Ya procesa los 2 Excel reales en el navegador (no hay datos de ejemplo) — pero
       <div class="help-block">
         <h4>📦 Inventario</h4>
         <p><b>Auditoría Shortpick</b>: importa los reportes del WMS, concilia faltantes y consulta el historial.</p>
-        <p><b>Auditoría Bultos Perdidos</b>: importa DATA LATAM (filtrado por Ubicación/Proceso), copia la lista de Nro LPN, sube la caja del WMS y se concilia sola cuando el WMS marca Ubicado o Cancelado — lo que sigue en Perdido queda pendiente para conciliar a mano.</p>
+        <p><b>Auditoría Bultos Perdidos</b>: importa DATA LATAM (filtrado por Ubicación/Proceso), copia la lista de Nro LPN, sube la caja del WMS y se concilia sola cuando el WMS marca Ubicado, Cancelado o Consumido — lo que sigue en Perdido queda pendiente para conciliar a mano.</p>
         <p><b>Auditoría Sin Ubicación</b> y <b>Control de Bolsa</b> también están conectados de verdad — todo lo que importes o concilies en Inventario queda guardado.</p>
       </div>
       </div>
@@ -4289,7 +4289,7 @@ document.getElementById("bolsa-detalle-toggle").addEventListener("click", (e)=>{
    Flujo real de 2 archivos: (1) DATA LATAM se importa filtrando por Ubicación (whitelist de
    zonas Drop/Control de Inventario) o Proceso (Sin Ubicación/Por ubicar) — arma la lista de
    Nro LPN candidatos a "Perdido" para buscar en el WMS; (2) se sube la caja del WMS y se
-   cruza por Nro LPN: Ubicado/Cancelado concilia solo, Perdido sigue pendiente. También se
+   cruza por Nro LPN: Ubicado/Cancelado/Consumido concilia solo, Perdido sigue pendiente. También se
    puede conciliar a mano (sustento + foto opcional) para lo que no matchea. */
 let bpData = [];
 let bpVerificaciones = {};
@@ -4587,7 +4587,7 @@ document.getElementById("bp-file-wms").addEventListener("change", ()=>{
   document.getElementById("bp-drop-wms").classList.toggle("filled", !!f);
   document.getElementById("bp-wms-import-btn").disabled = !f;
 });
-/* Cruce por Nro LPN con la caja del WMS: Ubicado/Cancelado concilia solo (queda el motivo
+/* Cruce por Nro LPN con la caja del WMS: Ubicado/Cancelado/Consumido concilia solo (queda el motivo
    real registrado), Perdido (o el LPN no aparece en la caja) sigue pendiente. Nunca toca un
    caso que ya esté conciliado (a mano o por un cruce anterior). */
 async function bpCruceWms(file){
@@ -4606,7 +4606,7 @@ async function bpCruceWms(file){
     if(!estadoWms) return;
     revisados++;
     const clave = estadoWms.trim().toLowerCase();
-    if(clave === "ubicado" || clave === "cancelado"){
+    if(clave === "ubicado" || clave === "cancelado" || clave === "consumido"){
       nuevos.push({
         registro_id: r.id,
         sustento: `Conciliado automáticamente por cruce con la caja WMS — Estado: ${estadoWms}.`,
@@ -4634,7 +4634,7 @@ document.getElementById("bp-wms-import-btn").addEventListener("click", async (e)
       statusEl.textContent = "⚠️ Ningún Nro LPN de la caja WMS coincide con los casos pendientes.";
     }else{
       await bpLoadData();
-      statusEl.textContent = `✅ Se cruzaron ${revisados} casos por Nro LPN — ${conciliados} conciliados (Ubicado/Cancelado). El resto sigue pendiente.`;
+      statusEl.textContent = `✅ Se cruzaron ${revisados} casos por Nro LPN — ${conciliados} conciliados (Ubicado/Cancelado/Consumido). El resto sigue pendiente.`;
     }
   }catch(err){
     statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
