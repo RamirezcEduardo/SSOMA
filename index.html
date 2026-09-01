@@ -3966,13 +3966,18 @@ const BOLSA_REGLAS_CONSIDERA = {
   "CONTEO CICLICO|AJUSTE RESERVA DETALLE LPN": true,
   "CONTEO CICLICO|AJUSTE RESERVA LPN": true,
   "CONTEO CICLICO|SHORTPICK": true,
+  "AJUSTE LPN|CREA LPN AUT": true,
   "AJUSTE LPN|AJUSTE SIEMBRA": false,
   "AJUSTE LPN|CREA LPN MULTISKU": false,
   "AJUSTE LPN|CREACION SUIZO": false,
   "AJUSTE LPN|OBSERVADO": false,
   "CONTEO CICLICO|OBSERVADO": false,
+  "AJUSTE LPN|CREACION FAPE MAYORISTA": false,
+  "CONTEO CICLICO|CREACION SUIZO": false,
 };
-/* true/false = regla conocida. undefined = motivo nuevo que el auditor no había usado antes:
+/* Actualizado con las hojas "Considerar"/"No considerar" de Dif_Santa_Anita_Q3_2026
+   (revisar cada trimestre contra el archivo del auditor, las reglas pueden cambiar).
+   true/false = regla conocida. undefined = motivo nuevo que el auditor no había usado antes:
    se cuenta como "sí considera" por seguridad (mejor de más que ocultar un cobro real),
    pero se marca para que lo revisen y agreguen la regla. */
 function bolsaConsidera(tipo, motivo){
