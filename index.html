@@ -350,8 +350,8 @@
   button.section-subhead.collapsible-toggle:hover{color:var(--text);}
   .collapsible-chevron{font-size:12px;transition:transform .18s ease;}
   button.section-subhead.collapsible-toggle[aria-expanded="false"] .collapsible-chevron{transform:rotate(-90deg);}
-  .collapsible-body{overflow:hidden;max-height:600px;transition:max-height .2s ease;}
-  button.section-subhead.collapsible-toggle[aria-expanded="false"] + .collapsible-body{max-height:0;border-width:0;}
+  .collapsible-body{overflow-y:auto;overflow-x:auto;max-height:600px;transition:max-height .2s ease;}
+  button.section-subhead.collapsible-toggle[aria-expanded="false"] + .collapsible-body{max-height:0;overflow:hidden;border-width:0;}
   .table-wrap{
     overflow-x:auto;
     border:1px solid var(--border);
