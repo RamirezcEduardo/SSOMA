@@ -515,6 +515,8 @@
     border-color:var(--red);
     box-shadow:0 0 0 3px rgba(227,30,36,.12);
   }
+  input[readonly]{background:var(--panel-alt);color:var(--muted);cursor:default;}
+  input[readonly]:focus{border-color:var(--border);box-shadow:none;}
   textarea{resize:vertical;min-height:80px;font-family:'Inter',sans-serif;}
 
   .toggle-group{display:flex;gap:10px;}
@@ -1119,13 +1121,12 @@
       <button type="button" class="navgroup-header" id="navgroup-ssoma-toggle" aria-expanded="true">
         <span class="navgroup-icon">🛡️</span>
         <span class="navgroup-title">SSOMA</span>
-        <span class="navgroup-count" id="navgroup-ssoma-count">4</span>
+        <span class="navgroup-count" id="navgroup-ssoma-count">3</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-ssoma-body">
         <button class="navitem active" data-view="racs"><span class="dot" style="background:#E31E24;"></span><span class="label">RACS</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
-        <button class="navitem" data-view="levantamiento"><span class="dot" style="background:#16A34A;"></span><span class="label">Informes · Levantamiento</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
       </div>
 
@@ -1178,7 +1179,10 @@
     <section class="panel active" id="panel-racs">
       <div class="section-head">
         <h2 class="section-title">Reporte de Seguridad — RACS</h2>
-        <span class="count-pill" id="racs-count">0 reportes</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="count-pill" id="racs-count">0 reportes</span>
+          <button type="button" class="btn btn-ghost" id="racs-ir-levantamiento" style="padding:6px 12px;font-size:12px;">📋 Levantamiento</button>
+        </div>
       </div>
       <p class="section-desc">Actos y Condiciones Subestándar. Reporta de forma rápida cualquier acto inseguro o condición peligrosa detectada en planta.</p>
 
@@ -1239,7 +1243,7 @@
           </div>
           <div class="field">
             <label>Nombre(s) del trabajador observado<span class="req">*</span></label>
-            <input type="text" id="f-trabajador" placeholder="Nombre completo">
+            <select id="f-trabajador"></select>
           </div>
           <div class="field">
             <label>Descripción detallada<span class="req">*</span></label>
@@ -1335,11 +1339,11 @@
         <div class="grid2">
           <div class="field">
             <label>Nombre del colaborador evaluado<span class="req">*</span></label>
-            <input type="text" id="c-colaborador" placeholder="Nombre completo" required>
+            <select id="c-colaborador" required></select>
           </div>
           <div class="field">
             <label>Área de trabajo del colaborador<span class="req">*</span></label>
-            <input type="text" id="c-area" placeholder="Ej. Despacho B2C" required>
+            <select id="c-area" required></select>
           </div>
         </div>
         <div class="grid2">
@@ -1472,7 +1476,7 @@
           <div class="grid2">
             <div class="field">
               <label>Cliente / cuenta<span class="req">*</span></label>
-              <input type="text" id="acc-cliente" placeholder="Ej. IND &amp; LOG">
+              <input type="text" id="acc-cliente" value="FP mayorista" readonly>
             </div>
             <div class="field">
               <label>Sede / ubicación<span class="req">*</span></label>
@@ -3279,6 +3283,11 @@ async function loadCatalogos(){
   fillSelect(document.getElementById("f-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("f-ocurrencia"), ocurrenciasCat, "Selecciona la ocurrencia", "descripcion", "descripcion");
   fillSelect(document.getElementById("f-condicion"), condicionesCat, "Selecciona la condición", "descripcion", "descripcion");
+  // Trabajador observado/colaborador evaluado guardan el nombre tal cual (no un id) —
+  // el value del <option> es el propio nombre_completo, igual que el texto libre de antes.
+  fillSelect(document.getElementById("f-trabajador"), personalTodos, "Selecciona al trabajador", "nombre_completo", "nombre_completo");
+  fillSelect(document.getElementById("c-colaborador"), personalTodos, "Selecciona al colaborador", "nombre_completo", "nombre_completo");
+  fillSelect(document.getElementById("c-area"), ubicacionesCat, "Selecciona un área", "nombre", "nombre");
   fillSelect(document.getElementById("c-supervisor"), personalSupervisores, "Selecciona un supervisor", "id", "nombre_completo");
   fillSelect(document.getElementById("acc-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("acc-reportante"), equipoSsomaCat, "Selecciona quién reporta", "id", "nombre_completo");
@@ -3317,14 +3326,19 @@ function renderChecklist(){
 renderChecklist();
 
 // nav switching
+function irAVista(view){
+  document.querySelectorAll(".navitem").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  const item = document.querySelector(`.navitem[data-view="${view}"]`);
+  if(item) item.classList.add("active");
+  document.getElementById("panel-"+view).classList.add("active");
+}
 document.querySelectorAll(".navitem").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".navitem").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById("panel-"+btn.dataset.view).classList.add("active");
-  });
+  btn.addEventListener("click", ()=> irAVista(btn.dataset.view));
 });
+// Levantamiento ya no tiene ítem propio en el menú (se fusionó visualmente con RACS,
+// que es de donde nace todo reporte pendiente de levantamiento) — se entra desde este botón.
+document.getElementById("racs-ir-levantamiento").addEventListener("click", ()=> irAVista("levantamiento"));
 
 const allNavgroupToggles = document.querySelectorAll(".navgroup-header");
 allNavgroupToggles.forEach(navgroupToggle=>{
