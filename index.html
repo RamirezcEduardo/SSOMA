@@ -7260,13 +7260,19 @@ function accAddInvolucrado(nombre){
 }
 function accRenderInvolDropdown(query){
   const q = query.trim().toLowerCase();
-  if(q === ""){ accInvolDropdown.style.display = "none"; return; }
   const nombres = personalTodos.map(p => p.nombre_completo);
-  const matches = nombres.filter(n => !accInvolucrados.includes(n) && n.toLowerCase().includes(q)).slice(0, 8);
+  // Con el campo vacío se muestra TODO el personal disponible (todavía no agregado) — no
+  // hace falta escribir nada para ver las opciones, el dropdown ya scrollea si son muchas.
+  const disponibles = nombres.filter(n => !accInvolucrados.includes(n));
+  const matches = q === "" ? disponibles : disponibles.filter(n => n.toLowerCase().includes(q));
   let html = matches.map(n => `<div class="combo-option" data-n="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join("");
-  const exact = nombres.some(n => n.toLowerCase() === q);
-  if(!exact) html += `<div class="combo-option freetext" data-freetext="1">+ Agregar "${escapeHtml(query.trim())}" (no está en la lista — tercero/proveedor)</div>`;
-  if(matches.length === 0 && exact) html = `<div class="combo-empty">Ya está agregado.</div>`;
+  if(q !== ""){
+    const exact = nombres.some(n => n.toLowerCase() === q);
+    if(!exact) html += `<div class="combo-option freetext" data-freetext="1">+ Agregar "${escapeHtml(query.trim())}" (no está en la lista — tercero/proveedor)</div>`;
+    if(matches.length === 0 && exact) html = `<div class="combo-empty">Ya está agregado.</div>`;
+  } else if(matches.length === 0){
+    html = `<div class="combo-empty">No hay más personal disponible.</div>`;
+  }
   accInvolDropdown.innerHTML = html;
   accInvolDropdown.style.display = "block";
   accInvolDropdown.querySelectorAll(".combo-option[data-n]").forEach(opt => opt.addEventListener("click", () => accAddInvolucrado(opt.dataset.n)));
@@ -7274,7 +7280,7 @@ function accRenderInvolDropdown(query){
   if(ft) ft.addEventListener("click", () => accAddInvolucrado(accInvolSearch.value.trim()));
 }
 accInvolSearch.addEventListener("input", e => accRenderInvolDropdown(e.target.value));
-accInvolSearch.addEventListener("focus", e => { if(e.target.value) accRenderInvolDropdown(e.target.value); });
+accInvolSearch.addEventListener("focus", e => accRenderInvolDropdown(e.target.value));
 document.addEventListener("click", e => { if(!e.target.closest("#acc-involucrado-widget")) accInvolDropdown.style.display = "none"; });
 
 /* ---- Factores (causas básicas): numeración automática 2/2.2/2.3… y 3/3.2/3.3… ---- */
