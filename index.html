@@ -1111,7 +1111,10 @@
         <p class="subtitle">Registro y consulta de los reportes de campo de distintos procesos: Seguridad, Salud Ocupacional, Medio Ambiente, Inventario y auditorías operativas. Cada formulario replica la estructura oficial usada en los Google Forms del equipo.</p>
       </div>
     </div>
-    <div class="header-time" id="header-time"><span class="header-time-icon">🕐</span><span id="header-time-text"></span></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-ghost" id="btn-actualizar" title="Actualizar todos los datos" style="padding:8px 14px;font-size:12px;">🔄 Actualizar</button>
+      <div class="header-time" id="header-time"><span class="header-time-icon">🕐</span><span id="header-time-text"></span></div>
+    </div>
   </div>
 </header>
 
@@ -7672,6 +7675,16 @@ async function ssomaNotificarPush(usuarioIds, titulo, cuerpo, datos, color){
     await sb.functions.invoke("ssoma-fcm-send", { body: { usuario_ids: ids, titulo, cuerpo, datos: datos || {}, color } });
   }catch(e){ console.warn("No se pudo enviar la notificación push:", e && e.message); }
 }
+
+// Recarga completa la app (sesión se mantiene por el token guardado en localStorage) —
+// más simple y confiable que refrescar módulo por módulo, ya que cada uno carga sus
+// propios datos por su cuenta (Inventario, Bolsa, etc. no pasan por init()).
+document.getElementById("btn-actualizar").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "Actualizando…";
+  location.reload();
+});
 
 checkSession();
 </script>
