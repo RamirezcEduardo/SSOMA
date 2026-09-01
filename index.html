@@ -402,6 +402,10 @@
   .import-drop-title{font-size:12.5px;font-weight:700;color:var(--text);}
   .import-drop-hint{font-size:11px;color:var(--muted);}
   .import-drop.filled .import-drop-hint{color:var(--green);font-weight:600;}
+  .wizard-steps{display:flex;gap:8px;margin:14px 0 16px;flex-wrap:wrap;}
+  .wizard-step{font-size:11.5px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:20px;background:var(--panel);border:1px solid var(--border);}
+  .wizard-step.active{color:var(--red);border-color:var(--red);background:var(--red-tint);}
+  .wizard-step.done{color:var(--green);border-color:var(--green);}
   .import-status{
     margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;
     background:var(--green-tint,rgba(22,163,74,.1));color:var(--green);border:1px solid var(--green);
@@ -2059,6 +2063,80 @@
         <div class="import-status" id="bolsa-import-status" style="display:none;"></div>
       </div>
 
+      <div class="import-card" id="bolsa-wms-wizard">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📦 Respaldo interno WMS (Plantilla_CD)</div>
+            <div class="import-card-sub">Sube tu export quincenal del WMS ("Plantilla_CD", hojas DATA + Motivos + Proveedor/VALORIZADO) para guardarlo como respaldo permanente en Supabase — sustenta tus disputas aunque cierres la sesión.</div>
+          </div>
+        </div>
+
+        <div class="wizard-steps" id="bolsa-wms-steps">
+          <span class="wizard-step active" data-step="1">① Archivo</span>
+          <span class="wizard-step" data-step="2">② Vista previa</span>
+          <span class="wizard-step" data-step="3">③ Confirmar</span>
+        </div>
+
+        <!-- Paso 1: archivo -->
+        <div id="bolsa-wms-step-1">
+          <label class="import-drop" for="bolsa-wms-file" id="bolsa-wms-drop" style="max-width:420px;">
+            <input type="file" id="bolsa-wms-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Export "Plantilla_CD" del WMS</span>
+            <span class="import-drop-hint" id="bolsa-wms-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+            <span class="import-drop-hint" style="font-size:11px;">Debe tener las hojas DATA, Motivos y Proveedor (o VALORIZADO)</span>
+          </label>
+          <div style="margin-top:14px;">
+            <button type="button" class="btn btn-primary" id="bolsa-wms-analizar-btn" disabled>Analizar archivo →</button>
+          </div>
+          <div class="import-status" id="bolsa-wms-analizar-status" style="display:none;"></div>
+        </div>
+
+        <!-- Paso 2: vista previa -->
+        <div id="bolsa-wms-step-2" style="display:none;">
+          <div class="stats-row stats-row-4" style="margin-top:6px;">
+            <div class="stat-card">
+              <div class="stat-label">Filas leídas</div>
+              <div class="stat-value" id="bolsa-wms-prev-total">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Clasificadas</div>
+              <div class="stat-value" id="bolsa-wms-prev-clasif" style="color:var(--green);">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Sin clasificar ⚠</div>
+              <div class="stat-value" id="bolsa-wms-prev-sinclasif" style="color:#B45309;">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total valorizado</div>
+              <div class="stat-value" id="bolsa-wms-prev-valor">S/ 0.00</div>
+            </div>
+          </div>
+          <div class="help-tip" id="bolsa-wms-prev-warning" style="margin-top:14px;display:none;">
+            <span class="ic">⚠️</span>
+            <div>Hay filas sin motivo clasificado (la combinación Historial de actividad + Nombre pantalla + Cod Razon no está en la hoja Motivos) — se importan igual con motivo vacío, pero conviene revisar si falta agregarla a esa hoja.</div>
+          </div>
+          <div class="table-wrap" style="margin-top:14px;max-height:360px;overflow-y:auto;">
+            <table class="data-table" id="bolsa-wms-prev-table">
+              <thead><tr><th>Fecha</th><th>Nro LPN</th><th>Cod Alternat</th><th>Producto</th><th>Motivo</th><th>Un Ajust</th><th>Valorizado</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-ghost" id="bolsa-wms-volver-btn">‹ Volver</button>
+            <button type="button" class="btn btn-primary" id="bolsa-wms-confirmar-btn">Confirmar e importar a Supabase →</button>
+          </div>
+        </div>
+
+        <!-- Paso 3: confirmación -->
+        <div id="bolsa-wms-step-3" style="display:none;">
+          <div class="import-status" id="bolsa-wms-import-status" style="display:none;"></div>
+          <div style="margin-top:14px;">
+            <button type="button" class="btn btn-ghost" id="bolsa-wms-nuevo-btn">Importar otro archivo</button>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
         <div class="field" style="min-width:130px;margin-bottom:0;">
           <label>Semana</label>
@@ -2152,7 +2230,7 @@ Ya procesa los 2 Excel reales en el navegador (no hay datos de ejemplo) — pero
           <div style="margin-top:8px;">La regla <b>Considerar / No considerar</b> es la que ya aplica el área auditora — se aplica tal cual sobre lo que subas para armar la cascada de arriba.</div>
           <div style="margin-top:8px;">📦 El casillero "Ajustes de inventario" solo necesita el <b>bruto del WMS</b> (sin Motivo/Área/Origen/Valorizado calculados) — la app calcula el Motivo con las reglas de la hoja Motivos de tu Plantilla CD 9053.</div>
           <div style="margin-top:8px;">🔗 El auditor cobra lo que <b>no encontró</b> (lo asume perdido). Si tu WMS registra un ajuste <b>positivo</b> (sí se encontró) del mismo SKU en esa semana, esa línea se marca sola como <b>"En disputa"</b> al importar — es tu evidencia para decir "no me cobres esto". Sin ese registro no se marca nada: no hay con qué sustentar la disputa.</div>
-          <div style="margin-top:8px;">⚠️ Pendiente de conectar a Supabase: el <b>Valorizado</b> del bruto del WMS (necesita el maestro de 45,385 SKU con costo/proveedor, muy pesado para cargarlo en el navegador) y guardar el historial entre sesiones.</div>
+          <div style="margin-top:8px;">📥 Para guardar el respaldo del WMS de forma permanente (no solo mientras tienes la página abierta), usa la tarjeta <b>"Respaldo interno WMS (Plantilla_CD)"</b> de más arriba — ahí subes el export quincenal completo (hojas DATA + Motivos + Proveedor/VALORIZADO) y queda guardado en Supabase con Motivo y Valorizado ya calculados.</div>
           <div style="margin-top:8px;">Usa <b>Disputar</b> / <b>Descartar</b> / <b>Aceptar</b> por fila para ver cómo cambia la cascada — es lo que reduce el "Neto final a pagar".</div>
         </div>
       </div>
@@ -4447,6 +4525,225 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
     btn.textContent = originalLabel;
     btn.disabled = false;
   }
+});
+
+/* ============ Respaldo interno WMS (Plantilla_CD) -> ssoma_bolsa_wms_lineas ============
+   Wizard de 3 pasos, self-contained: la clasificación motivo y el costo se leen del propio
+   archivo que se sube (hojas Motivos y Proveedor/VALORIZADO) — no depende de catálogos
+   precargados en Supabase ni de los mapas hardcodeados BOLSA_WMS_* de arriba (esos son
+   para el cruce en memoria contra el archivo del auditor, esto es el respaldo persistente). */
+
+function bolsaWmsSetStep(n){
+  document.querySelectorAll("#bolsa-wms-steps .wizard-step").forEach(el=>{
+    const step = parseInt(el.dataset.step, 10);
+    el.classList.toggle("active", step === n);
+    el.classList.toggle("done", step < n);
+  });
+  [1,2,3].forEach(i => document.getElementById("bolsa-wms-step-"+i).style.display = (i === n ? "block" : "none"));
+}
+
+/* Hoja Motivos: solo las columnas A-E son confiables (Historial de actividad, Nombre
+   pantalla, Cod Razon, OBS, Motivo) — el resto de esa hoja está desalineado. Se lee por
+   posición, no por nombre de columna, y se ubica la fila de encabezado buscando dónde
+   aparece "Historial de actividad" en la columna A. */
+function bolsaWmsBuildMotivosMap(wb){
+  const nombreHoja = wb.SheetNames.find(n => /motivo/i.test(n)) || wb.SheetNames[0];
+  const json = XLSX.utils.sheet_to_json(wb.Sheets[nombreHoja], { header:1, raw:true, defval:"" });
+  const headerIdx = json.findIndex(row => bolsaNormalizeHeader(row[0]) === "historial de actividad");
+  if(headerIdx === -1) return { map: new Map(), sheetName: nombreHoja, ok:false };
+  const map = new Map();
+  for(let i = headerIdx+1; i < json.length; i++){
+    const row = json[i];
+    const historial = String(row[0] || "").trim();
+    const pantalla = String(row[1] || "").trim();
+    const codRazon = String(row[2] || "").trim();
+    const motivo = String(row[4] || "").trim();
+    if(!historial && !pantalla && !codRazon) continue;
+    if(!motivo) continue;
+    map.set([historial, pantalla, codRazon].join("||"), motivo);
+  }
+  return { map, sheetName: nombreHoja, ok: map.size > 0 };
+}
+
+/* Hoja Proveedor (o VALORIZADO como alternativa) -> mapa Cod Alternat -> costo unitario. */
+function bolsaWmsBuildCostosMap(wb){
+  let hoja = bolsaPickSheet(wb, { cod: ["COD_PRODUCTO"], costo: ["COSTO"] });
+  if(!hoja) hoja = bolsaPickSheet(wb, { cod: ["Material"], costo: ["Precio"] });
+  const map = new Map();
+  if(!hoja) return { map, sheetName: "" };
+  hoja.rows.forEach(row => {
+    const cod = String(row[hoja.cols.cod] || "").trim();
+    const costo = parseFloat(row[hoja.cols.costo]);
+    if(cod && !isNaN(costo)) map.set(cod, costo);
+  });
+  return { map, sheetName: hoja.sheetName };
+}
+
+function bolsaWmsSemanaIso(date){
+  if(!date) return "";
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const isoWeek = 1 + Math.round((d - firstThursday) / (7*24*3600*1000));
+  return d.getUTCFullYear() + "-W" + String(isoWeek).padStart(2, "0");
+}
+function bolsaWmsTrimestre(mesNum){ return "Q" + (Math.floor((mesNum - 1) / 3) + 1); }
+
+let bolsaWmsFilas = [];
+let bolsaWmsArchivoNombre = "";
+
+document.getElementById("bolsa-wms-file").addEventListener("change", ()=>{
+  const f = document.getElementById("bolsa-wms-file").files[0];
+  document.getElementById("bolsa-wms-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bolsa-wms-drop").classList.toggle("filled", !!f);
+  document.getElementById("bolsa-wms-analizar-btn").disabled = !f;
+});
+
+document.getElementById("bolsa-wms-analizar-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Analizando…";
+  const statusEl = document.getElementById("bolsa-wms-analizar-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+  try{
+    const file = document.getElementById("bolsa-wms-file").files[0];
+    const wb = await bolsaReadWorkbook(file);
+
+    const hojaData = bolsaPickSheet(wb, {
+      historial: ["Historial de actividad"], nroLpn: ["Nro LPN"], producto: ["Producto"],
+      codAlternat: ["Cod Alternat"], descripcion: ["Descripcion", "Descripción"],
+      ubicacion: ["Ubicacion", "Ubicación"], fecha: ["Fe y Hr Crea"],
+      usuario: ["Usuario creado"], pantalla: ["Nombre pantalla"], codRazon: ["Cod Razon"],
+      unAjust: ["Un Ajust"],
+    });
+    if(!hojaData) throw new Error(`No encontré en "${file.name}" una hoja DATA con las columnas Historial de actividad, Nro LPN, Producto, Cod Alternat, Descripcion, Ubicacion, Fe y Hr Crea, Usuario creado, Nombre pantalla, Cod Razon y Un Ajust.`);
+
+    const motivos = bolsaWmsBuildMotivosMap(wb);
+    if(!motivos.ok) throw new Error(`No encontré la hoja Motivos (con Historial de actividad en la columna A) en "${file.name}".`);
+
+    const costos = bolsaWmsBuildCostosMap(wb);
+
+    bolsaWmsFilas = [];
+    bolsaWmsArchivoNombre = file.name;
+    let sinClasificar = 0;
+    let totalValorizado = 0;
+    hojaData.rows.forEach(row => {
+      const codAlternat = String(row[hojaData.cols.codAlternat] || "").trim();
+      if(!codAlternat) return;
+      const unAjust = parseFloat(row[hojaData.cols.unAjust]);
+      if(isNaN(unAjust)) return;
+      const historial = String(row[hojaData.cols.historial] || "").trim();
+      const pantalla = String(row[hojaData.cols.pantalla] || "").trim();
+      const codRazon = String(row[hojaData.cols.codRazon] || "").trim();
+      const motivo = motivos.map.get([historial, pantalla, codRazon].join("||")) || "";
+      if(!motivo) sinClasificar++;
+      const costo = costos.map.get(codAlternat);
+      const valorActual = costo != null ? unAjust * costo : null;
+      if(valorActual != null) totalValorizado += valorActual;
+      const fecha = bolsaToDate(row[hojaData.cols.fecha]);
+      bolsaWmsFilas.push({
+        historial_actividad: historial,
+        nro_lpn: String(row[hojaData.cols.nroLpn] || "").trim(),
+        cod_alternat: codAlternat,
+        producto: String(row[hojaData.cols.producto] || "").trim(),
+        descripcion: String(row[hojaData.cols.descripcion] || "").trim(),
+        ubicacion: String(row[hojaData.cols.ubicacion] || "").trim(),
+        fecha_crea: fecha ? fecha.toISOString() : null,
+        semana: bolsaWmsSemanaIso(fecha),
+        mes: fecha ? String(fecha.getUTCMonth()+1).padStart(2,"0") : "",
+        anio: fecha ? String(fecha.getUTCFullYear()) : "",
+        trimestre: fecha ? bolsaWmsTrimestre(fecha.getUTCMonth()+1) : "",
+        usuario_creado: String(row[hojaData.cols.usuario] || "").trim(),
+        nombre_pantalla: pantalla,
+        cod_razon: codRazon,
+        motivo,
+        area: "",
+        origen: BOLSA_WMS_MOTIVO_ORIGEN[motivo] || "",
+        un_ajust: unAjust,
+        valor_actual: valorActual,
+        proveedor: costo != null ? costos.sheetName : "",
+        archivo_origen: file.name,
+        importado_en: new Date().toISOString(),
+      });
+    });
+
+    if(!bolsaWmsFilas.length) throw new Error("No se encontraron filas válidas en la hoja DATA (revisa que Cod Alternat y Un Ajust tengan datos).");
+
+    document.getElementById("bolsa-wms-prev-total").textContent = bolsaWmsFilas.length;
+    document.getElementById("bolsa-wms-prev-clasif").textContent = bolsaWmsFilas.length - sinClasificar;
+    document.getElementById("bolsa-wms-prev-sinclasif").textContent = sinClasificar;
+    document.getElementById("bolsa-wms-prev-valor").textContent = "S/ " + totalValorizado.toFixed(2);
+    document.getElementById("bolsa-wms-prev-warning").style.display = sinClasificar ? "flex" : "none";
+
+    const tbody = document.querySelector("#bolsa-wms-prev-table tbody");
+    tbody.innerHTML = bolsaWmsFilas.slice(0, 50).map(r => `
+      <tr>
+        <td>${escapeHtml(r.fecha_crea ? r.fecha_crea.slice(0,10) : "")}</td>
+        <td>${escapeHtml(r.nro_lpn)}</td>
+        <td>${escapeHtml(r.cod_alternat)}</td>
+        <td>${escapeHtml(r.producto)}</td>
+        <td>${r.motivo ? escapeHtml(r.motivo) : '<span style="color:#B45309;">⚠ sin clasificar</span>'}</td>
+        <td class="num">${r.un_ajust}</td>
+        <td class="num">${r.valor_actual != null ? r.valor_actual.toFixed(2) : "—"}</td>
+      </tr>`).join("") + (bolsaWmsFilas.length > 50 ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);">… y ${bolsaWmsFilas.length - 50} filas más (se importan todas)</td></tr>` : "");
+
+    bolsaWmsSetStep(2);
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("bolsa-wms-file").files[0];
+  }
+});
+
+document.getElementById("bolsa-wms-volver-btn").addEventListener("click", ()=> bolsaWmsSetStep(1));
+
+document.getElementById("bolsa-wms-confirmar-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  document.getElementById("bolsa-wms-volver-btn").disabled = true;
+  bolsaWmsSetStep(3);
+  const statusEl = document.getElementById("bolsa-wms-import-status");
+  statusEl.className = "import-status";
+  statusEl.style.display = "block";
+  try{
+    const LOTE = 500;
+    let importados = 0;
+    for(let i = 0; i < bolsaWmsFilas.length; i += LOTE){
+      const lote = bolsaWmsFilas.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_bolsa_wms_lineas").insert(lote);
+      if(error) throw new Error(error.message);
+      importados += lote.length;
+      statusEl.textContent = `Importando… ${importados}/${bolsaWmsFilas.length}`;
+    }
+    statusEl.textContent = `✅ Importado: ${importados} líneas de "${bolsaWmsArchivoNombre}" guardadas en Supabase como respaldo permanente.`;
+    statusEl.className = "import-status success";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+  }finally{
+    btn.disabled = false;
+    document.getElementById("bolsa-wms-volver-btn").disabled = false;
+  }
+});
+
+document.getElementById("bolsa-wms-nuevo-btn").addEventListener("click", ()=>{
+  bolsaWmsFilas = [];
+  bolsaWmsArchivoNombre = "";
+  document.getElementById("bolsa-wms-file").value = "";
+  document.getElementById("bolsa-wms-file-name").textContent = "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bolsa-wms-drop").classList.remove("filled");
+  document.getElementById("bolsa-wms-analizar-btn").disabled = true;
+  document.getElementById("bolsa-wms-analizar-status").style.display = "none";
+  bolsaWmsSetStep(1);
 });
 
 document.getElementById("bolsa-motivo-toggle").addEventListener("click", (e)=>{
