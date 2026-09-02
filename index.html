@@ -4771,8 +4771,8 @@ function bpRender(){
   bpRenderLpnCard();
   const rows = bpFiltered();
   document.getElementById("bp-count").textContent = rows.length + (rows.length===1 ? " caso" : " casos");
-  const perdidos = bpData.filter(r=>!bpVerificaciones[r.id]);
-  const ubicados = bpData.filter(r=>bpVerificaciones[r.id]);
+  const perdidos = rows.filter(r=>!bpVerificaciones[r.id]);
+  const ubicados = rows.filter(r=>bpVerificaciones[r.id]);
   document.getElementById("bp-stat-total").textContent = perdidos.length;
   document.getElementById("bp-stat-valorizado").textContent = "S/ " + perdidos.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
   document.getElementById("bp-stat-ubicados").textContent = ubicados.length;
@@ -5209,8 +5209,8 @@ function suFiltered(){
 function suRender(){
   const rows = suFiltered();
   document.getElementById("su-count").textContent = rows.length + (rows.length===1 ? " caso" : " casos");
-  const pendientes = suData.filter(r=>!suVerificaciones[r.id]);
-  const ubicados = suData.filter(r=>suVerificaciones[r.id]);
+  const pendientes = rows.filter(r=>!suVerificaciones[r.id]);
+  const ubicados = rows.filter(r=>suVerificaciones[r.id]);
   document.getElementById("su-stat-total").textContent = pendientes.length;
   document.getElementById("su-stat-valorizado").textContent = "S/ " + pendientes.reduce((s,r)=>s+(r.valorizado||0),0).toFixed(2);
   document.getElementById("su-stat-ubicados").textContent = ubicados.length;
