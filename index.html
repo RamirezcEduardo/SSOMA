@@ -1124,13 +1124,14 @@
       <button type="button" class="navgroup-header" id="navgroup-ssoma-toggle" aria-expanded="true">
         <span class="navgroup-icon">🛡️</span>
         <span class="navgroup-title">SSOMA</span>
-        <span class="navgroup-count" id="navgroup-ssoma-count">3</span>
+        <span class="navgroup-count" id="navgroup-ssoma-count">4</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-ssoma-body">
         <button class="navitem active" data-view="racs"><span class="dot" style="background:#E31E24;"></span><span class="label">RACS</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="comportamental"><span class="dot" style="background:#2563EB;"></span><span class="label">Evaluación comportamental</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="accidentes"><span class="dot" style="background:#F59E0B;"></span><span class="label">Accidentes / Incidentes</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="charla5min"><span class="dot" style="background:#16A34A;"></span><span class="label">Charla de 5 Minutos</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-inventario-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -1215,7 +1216,7 @@
           </div>
           <div class="field">
             <label>Fecha<span class="req">*</span></label>
-            <input type="date" id="f-fecha" required>
+            <input type="date" id="f-fecha" required readonly>
           </div>
         </div>
 
@@ -1336,7 +1337,7 @@
           </div>
           <div class="field">
             <label>Fecha<span class="req">*</span></label>
-            <input type="date" id="c-fecha" required>
+            <input type="date" id="c-fecha" required readonly>
           </div>
         </div>
         <div class="grid2">
@@ -1468,7 +1469,7 @@
           <div class="grid2">
             <div class="field">
               <label>Fecha<span class="req">*</span></label>
-              <input type="date" id="acc-fecha" required>
+              <input type="date" id="acc-fecha" required readonly>
             </div>
             <div class="field">
               <label>Reportado por (equipo SSOMA)<span class="req">*</span></label>
@@ -1557,6 +1558,53 @@
       <div class="acc-view" id="acc-view-informes">
         <div id="acc-informes-list"></div>
       </div>
+    </section>
+
+    <!-- CHARLA DE 5 MINUTOS PANEL -->
+    <section class="panel" id="panel-charla5min">
+      <div class="section-head">
+        <h2 class="section-title">Charla de 5 Minutos — Evidencia</h2>
+        <span class="count-pill" id="charla-count">0 registradas</span>
+      </div>
+      <p class="section-desc">Sube la evidencia fotográfica de cada charla de seguridad de 5 minutos dictada en planta — no confundir con la encuesta de satisfacción, esto es el respaldo de que se dictó.</p>
+
+      <form class="report-form" id="charla-form">
+        <div class="grid2">
+          <div class="field">
+            <label>Fecha<span class="req">*</span></label>
+            <input type="date" id="charla-fecha" required readonly>
+          </div>
+          <div class="field">
+            <label>Responsable / Quién dictó la charla<span class="req">*</span></label>
+            <select id="charla-responsable" required></select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Tema tratado<span class="req">*</span></label>
+            <input type="text" id="charla-tema" placeholder="Ej. Uso correcto de EPP">
+          </div>
+          <div class="field">
+            <label>Ubicación<span class="req">*</span></label>
+            <select id="charla-ubicacion" required></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Evidencia fotográfica<span class="req">*</span> <span class="hint" style="display:inline;">(hasta 3 fotos)</span></label>
+          <div class="img-widget" id="img-widget-charla"></div>
+        </div>
+
+        <div class="form-actions">
+          <span class="form-note" id="charla-form-error"></span>
+          <div style="display:flex;gap:10px;">
+            <button type="button" class="btn btn-ghost" id="charla-reset">Limpiar</button>
+            <button type="submit" class="btn btn-primary">Guardar charla</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="section-subhead" style="margin-top:22px;">Charlas registradas</div>
+      <div id="charla-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </section>
 
     <!-- INVENTARIO · AUDITORÍA SHORTPICK (conectado a Supabase: ssoma_sp_registros / ssoma_sp_verificaciones) -->
@@ -3294,6 +3342,8 @@ async function loadCatalogos(){
   fillSelect(document.getElementById("c-supervisor"), personalSupervisores, "Selecciona un supervisor", "id", "nombre_completo");
   fillSelect(document.getElementById("acc-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("acc-reportante"), equipoSsomaCat, "Selecciona quién reporta", "id", "nombre_completo");
+  fillSelect(document.getElementById("charla-responsable"), personalSupervisores, "Selecciona un responsable", "id", "nombre_completo");
+  fillSelect(document.getElementById("charla-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   accSetCausaTipo("ACTO SUB ESTANDAR");
   await trLoadUsuarios();
 }
@@ -7038,6 +7088,101 @@ document.getElementById("comp-export-csv").addEventListener("click", ()=>{
   URL.revokeObjectURL(url);
 });
 
+/* ---- Charla de 5 Minutos: evidencia fotográfica ---- */
+let charlaReports = [];
+
+async function loadCharlas(){
+  const { data, error } = await sb
+    .from("ssoma_charlas_5min")
+    .select(`
+      id, fecha, tema, evidencia, created_at,
+      responsable:ssoma_personal(nombre_completo),
+      ubicacion:ssoma_ubicaciones(nombre)
+    `)
+    .order("fecha", { ascending: false });
+
+  if(error){
+    console.error("No se pudieron cargar las charlas de 5 minutos", error);
+    charlaReports = [];
+  }else{
+    charlaReports = (data || []).map(r => ({
+      id: r.id,
+      fecha: r.fecha,
+      tema: r.tema,
+      responsable: r.responsable ? r.responsable.nombre_completo : "",
+      ubicacion: r.ubicacion ? r.ubicacion.nombre : "",
+      evidencia: r.evidencia || [],
+      createdAt: r.created_at,
+    }));
+  }
+  renderCharlaList();
+}
+
+function renderCharlaList(){
+  document.getElementById("charla-count").textContent = charlaReports.length + (charlaReports.length===1 ? " registrada" : " registradas");
+  const list = document.getElementById("charla-list");
+  if(!list) return;
+  if(!charlaReports.length){
+    list.innerHTML = `<div class="empty">Todavía no hay charlas registradas.</div>`;
+    return;
+  }
+  list.innerHTML = charlaReports.map(r => `
+    <div class="stat-card" style="padding:14px 16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;color:var(--text);font-size:13.5px;">${escapeHtml(r.tema)}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${formatDate(r.fecha)} · ${escapeHtml(r.responsable)} · ${escapeHtml(r.ubicacion)}</div>
+        </div>
+      </div>
+      ${r.evidencia && r.evidencia.length ? `<div style="margin-top:10px;">${imgRowHtml(r.evidencia, false)}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:var(--muted);">Sin fotos</div>`}
+    </div>`).join("");
+}
+
+document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
+
+document.getElementById("charla-reset").addEventListener("click", ()=>{
+  document.getElementById("charla-form").reset();
+  document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
+  document.getElementById("charla-form-error").textContent = "";
+  clearImages("charla");
+});
+
+document.getElementById("charla-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const errorEl = document.getElementById("charla-form-error");
+  errorEl.textContent = "";
+
+  const fecha = document.getElementById("charla-fecha").value;
+  const responsableId = document.getElementById("charla-responsable").value;
+  const tema = document.getElementById("charla-tema").value.trim();
+  const ubicacionId = document.getElementById("charla-ubicacion").value;
+  const evidencia = getImages("charla");
+
+  if(!fecha || !responsableId || !tema || !ubicacionId){
+    errorEl.textContent = "Completa todos los campos obligatorios del formulario.";
+    return;
+  }
+  if(!evidencia.length){
+    errorEl.textContent = "Sube al menos una foto como evidencia de la charla.";
+    return;
+  }
+
+  const entry = {
+    fecha, responsable_id: Number(responsableId), tema,
+    ubicacion_id: Number(ubicacionId), evidencia,
+  };
+  const { error } = await sb.from("ssoma_charlas_5min").insert(entry);
+  if(error){
+    errorEl.textContent = "No se pudo guardar: " + error.message;
+    return;
+  }
+  await loadCharlas();
+
+  document.getElementById("charla-form").reset();
+  document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
+  clearImages("charla");
+});
+
 let levTab = "pendiente";
 
 document.querySelectorAll(".lev-tab").forEach(btn=>{
@@ -7118,7 +7263,7 @@ function renderLevList(){
             </div>
             <div class="field">
               <label>Fecha de levantamiento<span class="req">*</span></label>
-              <input type="date" id="lev-fecha-${r.id}">
+              <input type="date" id="lev-fecha-${r.id}" readonly>
             </div>
           </div>
           <div class="field">
@@ -7595,8 +7740,9 @@ function renderAccidentesInformes(){
 
 async function init(){
   await loadCatalogos();
-  await Promise.all([loadReports(), loadCompReports(), loadAccidentes(), trLoadTareas()]);
+  await Promise.all([loadReports(), loadCompReports(), loadAccidentes(), loadCharlas(), trLoadTareas()]);
   initImageWidget("acc");
+  initImageWidget("charla");
   ssomaInicializarPush();
 }
 
