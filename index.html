@@ -1247,7 +1247,10 @@
           </div>
           <div class="field">
             <label>Nombre(s) del trabajador observado<span class="req">*</span></label>
-            <select id="f-trabajador"></select>
+            <div class="combo-wrap" id="f-trabajador-widget">
+              <input type="text" id="f-trabajador" placeholder="Escribe el nombre (sugiere por apellido)" autocomplete="off">
+              <div class="combo-dropdown" id="f-trabajador-dropdown"></div>
+            </div>
           </div>
           <div class="field">
             <label>Descripción detallada<span class="req">*</span></label>
@@ -3334,9 +3337,10 @@ async function loadCatalogos(){
   fillSelect(document.getElementById("f-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
   fillSelect(document.getElementById("f-ocurrencia"), ocurrenciasCat, "Selecciona la ocurrencia", "descripcion", "descripcion");
   fillSelect(document.getElementById("f-condicion"), condicionesCat, "Selecciona la condición", "descripcion", "descripcion");
-  // Trabajador observado/colaborador evaluado guardan el nombre tal cual (no un id) —
-  // el value del <option> es el propio nombre_completo, igual que el texto libre de antes.
-  fillSelect(document.getElementById("f-trabajador"), personalTodos, "Selecciona al trabajador", "nombre_completo", "nombre_completo");
+  // Colaborador evaluado guarda el nombre tal cual (no un id) — el value del <option>
+  // es el propio nombre_completo, igual que el texto libre de antes. El trabajador
+  // observado usa en cambio un buscador de texto libre (ver f-trabajador más abajo):
+  // piden poder escribir cualquier nombre, con sugerencias si coincide con la lista.
   fillSelect(document.getElementById("c-colaborador"), personalTodos, "Selecciona al colaborador", "nombre_completo", "nombre_completo");
   fillSelect(document.getElementById("c-area"), ubicacionesCat, "Selecciona un área", "nombre", "nombre");
   fillSelect(document.getElementById("c-supervisor"), personalSupervisores, "Selecciona un supervisor", "id", "nombre_completo");
@@ -6811,6 +6815,29 @@ function ssomaDomingoDeSemana(fechaStr){
   const [y,m,d] = ssomaLunesDeSemana(fechaStr).split("-").map(Number);
   return ssomaFormatISO(new Date(y, m-1, d + 6));
 }
+
+/* Trabajador observado: piden texto libre (escriben cualquier nombre, incluso de
+   alguien fuera del roster), pero con sugerencias si lo que escriben coincide con el
+   personal registrado — mismo combo-dropdown que "Personal involucrado", sin chips
+   porque acá es un solo nombre, no una lista. */
+const fTrabajadorInput = document.getElementById("f-trabajador");
+const fTrabajadorDropdown = document.getElementById("f-trabajador-dropdown");
+function fRenderTrabajadorDropdown(query){
+  const q = query.trim().toLowerCase();
+  const nombres = personalTodos.map(p => p.nombre_completo);
+  const matches = q === "" ? nombres : nombres.filter(n => n.toLowerCase().includes(q));
+  if(!matches.length){ fTrabajadorDropdown.style.display = "none"; return; }
+  fTrabajadorDropdown.innerHTML = matches.map(n => `<div class="combo-option" data-n="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join("");
+  fTrabajadorDropdown.style.display = "block";
+  fTrabajadorDropdown.querySelectorAll(".combo-option").forEach(opt => opt.addEventListener("click", () => {
+    fTrabajadorInput.value = opt.dataset.n;
+    fTrabajadorDropdown.style.display = "none";
+    fTrabajadorInput.focus();
+  }));
+}
+fTrabajadorInput.addEventListener("input", e => fRenderTrabajadorDropdown(e.target.value));
+fTrabajadorInput.addEventListener("focus", e => fRenderTrabajadorDropdown(e.target.value));
+document.addEventListener("click", e => { if(!e.target.closest("#f-trabajador-widget")) fTrabajadorDropdown.style.display = "none"; });
 
 document.getElementById("racs-reset").addEventListener("click", ()=>{
   document.getElementById("racs-form").reset();
