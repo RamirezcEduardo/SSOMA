@@ -2505,6 +2505,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <button type="button" class="tab-btn" data-tab="comportamental">Comportamental</button>
         <button type="button" class="tab-btn" data-tab="levantamiento">Levantamiento</button>
         <button type="button" class="tab-btn" data-tab="accidentes">Accidentes</button>
+        <button type="button" class="tab-btn" data-tab="charla5min">Charla 5 min</button>
         <button type="button" class="tab-btn" data-tab="tareas">Tareas</button>
         <button type="button" class="tab-btn" data-tab="inventario">Inventario</button>
         <button type="button" class="tab-btn" data-tab="general">General</button>
@@ -2532,10 +2533,12 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <p>Sirve para reportar un acto inseguro de una persona o una condición insegura del entorno de trabajo.</p>
         <ol class="help-steps">
           <li>Entra al módulo <b>RACS</b> desde el menú lateral.</li>
+          <li>La <b>Fecha</b> siempre es la de hoy — el campo queda bloqueado, no se puede atrasar ni adelantar.</li>
           <li>Elige el tipo de ocurrencia: <b>Acto subestándar</b> o <b>Condición subestándar</b> (si no aparece en la lista, usa "Otro" y detállalo).</li>
-          <li>Escribe el nombre del trabajador involucrado (si aplica).</li>
+          <li>Escribe el nombre del trabajador observado — es un campo de texto libre (puede ser alguien fuera del roster, como un tercero), pero si lo que escribes coincide con el apellido de un colaborador registrado, te sugiere el nombre completo para hacer clic y autocompletar.</li>
           <li>Describe qué observaste: qué pasó o qué podría pasar si no se corrige.</li>
           <li>Pulsa <b>Guardar reporte</b> para registrarlo.</li>
+          <li>El botón <b>📋 Levantamiento</b> junto al contador de reportes te lleva directo al módulo de Levantamiento para cerrar un RACS pendiente.</li>
         </ol>
       </div>
       </div>
@@ -2546,7 +2549,8 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <p>Registra observaciones planeadas de seguridad sobre el comportamiento de un colaborador en su puesto de trabajo.</p>
         <ol class="help-steps">
           <li>Entra al módulo <b>Evaluación comportamental</b>.</li>
-          <li>Completa el nombre del colaborador y el área o proceso evaluado (ej. Despacho B2C).</li>
+          <li>La <b>Fecha</b> siempre es la de hoy — el campo queda bloqueado.</li>
+          <li>Elige al colaborador evaluado y el área de trabajo de las listas desplegables (son las mismas ubicaciones reales que usa RACS).</li>
           <li>Marca los criterios observados y agrega observaciones si es necesario.</li>
           <li>Pulsa <b>Guardar evaluación</b>.</li>
           <li>En <b>Evaluaciones registradas</b>, usa <b>Ver informe</b> para revisar el detalle de cualquier evaluación o <b>Descargar</b> para imprimirla/guardarla en PDF.</li>
@@ -2559,9 +2563,9 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <h4><span class="dot" style="background:#16A34A;"></span>Informes · Levantamiento de Observaciones</h4>
         <p>Aquí se hace seguimiento a los RACS ya reportados: se cierra el ciclo indicando cómo se corrigió el acto o condición. El estado (<b>Pendiente</b>/<b>Levantado</b>) se actualiza solo apenas se registra la acción correctiva.</p>
         <ol class="help-steps">
-          <li>Entra al módulo <b>Levantamiento</b> y busca el reporte pendiente en la lista.</li>
-          <li>Pulsa <b>Registrar levantamiento</b> sobre el reporte que quieres cerrar.</li>
-          <li>Describe la acción correctiva tomada y el responsable de ejecutarla.</li>
+          <li>Ya no tiene ítem propio en el menú lateral — se entra con el botón <b>📋 Levantamiento</b> que está junto al contador de reportes en <b>RACS</b>.</li>
+          <li>Busca el reporte pendiente en la lista y pulsa <b>Registrar levantamiento</b> sobre el que quieres cerrar.</li>
+          <li>Describe la acción correctiva tomada, el responsable de ejecutarla y la fecha (bloqueada al día de hoy).</li>
           <li>Pulsa <b>Guardar levantamiento</b> — el reporte pasa a estado <b>Levantado</b>.</li>
           <li>Usa <b>Ver informe</b> / <b>Descargar</b> en cualquier reporte, pendiente o ya levantado.</li>
           <li>Solo un <b>administrador</b> puede <b>Eliminar</b> un reporte o <b>Reabrir</b> uno ya levantado.</li>
@@ -2575,11 +2579,26 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <p>Registra accidentes e incidentes ocurridos, con causas y evidencias, para su análisis y plan de acción.</p>
         <ol class="help-steps">
           <li>Entra al módulo <b>Accidentes / Incidentes</b> y ubícate en la pestaña <b>Registrar reporte</b>.</li>
-          <li>Indica el cliente/operación y busca al colaborador involucrado.</li>
+          <li>La <b>Fecha</b> siempre es la de hoy (bloqueada) y el <b>Cliente/cuenta</b> ya viene fijo en "FP mayorista" — no hace falta escribirlo.</li>
+          <li>En <b>Personal involucrado</b> haz clic en el campo para ver de una vez a todo el personal disponible, o escribe para filtrar por nombre; puedes agregar más de una persona.</li>
           <li>Describe qué pasó, cuándo ocurrió y cómo se detectó.</li>
           <li>Selecciona el acto o condición causante (o detállalo si eliges "Otro").</li>
           <li>Adjunta evidencia fotográfica si está disponible y pulsa <b>Registrar reporte</b>.</li>
           <li>Desde la pestaña <b>Informes</b> revisa el historial, las acciones correctivas de cada caso, y usa <b>Ver informe</b> / <b>Descargar</b> para cada uno.</li>
+        </ol>
+      </div>
+      </div>
+
+      <div class="help-tab-panel" id="help-tab-charla5min" style="display:none;">
+      <div class="help-block">
+        <h4><span class="dot" style="background:#16A34A;"></span>Charla de 5 Minutos — Evidencia</h4>
+        <p>Registra la evidencia fotográfica de que se dictó la charla diaria de seguridad — no confundir con la encuesta anónima de satisfacción sobre esas charlas, esto es el respaldo interno de que sí se hizo.</p>
+        <ol class="help-steps">
+          <li>Entra al módulo <b>Charla de 5 Minutos</b>.</li>
+          <li>La <b>Fecha</b> siempre es la de hoy (bloqueada).</li>
+          <li>Selecciona quién dictó la charla, el tema tratado y la ubicación.</li>
+          <li>Sube al menos una foto como <b>Evidencia fotográfica</b> (hasta 3) — es obligatoria, sin foto no se puede guardar.</li>
+          <li>Pulsa <b>Guardar charla</b>. Queda visible en <b>Charlas registradas</b>, más recientes primero.</li>
         </ol>
       </div>
       </div>
@@ -2608,7 +2627,8 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <h4>📦 Inventario</h4>
         <p><b>Auditoría Shortpick</b>: importa los reportes del WMS, concilia faltantes y consulta el historial.</p>
         <p><b>Auditoría Bultos Perdidos</b>: importa DATA LATAM (filtrado por Ubicación/Proceso), copia la lista de Nro LPN, sube la caja del WMS y se concilia sola cuando el WMS marca Ubicado, Cancelado o Consumido — lo que sigue en Perdido queda pendiente para conciliar a mano.</p>
-        <p><b>Auditoría Sin Ubicación</b> y <b>Control de Bolsa</b> también están conectados de verdad — todo lo que importes o concilies en Inventario queda guardado.</p>
+        <p><b>Auditoría Sin Ubicación</b> también está conectada de verdad — todo lo que importes o concilies en Inventario queda guardado.</p>
+        <p><b>Control de Bolsa</b>: sube el reporte del auditor (Dif CD) y tu export interno del WMS a la vez, con el botón <b>Importar y calcular</b>. La app aplica la regla Considerar/No considerar, cruza ambos archivos y marca en disputa las líneas con evidencia — sea porque tu WMS encontró más de lo que se perdió, o porque el ajuste ya se neteó solo (un movimiento negativo que se compensa con uno positivo), lo que suele ser un falso positivo del auditor. El archivo del WMS queda guardado como respaldo permanente en Supabase.</p>
       </div>
       </div>
 
@@ -2616,6 +2636,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="help-block">
         <h4>⚙️ Funciones generales</h4>
         <ul class="help-steps">
+          <li><b>🔄 Actualizar</b>: botón junto al reloj, arriba a la derecha — recarga todos los datos de la app desde cero (no cierra tu sesión).</li>
           <li><b>Cambiar Tema</b>: alterna entre modo claro y oscuro desde la tarjeta de cuenta.</li>
           <li><b>Ver evidencias</b>: haz clic en cualquier imagen adjunta a un reporte para verla en tamaño completo.</li>
           <li><b>Ver informe / Descargar</b>: disponible en RACS-Levantamiento, Comportamental, Accidentes/Incidentes y Tareas, para revisar o imprimir/guardar en PDF el detalle de cualquier registro.</li>
