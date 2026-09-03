@@ -2206,9 +2206,10 @@
       <div class="help-tip" style="margin-top:18px;max-width:680px;">
         <span class="ic">📌</span>
         <div>
-Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la cascada, encuentra falsos positivos y guarda el respaldo del WMS en Supabase.
+Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la cascada, encuentra falsos positivos y guarda todo en Supabase — el detalle de auditoría, tus disputas y el respaldo del WMS.
           <div style="margin-top:8px;">La regla <b>Considerar / No considerar</b> es la que ya aplica el área auditora — se aplica tal cual sobre lo que subas para armar la cascada de arriba.</div>
-          <div style="margin-top:8px;">📦 El casillero "Ajustes de inventario" acepta el <b>bruto del WMS</b> tal cual lo exportas — si trae las hojas DATA + Motivos + Proveedor/VALORIZADO ("Plantilla_CD"), la app usa esas mismas hojas para calcular Motivo y Valorizado; si es el export antiguo de una sola hoja, usa las reglas guardadas. En ambos casos, cada línea válida queda guardada en Supabase como respaldo permanente — no se pierde al recargar la página.</div>
+          <div style="margin-top:8px;">📦 El casillero "Ajustes de inventario" acepta el <b>bruto del WMS</b> tal cual lo exportas — .xlsx/.xlsb con las hojas DATA + Motivos + Proveedor/VALORIZADO ("Plantilla_CD"), o el .csv crudo de "Historial Inventario" (se usan las reglas guardadas). En ambos casos, cada línea válida queda guardada en Supabase como respaldo permanente — no se pierde al recargar la página.</div>
+          <div style="margin-top:8px;">💾 Lo mismo pasa con el detalle de auditoría y el estado de cada disputa (Sin revisar / Disputar / Descartar / Aceptar): al importar se guardan en Supabase, y si reimportas el mismo reporte más adelante no se pisa lo que ya marcaste — solo se agregan líneas nuevas.</div>
           <div style="margin-top:8px;">🔗 El auditor cobra lo que <b>no encontró</b> (lo asume perdido). La app suma el <b>neto</b> de todos tus ajustes de ese SKU en la semana (positivos y negativos): si el neto es positivo, se encontró más de lo que se perdió; si el neto da exactamente 0, tu propio WMS ya neteó internamente el ajuste — probable <b>falso positivo</b> del auditor. En ambos casos la línea se marca sola como <b>"En disputa"</b> al importar. Sin ningún registro del SKU en esa semana no se marca nada: no hay con qué sustentar la disputa.</div>
           <div style="margin-top:8px;">Usa <b>Disputar</b> / <b>Descartar</b> / <b>Aceptar</b> por fila para ver cómo cambia la cascada — es lo que reduce el "Neto final a pagar".</div>
         </div>
@@ -2628,7 +2629,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <p><b>Auditoría Shortpick</b>: importa los reportes del WMS, concilia faltantes y consulta el historial.</p>
         <p><b>Auditoría Bultos Perdidos</b>: importa DATA LATAM (filtrado por Ubicación/Proceso), copia la lista de Nro LPN, sube la caja del WMS y se concilia sola cuando el WMS marca Ubicado, Cancelado o Consumido — lo que sigue en Perdido queda pendiente para conciliar a mano.</p>
         <p><b>Auditoría Sin Ubicación</b> también está conectada de verdad — todo lo que importes o concilies en Inventario queda guardado.</p>
-        <p><b>Control de Bolsa</b>: sube el reporte del auditor (Dif CD) y tu export interno del WMS a la vez, con el botón <b>Importar y calcular</b>. La app aplica la regla Considerar/No considerar, cruza ambos archivos y marca en disputa las líneas con evidencia — sea porque tu WMS encontró más de lo que se perdió, o porque el ajuste ya se neteó solo (un movimiento negativo que se compensa con uno positivo), lo que suele ser un falso positivo del auditor. El archivo del WMS queda guardado como respaldo permanente en Supabase.</p>
+        <p><b>Control de Bolsa</b>: sube el reporte del auditor (Dif CD) y tu export interno del WMS a la vez, con el botón <b>Importar y calcular</b>. La app aplica la regla Considerar/No considerar, cruza ambos archivos y marca en disputa las líneas con evidencia — sea porque tu WMS encontró más de lo que se perdió, o porque el ajuste ya se neteó solo (un movimiento negativo que se compensa con uno positivo), lo que suele ser un falso positivo del auditor. Tanto el detalle de la auditoría (con lo que marques por fila en Disputar/Descartar/Aceptar) como el respaldo del WMS quedan guardados de forma permanente en Supabase — no se pierden al recargar la página ni al reimportar el mismo reporte más adelante.</p>
       </div>
       </div>
 
@@ -4191,7 +4192,19 @@ function bolsaClasificarWms(row){
 function bolsaToDate(v){
   if(v instanceof Date) return isNaN(v) ? null : v;
   if(typeof v === "number") return new Date(Math.round((v - 25569) * 86400 * 1000));
-  if(typeof v === "string" && v.trim()){ const d = new Date(v); return isNaN(d) ? null : d; }
+  if(typeof v === "string" && v.trim()){
+    // El WMS exporta fechas como "DD/MM/YYYY[ HH:MM[:SS]]" (formato peruano). new Date(v) a
+    // secas las lee como MM/DD (inglés) y para días 1-12 las cambia de mes en silencio
+    // (ej. "1/07/2026" = 1-jul se leía como 7-ene) — se parsea a mano para no ambigüar.
+    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if(m){
+      const [, dd, mm, yyyy, hh, mi, ss] = m;
+      const d = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +(hh||0), +(mi||0), +(ss||0)));
+      return isNaN(d) ? null : d;
+    }
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
   return null;
 }
 function bolsaFechaLabel(date){ return date ? date.toISOString().slice(0,10) : ""; }
@@ -4234,20 +4247,55 @@ function bolsaPickSheet(wb, requiredCandidateLists){
   return null;
 }
 function bolsaReadWorkbook(file){
+  // El CSV crudo del WMS ("Historial Inventario") se lee como texto UTF-8, no como binario:
+  // leído como ArrayBuffer, SheetJS interpreta tildes/ñ mal (mojibake) y además auto-detecta
+  // fechas tipo "1/07/2026" como si fueran MM/DD (asume inglés) en vez de DD/MM (el formato
+  // real del WMS) — por eso se lee como string con cellDates:false, y bolsaToDate() se encarga
+  // de parsear el DD/MM/YYYY a mano, sin ambigüedad.
+  const esCsv = /\.csv$/i.test(file.name);
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onload = (e)=>{
-      try{ resolve(XLSX.read(e.target.result, { type:"array", cellDates:true })); }
+      try{
+        resolve(esCsv
+          ? XLSX.read(e.target.result, { type:"string", cellDates:false, raw:true })
+          : XLSX.read(e.target.result, { type:"array", cellDates:true }));
+      }
       catch(err){ reject(err); }
     };
     reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo"));
-    reader.readAsArrayBuffer(file);
+    if(esCsv) reader.readAsText(file, "UTF-8"); else reader.readAsArrayBuffer(file);
   });
 }
 
 let bolsaAuditLineas = [];
 let bolsaWmsLineas = [];
-let bolsaNextId = 1;
+
+/* Trae de Supabase todas las líneas de auditoría ya importadas (de cualquier trimestre)
+   junto con el estado de disputa que se les haya puesto — así lo que se gestiona en el
+   detalle (Disputar/Descartar/Aceptar) no se pierde al recargar la página. */
+async function bolsaLoadAuditLineas(){
+  const { data, error } = await sb.from("ssoma_bolsa_auditoria_lineas").select("*").order("fecha", { ascending:false });
+  if(error){ console.error(error); return; }
+  bolsaAuditLineas = (data || []).map(r => ({
+    id: r.id,
+    fecha: r.fecha,
+    semana: r.semana || "",
+    producto: r.producto || "",
+    codProducto: r.cod_producto || "",
+    ubicacion: r.ubicacion || "",
+    familia: r.familia || "",
+    tipo: r.tipo,
+    motivo: r.motivo_op,
+    monto: Number(r.monto_reversado),
+    considera: r.considera,
+    reglaDesconocida: !bolsaReglaConocida(r.tipo, r.motivo_op),
+    estado: r.estado_disputa,
+    sustento: r.sustento || "",
+  }));
+  bolsaRenderFilters();
+  bolsaRender();
+}
 
 function bolsaRenderFilters(){
   const selSem = document.getElementById("bolsa-f-semana");
@@ -4363,17 +4411,29 @@ function bolsaRender(){
     </tr>`).join("") : `<tr><td colspan="10" style="text-align:center;color:var(--muted);">Todavía no has importado nada — sube los 2 archivos arriba.</td></tr>`;
 
   detailBody.querySelectorAll(".bolsa-estado-select").forEach(sel=>{
-    sel.addEventListener("change", (e)=>{
+    sel.addEventListener("change", async (e)=>{
       const id = Number(e.target.dataset.id);
       const row = bolsaAuditLineas.find(r=>r.id === id);
-      if(row) row.estado = e.target.value;
+      if(!row) return;
+      const nuevoEstado = e.target.value;
+      // La tabla exige sustento cuando el estado no es "sin_revisar" — si no trae uno del
+      // cruce automático (p.ej. lo marca a mano el usuario sin evidencia previa), se anota
+      // que fue una decisión manual para que la constraint no rechace el update.
+      const sustento = row.sustento || (nuevoEstado !== "sin_revisar" ? "Marcado manualmente por el usuario." : "");
+      e.target.disabled = true;
+      const { error } = await sb.from("ssoma_bolsa_auditoria_lineas")
+        .update({ estado_disputa: nuevoEstado, sustento: sustento || null })
+        .eq("id", id);
+      e.target.disabled = false;
+      if(error){ alert("No se pudo guardar el cambio: " + error.message); e.target.value = row.estado; return; }
+      row.estado = nuevoEstado;
+      row.sustento = sustento;
       bolsaRender();
     });
   });
 }
 
-bolsaRenderFilters();
-bolsaRender();
+bolsaLoadAuditLineas();
 document.getElementById("bolsa-f-semana").addEventListener("change", bolsaRender);
 document.getElementById("bolsa-f-motivo").addEventListener("change", bolsaRender);
 
@@ -4454,7 +4514,6 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
       const reglaDesconocida = !bolsaReglaConocida(tipo, motivoOp);
       if(reglaDesconocida) sinRegla++;
       bolsaAuditLineas.push({
-        id: bolsaNextId++,
         fecha: bolsaFechaLabel(fecha),
         semana,
         producto: idxProductoAud !== -1 ? String(row[idxProductoAud] || "") : "",
@@ -4581,14 +4640,33 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
       }
     });
 
-    bolsaRenderFilters();
-    bolsaRender();
+    // Guarda el detalle de auditoría (y su estado de disputa) en Supabase — antes solo vivía
+    // en este array de JS y se perdía al recargar. ignoreDuplicates hace que, si reimportas
+    // el mismo reporte (o uno que repite semanas ya cargadas), NO se pise una línea que ya
+    // marcaste Disputar/Descartar/Aceptar — solo se insertan las líneas realmente nuevas.
+    const filasParaAuditoria = bolsaAuditLineas.map(r => ({
+      fecha: r.fecha, semana: r.semana, cod_producto: r.codProducto, producto: r.producto || "",
+      familia: r.familia, ubicacion: r.ubicacion, tipo: r.tipo, motivo_op: r.motivo,
+      monto_reversado: r.monto, considera: r.considera, estado_disputa: r.estado,
+      sustento: r.sustento || null, archivo_origen: fileAuditoria.name,
+    }));
+    let guardadasAuditoria = 0;
+    for(let i = 0; i < filasParaAuditoria.length; i += LOTE){
+      const lote = filasParaAuditoria.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_bolsa_auditoria_lineas")
+        .upsert(lote, { onConflict: "fecha,cod_producto,tipo,motivo_op,monto_reversado,ubicacion", ignoreDuplicates: true });
+      if(error) throw new Error(`Se calculó la cascada, pero no se pudo guardar el detalle de auditoría en Supabase: ${error.message}`);
+      guardadasAuditoria += lote.length;
+      statusEl.textContent = `Guardando detalle de auditoría en Supabase… ${guardadasAuditoria}/${filasParaAuditoria.length}`;
+      statusEl.style.display = "block";
+    }
+    await bolsaLoadAuditLineas(); // trae todo de vuelta desde Supabase (ya con ids reales y estados previos intactos)
 
-    let msg = `✅ Importado: ${bolsaAuditLineas.length} líneas de auditoría (hoja "${hojaAuditoria.sheetName}") + ${bolsaWmsLineas.length} líneas de WMS válidas (hoja "${hojaWms.sheetName}"`;
+    let msg = `✅ Importado: ${filasParaAuditoria.length} líneas de auditoría (hoja "${hojaAuditoria.sheetName}") + ${bolsaWmsLineas.length} líneas de WMS válidas (hoja "${hojaWms.sheetName}"`;
     if(filasIgnoradasPorTipo) msg += `, ${filasIgnoradasPorTipo} filas de picking/empaque ignoradas`;
     msg += `). `;
     msg += motivosMap.ok ? `Motivo y Valorizado calculados con las hojas Motivos/${costosMap.sheetName || "Proveedor"} de tu propio archivo. ` : `Motivo calculado con las reglas guardadas (tu archivo no traía hoja Motivos). `;
-    msg += `${guardadas} líneas de WMS guardadas en Supabase como respaldo permanente. `;
+    msg += `${guardadas} líneas de WMS y ${guardadasAuditoria} líneas de auditoría guardadas en Supabase como respaldo permanente — no se pierden al recargar. `;
     msg += `${conEvidencia} con unidades encontradas y ${conNeteo} ya neteadas internamente quedaron marcadas "En disputa" (posibles falsos positivos del auditor). `;
     if(sinRegla) msg += `${sinRegla} con motivo de auditoría nuevo (⚠) — revisa si va en Considerar o No considerar.`;
     statusEl.textContent = msg;
