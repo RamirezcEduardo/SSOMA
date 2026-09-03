@@ -2687,7 +2687,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="field" id="conc-foto-wrap" style="display:none;">
         <label>Foto de evidencia</label>
         <label class="import-drop" for="conc-foto" id="conc-drop-foto" style="padding:14px;">
-          <input type="file" accept="image/*" capture="environment" id="conc-foto" hidden>
+          <input type="file" accept="image/*" id="conc-foto" hidden>
           <span class="import-drop-icon">📷</span>
           <span class="import-drop-hint" id="conc-foto-name">Toca para tomar una foto o elegir un archivo</span>
         </label>
@@ -2714,7 +2714,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="field" style="margin-top:16px;">
         <label>Foto de evidencia (Historial Inventario, ubicación, etc.)</label>
         <label class="import-drop" for="bp-foto" id="bp-drop-foto" style="padding:14px;">
-          <input type="file" accept="image/*" capture="environment" id="bp-foto" hidden>
+          <input type="file" accept="image/*" id="bp-foto" hidden>
           <span class="import-drop-icon">📷</span>
           <span class="import-drop-hint" id="bp-foto-name">Toca para tomar una foto o elegir un archivo</span>
         </label>
@@ -2747,7 +2747,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="field" style="margin-top:16px;">
         <label>Foto de la ubicación encontrada</label>
         <label class="import-drop" for="su-foto" id="su-drop-foto" style="padding:14px;">
-          <input type="file" accept="image/*" capture="environment" id="su-foto" hidden>
+          <input type="file" accept="image/*" id="su-foto" hidden>
           <span class="import-drop-icon">📷</span>
           <span class="import-drop-hint" id="su-foto-name">Toca para tomar una foto o elegir un archivo</span>
         </label>
@@ -2811,7 +2811,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label>O una foto como evidencia</label>
-        <input type="file" id="tf-foto" accept="image/*" capture="environment">
+        <input type="file" id="tf-foto" accept="image/*">
         <div class="hint">Sube el archivo o la foto — con uno de los dos alcanza.</div>
       </div>
       <div class="field" style="margin-bottom:4px;">
@@ -2843,7 +2843,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
       <div class="field" style="margin-bottom:4px;">
         <label>O una foto como evidencia</label>
-        <input type="file" id="ta-foto" accept="image/*" capture="environment">
+        <input type="file" id="ta-foto" accept="image/*">
         <div class="hint">La evidencia es opcional — el avance de texto ya alcanza para registrar el día.</div>
       </div>
       <span class="login-error" id="ta-modal-error"></span>
@@ -3076,7 +3076,7 @@ function renderImageWidget(key){
     <div class="img-slot">
       ${img
         ? `<img src="${img}" class="img-thumb"><button type="button" class="img-remove" data-key="${key}" data-idx="${i}">×</button>`
-        : `<label class="img-empty"><input type="file" accept="image/*" capture="environment" class="img-input" data-key="${key}" data-idx="${i}" hidden>+</label>`
+        : `<label class="img-empty"><input type="file" accept="image/*" class="img-input" data-key="${key}" data-idx="${i}" hidden>+</label>`
       }
     </div>
   `).join("");
