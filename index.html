@@ -4270,10 +4270,12 @@ function bolsaClasificarWms(row){
   return { motivo, origen };
 }
 
-/* Excel serial / string / Date -> Date. Semana = número de semana ISO (lunes-domingo),
+/* Excel serial / string / Date -> Date. Compartida por todo Inventario (Control de Bolsa,
+   Bultos Perdidos, Sin Ubicación, Shortpick) — cualquier import que lea "Fe y Hr Crea"/
+   "Fe y Hr Modif" del WMS pasa por aquí. Semana = número de semana ISO (lunes-domingo),
    sin offset — verificado en vivo contra las fechas reales de tu Q3 2026 (SEM 27 =
    29/06-05/07, SEM 28 = 06/07-12/07, SEM 33 = 10/08-16/08: la semana ISO calza exacto). */
-function bolsaToDate(v){
+function wmsParseFecha(v){
   if(v instanceof Date) return isNaN(v) ? null : v;
   if(typeof v === "number") return new Date(Math.round((v - 25569) * 86400 * 1000));
   if(typeof v === "string" && v.trim()){
@@ -4334,7 +4336,7 @@ function bolsaReadWorkbook(file){
   // El CSV crudo del WMS ("Historial Inventario") se lee como texto UTF-8, no como binario:
   // leído como ArrayBuffer, SheetJS interpreta tildes/ñ mal (mojibake) y además auto-detecta
   // fechas tipo "1/07/2026" como si fueran MM/DD (asume inglés) en vez de DD/MM (el formato
-  // real del WMS) — por eso se lee como string con cellDates:false, y bolsaToDate() se encarga
+  // real del WMS) — por eso se lee como string con cellDates:false, y wmsParseFecha() se encarga
   // de parsear el DD/MM/YYYY a mano, sin ambigüedad.
   const esCsv = /\.csv$/i.test(file.name);
   return new Promise((resolve, reject)=>{
@@ -4592,7 +4594,7 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
       if(!tipo && !motivoOp) return; // fila en blanco (comunes al final de estos reportes)
       const monto = parseFloat(row[hojaAuditoria.cols.monto]);
       if(isNaN(monto)) return;
-      const fecha = bolsaToDate(row[hojaAuditoria.cols.fecha]);
+      const fecha = wmsParseFecha(row[hojaAuditoria.cols.fecha]);
       const semana = (idxSemanaAud !== -1 && row[idxSemanaAud]) ? String(row[idxSemanaAud]) : bolsaSemanaLabel(fecha);
       const considera = bolsaConsidera(tipo, motivoOp);
       const reglaDesconocida = !bolsaReglaConocida(tipo, motivoOp);
@@ -4631,7 +4633,7 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
       const pantalla = String(row[hojaWms.cols.pantalla] || "");
       const codRazon = String(row[hojaWms.cols.codRazon] || "");
       const ubicacion = String(row[hojaWms.cols.ubicacion] || "");
-      const fecha = bolsaToDate(row[hojaWms.cols.fecha]);
+      const fecha = wmsParseFecha(row[hojaWms.cols.fecha]);
 
       // Si el archivo trae su propia hoja Motivos (formato "Plantilla_CD"), se usa esa regla
       // (más confiable, la define el propio auditor/WMS este trimestre). Si no, se cae al
@@ -5121,10 +5123,9 @@ async function bpImportarRegistros(file){
     })
     .map(fila=>{
       const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
-      let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
-      if(isNaN(fechaDt.getTime())) fechaDt = new Date();
+      let fechaDt = wmsParseFecha(fechaRaw) || new Date();
       const caducidadRaw = spBuscaCampo(fila, ["Fecha de Caducidad","Fecha de caducidad"]);
-      const caducidadDt = caducidadRaw instanceof Date ? caducidadRaw : (caducidadRaw ? new Date(caducidadRaw) : null);
+      const caducidadDt = wmsParseFecha(caducidadRaw);
       const valTot = spBuscaCampo(fila, ["Val tot"]);
       const nroLpn = String(spBuscaCampo(fila, ["Nro LPN"])).trim();
       const ubicacion = String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim();
@@ -5530,8 +5531,7 @@ async function suImportarRegistros(file){
   const actorId = miUsuario ? miUsuario.id : null;
   const registros = filas.map(fila=>{
     const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
-    let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
-    if(isNaN(fechaDt.getTime())) fechaDt = new Date();
+    let fechaDt = wmsParseFecha(fechaRaw) || new Date();
     const codAlternat = String(spBuscaCampo(fila, ["Cod Alternat"])).trim();
     const cantidad = parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0;
     /* Si el archivo no trae Valorizado, se calcula con el catálogo compartido de costos
@@ -6722,7 +6722,12 @@ async function spParseWorkbookFile(file, opts){
     combinado.set(bytes, bom.length);
     bytes = combinado;
   }
-  const wb = XLSX.read(bytes.buffer, { type: "array", cellDates: true });
+  // cellDates:true solo para el binario real (esZip) — para CSV/texto, SheetJS auto-detecta
+  // fechas tipo "1/07/2026" como si fueran MM/DD (inglés) en vez de DD/MM (el formato real del
+  // WMS) y cambia de mes en silencio para días 1-12. Se deja como string y wmsParseFecha() la
+  // interpreta a mano en cada import (bpImportarRegistros, suImportarRegistros, spImportarRegistros,
+  // spEstadoPedidosPorOrden).
+  const wb = XLSX.read(bytes.buffer, { type: "array", cellDates: esZip, raw: !esZip });
   const sheetName = opts.sheetName && wb.SheetNames.includes(opts.sheetName) ? opts.sheetName : wb.SheetNames[0];
   const sheet = wb.Sheets[sheetName];
   const range = opts.headerRow && opts.headerRow > 1 ? opts.headerRow - 1 : undefined;
@@ -6749,7 +6754,7 @@ async function spEstadoPedidosPorOrden(file){
     const estado = String(spBuscaCampo(fila, ["Estado"])).trim();
     if(!estado) return;
     const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha","Fecha Creación","FechaHora"]);
-    const fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : null);
+    const fechaDt = wmsParseFecha(fechaRaw);
     const previo = porOrden[orden];
     if(!previo || (fechaDt && (!previo.fecha || fechaDt > previo.fecha))){
       porOrden[orden] = { estado, fecha: fechaDt };
@@ -6767,8 +6772,7 @@ async function spImportarRegistros(file, estadoPorOrden){
   const actorId = miUsuario ? miUsuario.id : null;
   const registros = filas.map(fila=>{
     const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha","Fecha Creación","FechaHora","Fecha y Hora"]);
-    let fechaDt = fechaRaw instanceof Date ? fechaRaw : (fechaRaw ? new Date(fechaRaw) : new Date());
-    if(isNaN(fechaDt.getTime())) fechaDt = new Date();
+    let fechaDt = wmsParseFecha(fechaRaw) || new Date();
     const unajustRaw = spBuscaCampo(fila, ["Un Ajust","Un. Ajust","Unidades Ajustadas","Cantidad"]);
     const orden = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim() || null;
     const estadoPedido = orden && estadoPorOrden && estadoPorOrden[orden] ? estadoPorOrden[orden].estado : null;
@@ -6782,7 +6786,7 @@ async function spImportarRegistros(file, estadoPorOrden){
     let turno = turnoArchivo || null;
     if(!turno){
       const modifRaw = spBuscaCampo(fila, ["Fe y Hr Modif"]);
-      const modifDt = modifRaw instanceof Date ? modifRaw : (modifRaw ? new Date(modifRaw) : null);
+      const modifDt = wmsParseFecha(modifRaw);
       turno = spTurnoDeHora(modifDt);
     }
     const responsableArchivo = String(spBuscaCampo(fila, ["Responsable"])).trim();
