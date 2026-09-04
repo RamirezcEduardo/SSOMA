@@ -5126,6 +5126,7 @@ const BP_COLUMNAS_CASOS = [
   { header: "Supervisor", get: r => r.supervisor },
   { header: "Valorizado", get: r => (r.valorizado||0).toFixed(2) },
   { header: "Estado", get: r => bpVerificaciones[r.id] ? "Conciliado" : (r.categoria === "consulta_reinyectado" ? "Consulta Reinyectado" : "Pendiente") },
+  { header: "Motivo de conciliación", get: r => bpVerificaciones[r.id] ? bpVerificaciones[r.id].sustento : "" },
 ];
 document.getElementById("bp-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -5147,7 +5148,6 @@ document.getElementById("bp-conc-export-btn").addEventListener("click", ()=>{
 });
 const BP_COLUMNAS_HISTORIAL = [
   ...BP_COLUMNAS_CASOS,
-  { header: "Motivo de conciliación", get: r => bpVerificaciones[r.id] ? bpVerificaciones[r.id].sustento : "" },
   { header: "Conciliado el", get: r => (bpVerificaciones[r.id] ? bpVerificaciones[r.id].fecha : "").slice(0, 10) },
 ];
 document.getElementById("bp-hist-export-btn").addEventListener("click", ()=>{
@@ -5307,7 +5307,7 @@ async function bpCruceWms(file){
     if(clave === "ubicado" || clave === "cancelado" || clave === "consumido"){
       nuevos.push({
         registro_id: r.id,
-        sustento: `Conciliado automáticamente por cruce con la caja WMS — Estado: ${estadoWms}.`,
+        sustento: `Cambio de estado a ${estadoWms} en el WMS (conciliado automáticamente por cruce con la caja WMS).`,
         foto: null,
         verificado_por_id: actorId,
         fecha: new Date().toISOString(),
