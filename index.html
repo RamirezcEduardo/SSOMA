@@ -3499,6 +3499,39 @@ async function sbSelectAll(table, select, orderBy){
   return { data: resultados.flatMap(r => r.data || []), error: null };
 }
 
+/* Huella del archivo (SHA-256 del contenido, no del nombre) — Shortpick y Sin Ubicación no
+   tienen forma de deduplicar por fila (no hay Nro LPN ni ID propio del WMS en esas hojas de
+   "Ajustes de inventario"/DATA), así que se avisa ANTES de importar si ese mismo archivo ya
+   se cargó, en vez de duplicar todo su contenido en silencio. */
+async function sbHashArchivo(file){
+  const buf = await file.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function importVerificarDuplicado(modulo, file){
+  let hash = null;
+  try{ hash = await sbHashArchivo(file); }
+  catch(e){ return { ok: true, hash: null }; } // sin SubtleCrypto (http sin TLS, navegador viejo) no bloquea el import
+  const { data, error } = await sb.from("ssoma_importaciones_log")
+    .select("archivo_nombre, importado_en, filas")
+    .eq("modulo", modulo).eq("archivo_hash", hash)
+    .order("importado_en", { ascending: false }).limit(1);
+  if(!error && data && data.length){
+    const previo = data[0];
+    const fecha = new Date(previo.importado_en).toLocaleString("es-PE");
+    const seguir = confirm(`Este mismo archivo ya se importó el ${fecha} (${previo.filas} filas, "${previo.archivo_nombre}"). Si lo subes de nuevo vas a duplicar esos registros.\n\n¿Seguro que quieres importarlo otra vez?`);
+    if(!seguir) return { ok: false, hash };
+  }
+  return { ok: true, hash };
+}
+async function importRegistrarLog(modulo, file, hash, filas){
+  if(!hash || !filas) return;
+  await sb.from("ssoma_importaciones_log").insert({
+    modulo, archivo_nombre: file.name, archivo_hash: hash, filas,
+    importado_por_id: miUsuario ? miUsuario.id : null,
+  });
+}
+
 /* ---- Exportar a CSV (compartido por Shortpick/Bultos Perdidos/Sin Ubicación) ----
    Cada botón "Exportar" abre este modal pasándole las filas YA filtradas de su pestaña
    (respeta los filtros activos ahí) más las columnas a exportar; el modal deja acotar
@@ -5608,17 +5641,21 @@ async function suImportarRegistros(file){
 
 document.getElementById("su-import-btn").addEventListener("click", async (e)=>{
   const btn = e.currentTarget; const original = btn.textContent;
+  const file = document.getElementById("su-file").files[0];
+  const chequeo = await importVerificarDuplicado("sin_ubicacion", file);
+  if(!chequeo.ok) return;
+
   btn.disabled = true; btn.textContent = "Importando y calculando…";
   const statusEl = document.getElementById("su-import-status");
   statusEl.style.display = "none";
   try{
-    const file = document.getElementById("su-file").files[0];
     const { count, error } = await suImportarRegistros(file);
     if(error){
       statusEl.textContent = "❌ No se pudo importar: " + error.message;
     }else if(count === 0){
       statusEl.textContent = "⚠️ No se encontraron filas válidas en el archivo (revisa que tenga columnas de Cod Alternat y Nro LPN).";
     }else{
+      await importRegistrarLog("sin_ubicacion", file, chequeo.hash, count);
       await suLoadData();
       statusEl.textContent = `✅ Importados ${count} casos de Sin Ubicación.`;
     }
@@ -6865,14 +6902,17 @@ async function spImportarRegistros(file, estadoPorOrden){
 document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
   const btn = e.currentTarget;
   const originalLabel = btn.textContent;
+  const f1 = document.getElementById("sp-file-adjust").files[0];
+  const f2 = document.getElementById("sp-file-orders").files[0];
+  const chequeo = await importVerificarDuplicado("shortpick", f1);
+  if(!chequeo.ok) return;
+
   btn.disabled = true;
   btn.textContent = "Importando y calculando…";
   const statusEl = document.getElementById("sp-import-status");
   statusEl.style.display = "none";
 
   try{
-    const f1 = document.getElementById("sp-file-adjust").files[0];
-    const f2 = document.getElementById("sp-file-orders").files[0];
     const estadoPorOrden = await spEstadoPedidosPorOrden(f2);
     const { count, error } = await spImportarRegistros(f1, estadoPorOrden);
     if(error){
@@ -6880,6 +6920,7 @@ document.getElementById("sp-import-btn").addEventListener("click", async (e)=>{
     }else if(count === 0){
       statusEl.textContent = "⚠️ No se encontraron filas válidas en el archivo (revisa que tenga columnas de Cod Alternat y Descripción).";
     }else{
+      await importRegistrarLog("shortpick", f1, chequeo.hash, count);
       await spLoadData();
       statusEl.textContent = `✅ Importados ${count} registros de Short Pick, cruzados con el estado más reciente de cada pedido en "Estado de pedidos". Resumen actualizado abajo.`;
     }
