@@ -2814,6 +2814,25 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
   </div>
 </div>
 
+<div class="modal-overlay" id="sp-costos-export-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-head">
+      <h3>Exportar informe del catálogo</h3>
+      <button class="modal-close" id="sp-costos-export-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" style="margin-bottom:14px;">Elige qué quieres descargar.</p>
+      <button type="button" class="btn btn-ghost" id="sp-costos-export-general-btn" style="width:100%;text-align:left;height:auto;padding:14px 16px;display:block;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:13.5px;">📋 Detalle general de productos y precios</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;font-weight:400;">Todo el catálogo: código, producto, familia y precio.</div>
+      </button>
+      <button type="button" class="btn btn-ghost" id="sp-costos-export-pendientes-btn" style="width:100%;text-align:left;height:auto;padding:14px 16px;display:block;">
+        <div style="font-weight:700;font-size:13.5px;color:var(--orange);">⚠ Pendiente de precio</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;font-weight:400;">Solo los productos sin precio cargado o cargados en S/ 0.00.</div>
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="tarea-finalizar-modal">
   <div class="modal-box" style="max-width:440px;">
@@ -3537,14 +3556,18 @@ function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
    plantilla). Valorizado = Costo(Cod Alternat) x |Un Ajust| — igual que tu fórmula
    BUSCARV(...VALOR...)*Un Ajust. Se recarga en spLoadData() y se puede actualizar desde
    la app (solo administradores) con "Actualizar catálogo de costos". */
+/* costosMap guarda el precio TAL CUAL está en la base (null si no tiene) — no lo convierte
+   a 0 al cargar, para poder distinguir "sin precio/0" (pendiente) de un precio real. spCosto()
+   sí devuelve 0 como respaldo para la matemática de valorización. */
 let costosMap = {};
 async function spCargarCostos(){
   const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, costo");
   if(error){ console.error("No se pudo cargar el catálogo de costos:", error.message); return; }
   costosMap = {};
-  (data || []).forEach(c => { costosMap[c.cod_alternat] = Number(c.costo) || 0; });
+  (data || []).forEach(c => { costosMap[c.cod_alternat] = (c.costo === null || c.costo === undefined) ? null : Number(c.costo); });
 }
 function spCosto(codAlternat){ return costosMap[codAlternat] || 0; }
+function spTienePrecio(codAlternat){ return !!costosMap[codAlternat]; } // false = sin precio o cargado en 0
 function spValorizado(row){
   if(row.valorizado !== undefined && row.valorizado !== null) return row.valorizado;
   return spCosto(row.codAlternat) * Math.abs(row.unajust);
@@ -3705,13 +3728,13 @@ function spRender(){
   const topSubarea = Object.entries(porSubarea).sort((a,b)=>b[1]-a[1])[0];
   document.getElementById("sp-stat-subarea").textContent = topSubarea ? `${topSubarea[0]} (${topSubarea[1]})` : "—";
 
-  // Productos que no tienen costo en el catálogo (ssoma_sp_costos) — su Valorizado calcula
-  // en 0 y no suma al total, salvo que alguien ya lo haya corregido a mano fila por fila
-  // (input "Valorizado" del detalle). Se agrupa por código para que se pueda cargar el
-  // costo una sola vez por producto en vez de fila por fila.
+  // Productos sin precio en el catálogo (ssoma_sp_costos) O cargados en S/ 0.00 — en ambos
+  // casos su Valorizado calcula en 0 y no suma al total, salvo que alguien ya lo haya
+  // corregido a mano fila por fila (input "Valorizado" del detalle). Se agrupa por código
+  // para que se pueda cargar el costo una sola vez por producto en vez de fila por fila.
   const sinCosto = new Map(); // codAlternat -> {producto, registros, unidades}
   rows.forEach(r=>{
-    if(!r.codAlternat || Object.prototype.hasOwnProperty.call(costosMap, r.codAlternat)) return;
+    if(!r.codAlternat || spTienePrecio(r.codAlternat)) return;
     if(r.valorizado !== undefined && r.valorizado !== null) return; // ya corregido a mano
     const entry = sinCosto.get(r.codAlternat) || { producto: r.producto || r.desc || "", registros: 0, unidades: 0 };
     entry.registros += 1;
@@ -6860,29 +6883,39 @@ document.getElementById("sp-costos-plantilla-btn").addEventListener("click", ()=
     [{ COD_ALTERNO: "121868003", PRODUCTO: "GLADE GEL AROMAT.LTAX70G, LIMON", COSTO: "3.20", FAMILIA: "PERFUMERIA" }]
   );
 });
-document.getElementById("sp-costos-export-btn").addEventListener("click", async (e)=>{
-  const btn = e.currentTarget;
+document.getElementById("sp-costos-export-btn").addEventListener("click", ()=>{
+  document.getElementById("sp-costos-export-modal").classList.add("show");
+});
+document.getElementById("sp-costos-export-modal-close").addEventListener("click", ()=>{
+  document.getElementById("sp-costos-export-modal").classList.remove("show");
+});
+document.getElementById("sp-costos-export-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "sp-costos-export-modal") document.getElementById("sp-costos-export-modal").classList.remove("show");
+});
+/* PRECIO "pendiente" = sin costo cargado O cargado en 0 — en ambos casos no suma nada al
+   valorizado, así que cuenta como que aún falta ponerle precio real. */
+function spCostoEsPendiente(costo){ return costo === null || costo === undefined || Number(costo) === 0; }
+async function spExportarCatalogo(btn, soloPendientes){
   const originalLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "Exportando…";
-  try{
-    const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia", { column: "cod_alternat" });
-    if(error){ alert("No se pudo exportar el catálogo: " + error.message); return; }
-    descargarCsv(
-      "catalogo_costos.csv",
-      [
-        { header: "COD_ALTERNO", get: r => r.cod_alternat },
-        { header: "PRODUCTO", get: r => r.producto || "" },
-        { header: "FAMILIA", get: r => r.familia || "" },
-        { header: "PRECIO", get: r => (r.costo === null || r.costo === undefined) ? "No cuenta con precio establecido" : Number(r.costo).toFixed(2) },
-      ],
-      data || []
-    );
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  }
-});
+  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia", { column: "cod_alternat" });
+  btn.disabled = false;
+  if(error){ alert("No se pudo exportar el catálogo: " + error.message); return; }
+  const filas = soloPendientes ? (data || []).filter(r => spCostoEsPendiente(r.costo)) : (data || []);
+  descargarCsv(
+    soloPendientes ? "catalogo_pendientes_precio.csv" : "catalogo_costos.csv",
+    [
+      { header: "COD_ALTERNO", get: r => r.cod_alternat },
+      { header: "PRODUCTO", get: r => r.producto || "" },
+      { header: "FAMILIA", get: r => r.familia || "" },
+      { header: "PRECIO", get: r => spCostoEsPendiente(r.costo) ? "No cuenta con precio establecido" : Number(r.costo).toFixed(2) },
+    ],
+    filas
+  );
+  document.getElementById("sp-costos-export-modal").classList.remove("show");
+}
+document.getElementById("sp-costos-export-general-btn").addEventListener("click", (e)=> spExportarCatalogo(e.currentTarget, false));
+document.getElementById("sp-costos-export-pendientes-btn").addEventListener("click", (e)=> spExportarCatalogo(e.currentTarget, true));
 document.getElementById("sp-file-costos").addEventListener("change", ()=>{
   const f = document.getElementById("sp-file-costos").files[0];
   document.getElementById("sp-file-costos-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
