@@ -1656,8 +1656,9 @@
             <div class="import-card-title">💲 Actualizar catálogo de costos</div>
             <div class="import-card-sub">Solo administradores. Sube el tarifario (columnas COD_ALTERNO, PRODUCTO, COSTO, FAMILIA) para agregar productos nuevos o actualizar precios — aplica a todo Inventario (Shortpick, Bultos Perdidos, Sin Ubicación). No borra los códigos ya cargados, solo agrega o actualiza.</div>
           </div>
-          <div style="display:flex;gap:8px;flex-shrink:0;">
+          <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
             <button type="button" class="btn btn-ghost" id="sp-costos-plantilla-btn">📥 Descargar plantilla</button>
+            <button type="button" class="btn btn-ghost" id="sp-costos-export-btn">📤 Exportar informe</button>
             <button type="button" class="btn btn-ghost" id="sp-costos-import-btn" disabled>Actualizar catálogo</button>
           </div>
         </div>
@@ -3444,6 +3445,25 @@ allNavgroupToggles.forEach(navgroupToggle=>{
   });
 });
 
+/* Supabase (hosted) limita cada select a 1000 filas por página salvo que pagines con
+   .range() — varias tablas de este archivo ya superan eso (ssoma_sp_costos: ~46 mil filas,
+   ssoma_bolsa_auditoria_lineas puede superarlo en un solo trimestre), así que se trae todo
+   en páginas de 1000 en vez de un solo select sin límite (que se cortaría en la fila 1000
+   sin avisar). */
+async function sbSelectAll(table, select, orderBy){
+  const PAGE = 1000;
+  let all = [], from = 0;
+  for(;;){
+    let q = sb.from(table).select(select).range(from, from + PAGE - 1);
+    if(orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending !== false });
+    const { data, error } = await q;
+    if(error) return { data: null, error };
+    all = all.concat(data || []);
+    if(!data || data.length < PAGE) return { data: all, error: null };
+    from += PAGE;
+  }
+}
+
 /* ---- Exportar a CSV (compartido por Shortpick/Bultos Perdidos/Sin Ubicación) ----
    Cada botón "Exportar" abre este modal pasándole las filas YA filtradas de su pestaña
    (respeta los filtros activos ahí) más las columnas a exportar; el modal deja acotar
@@ -3519,7 +3539,7 @@ function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
    la app (solo administradores) con "Actualizar catálogo de costos". */
 let costosMap = {};
 async function spCargarCostos(){
-  const { data, error } = await sb.from("ssoma_sp_costos").select("cod_alternat, costo");
+  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, costo");
   if(error){ console.error("No se pudo cargar el catálogo de costos:", error.message); return; }
   costosMap = {};
   (data || []).forEach(c => { costosMap[c.cod_alternat] = Number(c.costo) || 0; });
@@ -4339,7 +4359,7 @@ let bolsaWmsLineas = [];
    junto con el estado de disputa que se les haya puesto — así lo que se gestiona en el
    detalle (Disputar/Descartar/Aceptar) no se pierde al recargar la página. */
 async function bolsaLoadAuditLineas(){
-  const { data, error } = await sb.from("ssoma_bolsa_auditoria_lineas").select("*").order("fecha", { ascending:false });
+  const { data, error } = await sbSelectAll("ssoma_bolsa_auditoria_lineas", "*", { column: "fecha", ascending: false });
   if(error){ console.error(error); return; }
   bolsaAuditLineas = (data || []).map(r => ({
     id: r.id,
@@ -6835,6 +6855,29 @@ document.getElementById("sp-costos-plantilla-btn").addEventListener("click", ()=
     ],
     [{ COD_ALTERNO: "121868003", PRODUCTO: "GLADE GEL AROMAT.LTAX70G, LIMON", COSTO: "3.20", FAMILIA: "PERFUMERIA" }]
   );
+});
+document.getElementById("sp-costos-export-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Exportando…";
+  try{
+    const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia", { column: "cod_alternat" });
+    if(error){ alert("No se pudo exportar el catálogo: " + error.message); return; }
+    descargarCsv(
+      "catalogo_costos.csv",
+      [
+        { header: "COD_ALTERNO", get: r => r.cod_alternat },
+        { header: "PRODUCTO", get: r => r.producto || "" },
+        { header: "FAMILIA", get: r => r.familia || "" },
+        { header: "PRECIO", get: r => (r.costo === null || r.costo === undefined) ? "No cuenta con precio establecido" : Number(r.costo).toFixed(2) },
+      ],
+      data || []
+    );
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
 });
 document.getElementById("sp-file-costos").addEventListener("change", ()=>{
   const f = document.getElementById("sp-file-costos").files[0];
