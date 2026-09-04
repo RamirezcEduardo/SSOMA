@@ -3466,20 +3466,21 @@ allNavgroupToggles.forEach(navgroupToggle=>{
 
 /* Supabase (hosted) limita cada select a 1000 filas por página salvo que pagines con
    .range() — varias tablas de este archivo ya superan eso (ssoma_sp_costos: ~46 mil filas,
-   ssoma_bolsa_auditoria_lineas puede superarlo en un solo trimestre). Se pide primero el
-   conteo (head:true, no trae filas) y se piden TODAS las páginas de 1000 en paralelo — una
-   por una tardaba ~9s para 46 mil filas (47 vueltas de red seguidas); en paralelo tardan lo
-   mismo que 1 sola vuelta. Si el conteo falla (permisos, etc.) cae a traer página por página
-   como antes, más lento pero funcional igual. */
-async function sbSelectAll(table, select, orderBy){
+   ssoma_sp_registros ya pasó de 1000 con un solo import de Shortpick, ssoma_bolsa_auditoria_lineas
+   puede superarlo en un solo trimestre). Se pide primero el conteo (head:true, no trae filas) y
+   se piden TODAS las páginas de 1000 en paralelo — una por una tardaba ~9s para 46 mil filas (47
+   vueltas de red seguidas); en paralelo tardan lo mismo que 1 sola vuelta. Si el conteo falla
+   (permisos, etc.) cae a traer página por página como antes, más lento pero funcional igual.
+   "extend" es opcional: función que recibe el query base (sb.from(table).select(select)) y le
+   agrega .order()/.in()/.eq()/etc — se aplica igual en el conteo y en cada página. */
+async function sbSelectAll(table, select, extend){
   const PAGE = 1000;
-  const { count, error: countError } = await sb.from(table).select(select, { count: "exact", head: true });
+  const aplicar = (q) => extend ? extend(q) : q;
+  const { count, error: countError } = await aplicar(sb.from(table).select(select, { count: "exact", head: true }));
   if(countError || count == null){
     let all = [], from = 0;
     for(;;){
-      let q = sb.from(table).select(select).range(from, from + PAGE - 1);
-      if(orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending !== false });
-      const { data, error } = await q;
+      const { data, error } = await aplicar(sb.from(table).select(select)).range(from, from + PAGE - 1);
       if(error) return { data: null, error };
       all = all.concat(data || []);
       if(!data || data.length < PAGE) return { data: all, error: null };
@@ -3489,11 +3490,9 @@ async function sbSelectAll(table, select, orderBy){
   if(count === 0) return { data: [], error: null };
   const inicios = [];
   for(let from = 0; from < count; from += PAGE) inicios.push(from);
-  const resultados = await Promise.all(inicios.map(from => {
-    let q = sb.from(table).select(select).range(from, from + PAGE - 1);
-    if(orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending !== false });
-    return q;
-  }));
+  const resultados = await Promise.all(inicios.map(from =>
+    aplicar(sb.from(table).select(select)).range(from, from + PAGE - 1)
+  ));
   const conError = resultados.find(r => r.error);
   if(conError) return { data: null, error: conError.error };
   return { data: resultados.flatMap(r => r.data || []), error: null };
@@ -3726,7 +3725,7 @@ function spPopulateFiltros(){
    Auditoría, Conciliación e Historial. */
 async function spLoadData(){
   await spCargarCostos();
-  const { data: registrosData, error: regError } = await sb.from("ssoma_sp_registros").select("*").order("fecha", { ascending: false });
+  const { data: registrosData, error: regError } = await sbSelectAll("ssoma_sp_registros", "*", q => q.order("fecha", { ascending: false }));
   if(regError){ console.error("No se pudieron cargar los registros de Short Pick:", regError.message); return; }
   spData = (registrosData || []).map(r => ({
     id: r.id, fecha: spFmtFechaHora(new Date(r.fecha)), codAlternat: r.cod_alternat,
@@ -3738,7 +3737,7 @@ async function spLoadData(){
   verificaciones = {};
   const ids = spData.map(r=>r.id);
   if(ids.length){
-    const { data: verData, error: verError } = await sb.from("ssoma_sp_verificaciones").select("*").in("registro_id", ids);
+    const { data: verData, error: verError } = await sbSelectAll("ssoma_sp_verificaciones", "*", q => q.in("registro_id", ids));
     if(verError) console.error("No se pudieron cargar las verificaciones:", verError.message);
     (verData || []).forEach(v=>{
       verificaciones[v.registro_id] = {
@@ -4440,7 +4439,7 @@ let bolsaWmsLineas = [];
    junto con el estado de disputa que se les haya puesto — así lo que se gestiona en el
    detalle (Disputar/Descartar/Aceptar) no se pierde al recargar la página. */
 async function bolsaLoadAuditLineas(){
-  const { data, error } = await sbSelectAll("ssoma_bolsa_auditoria_lineas", "*", { column: "fecha", ascending: false });
+  const { data, error } = await sbSelectAll("ssoma_bolsa_auditoria_lineas", "*", q => q.order("fecha", { ascending: false }));
   if(error){ console.error(error); return; }
   bolsaAuditLineas = (data || []).map(r => ({
     id: r.id,
@@ -4951,7 +4950,7 @@ function bpFmtFecha(d){
   return `${y}-${mo}-${da}`;
 }
 async function bpLoadData(){
-  const { data, error } = await sb.from("ssoma_bp_registros").select("*").order("fecha", { ascending: false });
+  const { data, error } = await sbSelectAll("ssoma_bp_registros", "*", q => q.order("fecha", { ascending: false }));
   if(error){ console.error("No se pudieron cargar los casos de Bultos Perdidos:", error.message); return; }
   bpData = (data || []).map(r => ({
     id: r.id, fecha: bpFmtFecha(new Date(r.fecha)), nroLpn: r.nro_lpn, codAlternat: r.cod_alternat,
@@ -4964,7 +4963,7 @@ async function bpLoadData(){
   bpVerificaciones = {};
   const ids = bpData.map(r=>r.id);
   if(ids.length){
-    const { data: verData, error: verError } = await sb.from("ssoma_bp_verificaciones").select("*").in("registro_id", ids);
+    const { data: verData, error: verError } = await sbSelectAll("ssoma_bp_verificaciones", "*", q => q.in("registro_id", ids));
     if(verError) console.error("No se pudieron cargar las verificaciones de Bultos Perdidos:", verError.message);
     (verData || []).forEach(v=>{
       bpVerificaciones[v.registro_id] = { sustento: v.sustento, fotoNombre: v.foto && v.foto.nombre ? v.foto.nombre : "", foto: v.foto || null, fecha: v.fecha };
@@ -5412,7 +5411,7 @@ let suData = [];
 let suVerificaciones = {};
 
 async function suLoadData(){
-  const { data, error } = await sb.from("ssoma_su_registros").select("*").order("fecha_crea", { ascending: false });
+  const { data, error } = await sbSelectAll("ssoma_su_registros", "*", q => q.order("fecha_crea", { ascending: false }));
   if(error){ console.error("No se pudieron cargar los casos de Sin Ubicación:", error.message); return; }
   suData = (data || []).map(r => ({
     id: r.id, fecha: bpFmtFecha(new Date(r.fecha_crea)), nroLpn: r.nro_lpn, codAlternat: r.cod_alternat,
@@ -5423,7 +5422,7 @@ async function suLoadData(){
   suVerificaciones = {};
   const ids = suData.map(r=>r.id);
   if(ids.length){
-    const { data: verData, error: verError } = await sb.from("ssoma_su_verificaciones").select("*").in("registro_id", ids);
+    const { data: verData, error: verError } = await sbSelectAll("ssoma_su_verificaciones", "*", q => q.in("registro_id", ids));
     if(verError) console.error("No se pudieron cargar las verificaciones de Sin Ubicación:", verError.message);
     (verData || []).forEach(v=>{
       suVerificaciones[v.registro_id] = { ubicacionEncontrada: v.ubicacion_encontrada, sustento: v.sustento, fotoNombre: v.foto && v.foto.nombre ? v.foto.nombre : "", foto: v.foto || null, fecha: v.fecha };
@@ -6979,7 +6978,7 @@ function spCostoEsPendiente(costo){ return costo === null || costo === undefined
 async function spExportarCatalogo(btn, soloPendientes){
   const originalLabel = btn.textContent;
   btn.disabled = true;
-  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia", { column: "cod_alternat" });
+  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia", q => q.order("cod_alternat"));
   btn.disabled = false;
   if(error){ alert("No se pudo exportar el catálogo: " + error.message); return; }
   const filas = soloPendientes ? (data || []).filter(r => spCostoEsPendiente(r.costo)) : (data || []);
