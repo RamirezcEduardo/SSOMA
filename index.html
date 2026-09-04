@@ -6827,12 +6827,22 @@ function spBuscaCampo(fila, alias){
 /* Cruce con "Estado de pedidos" (hoja Filtro de tu plantilla): esa hoja trae varias
    filas por Nro Orden (una por cada cambio de estado del pedido — "No preparado",
    "Cancelado", etc.). Nos quedamos con el estado más reciente (mayor Fe y Hr Crea)
-   de cada orden, para saber en qué quedó realmente. */
+   de cada orden, para saber en qué quedó realmente.
+   El "Nro Orden" de "Ajustes de inventario" (Data Short pick) viene SIEMPRE vacío —
+   confirmado contra la plantilla real: 0 de 1604 filas lo traían — así que Proceso/Sub
+   Proceso y el estado del pedido nunca calzaban. El join real es por "Nro Grupo" (id de
+   WMS que sí viene en ambos archivos): "Estado de pedidos" trae el Nro Orden real para
+   cada Nro Grupo (confirmado 1 Nro Orden por Nro Grupo, sin ambigüedad), así que se arma
+   también ese mapa acá para que spImportarRegistros() pueda resolver el Nro Orden real
+   de cada línea de "Ajustes de inventario" a través de su Nro Grupo. */
 async function spEstadoPedidosPorOrden(file){
   const filas = await spParseWorkbookFile(file);
   const porOrden = {};
+  const ordenPorGrupo = {};
   filas.forEach(fila=>{
     const orden = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim();
+    const nroGrupo = String(spBuscaCampo(fila, ["Nro Grupo"])).trim();
+    if(orden && nroGrupo && !ordenPorGrupo[nroGrupo]) ordenPorGrupo[nroGrupo] = orden;
     if(!orden) return;
     const estado = String(spBuscaCampo(fila, ["Estado"])).trim();
     if(!estado) return;
@@ -6843,22 +6853,28 @@ async function spEstadoPedidosPorOrden(file){
       porOrden[orden] = { estado, fecha: fechaDt };
     }
   });
-  return porOrden;
+  return { porOrden, ordenPorGrupo };
 }
 
 /* "Ajustes de inventario" = hoja "Data Short pick" de tu plantilla. Columnas reales
    confirmadas contra SP_DIARIO_PLANTILLA: el "Producto" del WMS es el código de
    barras/EAN (no un nombre), "Cod Razon" trae el motivo tipo "SHORT PICK ACTIVO", y
-   Turno/Responsable/Supervisor/Proceso ya vienen calculados en el propio export. */
+   Turno/Responsable/Supervisor/Proceso ya vienen calculados en el propio export.
+   Nro Orden viene vacío en esta hoja — se resuelve a través del Nro Grupo (ver
+   spEstadoPedidosPorOrden), que sí trae ambos archivos. */
 async function spImportarRegistros(file, estadoPorOrden){
   const filas = await spParseWorkbookFile(file);
   const actorId = miUsuario ? miUsuario.id : null;
+  const porOrden = (estadoPorOrden && estadoPorOrden.porOrden) || {};
+  const ordenPorGrupo = (estadoPorOrden && estadoPorOrden.ordenPorGrupo) || {};
   const registros = filas.map(fila=>{
     const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha","Fecha Creación","FechaHora","Fecha y Hora"]);
     let fechaDt = wmsParseFecha(fechaRaw) || new Date();
     const unajustRaw = spBuscaCampo(fila, ["Un Ajust","Un. Ajust","Unidades Ajustadas","Cantidad"]);
-    const orden = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim() || null;
-    const estadoPedido = orden && estadoPorOrden && estadoPorOrden[orden] ? estadoPorOrden[orden].estado : null;
+    const nroGrupo = String(spBuscaCampo(fila, ["Nro Grupo"])).trim() || null;
+    const ordenArchivo = String(spBuscaCampo(fila, ["Nro Orden","N° Orden","Orden","Numero Orden"])).trim();
+    const orden = ordenArchivo || (nroGrupo && ordenPorGrupo[nroGrupo]) || null;
+    const estadoPedido = orden && porOrden[orden] ? porOrden[orden].estado : null;
     const ubicacion = String(spBuscaCampo(fila, ["Ubicación","Ubicacion"])).trim();
     /* Sub Área/Turno/Responsable/Supervisor: se usan si vienen en el archivo (export ya
        procesado); si no (export crudo del WMS), se calculan a partir de Ubicación y
@@ -6888,6 +6904,7 @@ async function spImportarRegistros(file, estadoPorOrden){
       responsable: responsable || null,
       supervisor: supervisor || null,
       orden,
+      nro_grupo: nroGrupo,
       un_ajust: parseInt(unajustRaw, 10) || 0,
       semana: spSemanaDeFecha(fechaDt),
       estado: estadoPedido || String(spBuscaCampo(fila, ["Cod Razon","Estado"])).trim() || "SHORT PICK ACTIVO",
