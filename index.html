@@ -1706,6 +1706,22 @@
           <div class="stat-label">Sub área con más SP</div>
           <div class="stat-value" id="sp-stat-subarea" style="font-size:20px;">—</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label">Productos sin valor unitario</div>
+          <div class="stat-value" id="sp-stat-sincosto" style="color:var(--orange);">0</div>
+          <div class="stat-sublabel">No suman al valorizado total</div>
+        </div>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="sp-sincosto-toggle" aria-expanded="false">
+        ⚠ Productos sin valor unitario en el catálogo · <span id="sp-sincosto-count">0</span>
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="sp-sincosto-wrap">
+        <table class="data-table" id="sp-sincosto-table">
+          <thead><tr><th>Cod Alternat</th><th>Producto</th><th>Registros</th><th>Unidades</th><th>Costo unitario (S/)</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
 
       <button type="button" class="section-subhead collapsible-toggle" id="sp-summary-toggle" aria-expanded="false">
@@ -3669,6 +3685,49 @@ function spRender(){
   const topSubarea = Object.entries(porSubarea).sort((a,b)=>b[1]-a[1])[0];
   document.getElementById("sp-stat-subarea").textContent = topSubarea ? `${topSubarea[0]} (${topSubarea[1]})` : "—";
 
+  // Productos que no tienen costo en el catálogo (ssoma_sp_costos) — su Valorizado calcula
+  // en 0 y no suma al total, salvo que alguien ya lo haya corregido a mano fila por fila
+  // (input "Valorizado" del detalle). Se agrupa por código para que se pueda cargar el
+  // costo una sola vez por producto en vez de fila por fila.
+  const sinCosto = new Map(); // codAlternat -> {producto, registros, unidades}
+  rows.forEach(r=>{
+    if(!r.codAlternat || Object.prototype.hasOwnProperty.call(costosMap, r.codAlternat)) return;
+    if(r.valorizado !== undefined && r.valorizado !== null) return; // ya corregido a mano
+    const entry = sinCosto.get(r.codAlternat) || { producto: r.producto || r.desc || "", registros: 0, unidades: 0 };
+    entry.registros += 1;
+    entry.unidades += Math.abs(r.unajust);
+    sinCosto.set(r.codAlternat, entry);
+  });
+  document.getElementById("sp-stat-sincosto").textContent = sinCosto.size;
+  document.getElementById("sp-sincosto-count").textContent = sinCosto.size;
+  const sincostoBody = document.querySelector("#sp-sincosto-table tbody");
+  const sinCostoOrdenado = [...sinCosto.entries()].sort((a,b)=> b[1].unidades - a[1].unidades);
+  sincostoBody.innerHTML = sinCostoOrdenado.length ? sinCostoOrdenado.map(([cod, e]) => `
+    <tr>
+      <td>${escapeHtml(cod)}</td>
+      <td>${escapeHtml(e.producto)}</td>
+      <td class="num">${e.registros}</td>
+      <td class="num">${e.unidades}</td>
+      <td class="num">${esAdmin()
+        ? `<input type="number" step="0.01" min="0" class="sp-costo-nuevo-input" data-cod="${escapeHtml(cod)}" data-producto="${escapeHtml(e.producto)}" placeholder="0.00" style="width:90px;">`
+        : `<span style="color:var(--muted);">— (pide a un administrador)</span>`}</td>
+    </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;color:var(--muted);">Todos los productos de este filtro tienen costo cargado.</td></tr>`;
+
+  sincostoBody.querySelectorAll(".sp-costo-nuevo-input").forEach(input=>{
+    input.addEventListener("change", async (e)=>{
+      const cod = e.target.dataset.cod;
+      const costo = parseFloat(e.target.value);
+      if(isNaN(costo) || costo < 0){ e.target.value = ""; return; }
+      e.target.disabled = true;
+      const { error } = await sb.from("ssoma_sp_costos")
+        .upsert({ cod_alternat: cod, producto: e.target.dataset.producto, costo }, { onConflict: "cod_alternat" });
+      e.target.disabled = false;
+      if(error){ alert("No se pudo guardar el costo: " + error.message); return; }
+      await spCargarCostos();
+      spRender();
+    });
+  });
+
   const grupos = {};
   rows.forEach(r=>{
     const proceso = spProceso(r.orden);
@@ -3728,6 +3787,11 @@ document.getElementById("sp-f-semana").addEventListener("change", spRender);
 document.getElementById("sp-f-subarea").addEventListener("change", spRender);
 
 document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+document.getElementById("sp-sincosto-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
   const expanded = btn.getAttribute("aria-expanded") === "true";
   btn.setAttribute("aria-expanded", String(!expanded));
