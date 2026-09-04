@@ -3466,21 +3466,37 @@ allNavgroupToggles.forEach(navgroupToggle=>{
 
 /* Supabase (hosted) limita cada select a 1000 filas por página salvo que pagines con
    .range() — varias tablas de este archivo ya superan eso (ssoma_sp_costos: ~46 mil filas,
-   ssoma_bolsa_auditoria_lineas puede superarlo en un solo trimestre), así que se trae todo
-   en páginas de 1000 en vez de un solo select sin límite (que se cortaría en la fila 1000
-   sin avisar). */
+   ssoma_bolsa_auditoria_lineas puede superarlo en un solo trimestre). Se pide primero el
+   conteo (head:true, no trae filas) y se piden TODAS las páginas de 1000 en paralelo — una
+   por una tardaba ~9s para 46 mil filas (47 vueltas de red seguidas); en paralelo tardan lo
+   mismo que 1 sola vuelta. Si el conteo falla (permisos, etc.) cae a traer página por página
+   como antes, más lento pero funcional igual. */
 async function sbSelectAll(table, select, orderBy){
   const PAGE = 1000;
-  let all = [], from = 0;
-  for(;;){
+  const { count, error: countError } = await sb.from(table).select(select, { count: "exact", head: true });
+  if(countError || count == null){
+    let all = [], from = 0;
+    for(;;){
+      let q = sb.from(table).select(select).range(from, from + PAGE - 1);
+      if(orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending !== false });
+      const { data, error } = await q;
+      if(error) return { data: null, error };
+      all = all.concat(data || []);
+      if(!data || data.length < PAGE) return { data: all, error: null };
+      from += PAGE;
+    }
+  }
+  if(count === 0) return { data: [], error: null };
+  const inicios = [];
+  for(let from = 0; from < count; from += PAGE) inicios.push(from);
+  const resultados = await Promise.all(inicios.map(from => {
     let q = sb.from(table).select(select).range(from, from + PAGE - 1);
     if(orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending !== false });
-    const { data, error } = await q;
-    if(error) return { data: null, error };
-    all = all.concat(data || []);
-    if(!data || data.length < PAGE) return { data: all, error: null };
-    from += PAGE;
-  }
+    return q;
+  }));
+  const conError = resultados.find(r => r.error);
+  if(conError) return { data: null, error: conError.error };
+  return { data: resultados.flatMap(r => r.data || []), error: null };
 }
 
 /* ---- Exportar a CSV (compartido por Shortpick/Bultos Perdidos/Sin Ubicación) ----
@@ -3558,13 +3574,20 @@ function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
    la app (solo administradores) con "Actualizar catálogo de costos". */
 /* costosMap guarda el precio TAL CUAL está en la base (null si no tiene) — no lo convierte
    a 0 al cargar, para poder distinguir "sin precio/0" (pendiente) de un precio real. spCosto()
-   sí devuelve 0 como respaldo para la matemática de valorización. */
+   sí devuelve 0 como respaldo para la matemática de valorización.
+   Se cachea en memoria: Shortpick/Bultos Perdidos/Sin Ubicación llaman spCargarCostos() cada
+   uno antes de importar, y sin esto se volvían a traer las ~46 mil filas del catálogo cada
+   vez (ya en paralelo gracias a sbSelectAll, pero sigue siendo trabajo de más). Pasa forzar:true
+   solo donde el catálogo mismo acaba de cambiar (subida de tarifario, edición de un precio). */
 let costosMap = {};
-async function spCargarCostos(){
+let costosMapCargado = false;
+async function spCargarCostos(forzar){
+  if(costosMapCargado && !forzar) return;
   const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, costo");
   if(error){ console.error("No se pudo cargar el catálogo de costos:", error.message); return; }
   costosMap = {};
   (data || []).forEach(c => { costosMap[c.cod_alternat] = (c.costo === null || c.costo === undefined) ? null : Number(c.costo); });
+  costosMapCargado = true;
 }
 function spCosto(codAlternat){ return costosMap[codAlternat] || 0; }
 function spTienePrecio(codAlternat){ return !!costosMap[codAlternat]; } // false = sin precio o cargado en 0
@@ -3766,7 +3789,7 @@ function spRender(){
         .upsert({ cod_alternat: cod, producto: e.target.dataset.producto, costo }, { onConflict: "cod_alternat" });
       e.target.disabled = false;
       if(error){ alert("No se pudo guardar el costo: " + error.message); return; }
-      await spCargarCostos();
+      await spCargarCostos(true);
       spRender();
     });
   });
@@ -6951,7 +6974,7 @@ document.getElementById("sp-costos-import-btn").addEventListener("click", async 
         statusEl.style.display = "block";
         statusEl.textContent = `Actualizando… ${importados}/${costos.length}`;
       }
-      await spCargarCostos();
+      await spCargarCostos(true);
       spRender(); spRenderConc(); spRenderHistorial();
       statusEl.textContent = `✅ Catálogo actualizado: ${importados} códigos.`;
     }
