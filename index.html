@@ -3447,6 +3447,12 @@ function irAVista(view){
   const item = document.querySelector(`.navitem[data-view="${view}"]`);
   if(item) item.classList.add("active");
   document.getElementById("panel-"+view).classList.add("active");
+  // Designación de Tareas solo se cargaba una vez al iniciar sesión — si alguien te
+  // asignaba o delegaba una tarea mientras tenías la app abierta, no aparecía hasta
+  // recargar todo. Se refresca cada vez que se entra a estas vistas.
+  if(view === "tareas-jefatura" || view === "tareas-coordinador" || view === "tareas-supervisor"){
+    trLoadTareas();
+  }
 }
 document.querySelectorAll(".navitem").forEach(btn=>{
   btn.addEventListener("click", ()=> irAVista(btn.dataset.view));
@@ -8103,6 +8109,14 @@ async function init(){
   initImageWidget("charla");
   ssomaInicializarPush();
 }
+
+// En el APK (Capacitor), reabrir la app desde segundo plano no recarga la página —
+// retoma el mismo WebView con los datos que tenía al minimizarla. Sin esto, una tarea
+// asignada mientras la app estaba en segundo plano no aparecía hasta cerrar y volver
+// a abrir todo (o recargar a mano en el navegador).
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible" && currentSession) trLoadTareas();
+});
 
 /* ---- Notificaciones push (app móvil vía Capacitor + Firebase) ----
    En el navegador de escritorio window.Capacitor no existe y todo esto queda inactivo. */
