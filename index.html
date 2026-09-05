@@ -1785,8 +1785,8 @@
           <div class="stat-value" id="conc-stat-pendientes" style="color:#B45309;">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Verificados</div>
-          <div class="stat-value" id="conc-stat-verificados" style="color:#16A34A;">0</div>
+          <div class="stat-label">% Avance</div>
+          <div class="stat-value" id="conc-stat-verificados" style="color:#16A34A;">0%</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Valor conciliado</div>
@@ -4029,32 +4029,42 @@ function concEstadoBadge(v){
 
 /* Tarjeta compacta reutilizada por Conciliación (pendientes) e Historial (verificados) —
    pensada para verse bien apilada en una sola columna en el celular. */
-function concCardCampos(r){
+/* verParcial: si el pendiente ya tiene un avance parcial, se muestra "Falta N" (lo que
+   realmente queda por encontrar) en vez del total original — con el detalle de cuánto ya
+   se encontró al lado, para no perder la trazabilidad. En Historial no se pasa (ahí sí
+   interesa ver el total original tal como se reportó). */
+function concCardCampos(r, verParcial){
   const cantWms = Math.abs(r.unajust);
+  const cantidadTexto = verParcial
+    ? `Falta ${cantWms - verParcial.cantidadEncontrada} <span style="color:var(--muted);font-weight:400;">(ya se encontraron ${verParcial.cantidadEncontrada} de ${cantWms})</span>`
+    : `${cantWms} ${cantWms===1 ? "unidad" : "unidades"}`;
   return `
     <div class="cg-item"><b>Código de barras</b><span>${escapeHtml(r.codigoBarras || "—")}</span></div>
     <div class="cg-item"><b>Código alternativo</b><span>${escapeHtml(r.codAlternat)}</span></div>
     <div class="cg-item"><b>Producto</b><span>${escapeHtml(r.producto || r.desc)}</span></div>
     <div class="cg-item"><b>Descripción</b><span>${escapeHtml(r.desc)}</span></div>
     <div class="cg-item"><b>Ubicación</b><span>${escapeHtml(r.ubicacion)}</span></div>
-    <div class="cg-item"><b>Cantidad</b><span>${cantWms} ${cantWms===1 ? "unidad" : "unidades"}</span></div>`;
+    <div class="cg-item"><b>Cantidad</b><span>${cantidadTexto}</span></div>`;
 }
 
 function spRenderConc(){
-  let pendientes = 0, verificados = 0, valorConciliado = 0;
+  let pendientes = 0, valorConciliado = 0, unidadesTotal = 0, unidadesEncontradas = 0;
   const statsPorCodigo = {}; // cod -> {total, completos} — para avisar en la tarjeta pendiente cuántos de su mismo código ya quedaron completos
   spData.forEach(r=>{
     const completo = spEstaCompleto(r.id);
-    if(completo) verificados++; else pendientes++;
+    if(!completo) pendientes++;
     valorConciliado += concValorConciliadoRow(r);
+    unidadesTotal += Math.abs(r.unajust);
+    if(verificaciones[r.id]) unidadesEncontradas += verificaciones[r.id].cantidadEncontrada; // parcial también suma su avance
     if(!statsPorCodigo[r.codAlternat]) statsPorCodigo[r.codAlternat] = { total: 0, completos: 0 };
     statsPorCodigo[r.codAlternat].total++;
     if(completo) statsPorCodigo[r.codAlternat].completos++;
   });
+  const porcentajeAvance = unidadesTotal > 0 ? Math.round((unidadesEncontradas / unidadesTotal) * 100) : 0;
   document.getElementById("conc-count").textContent = pendientes + (pendientes===1 ? " pendiente" : " pendientes");
   document.getElementById("sp-tab-count-conciliacion").textContent = pendientes;
   document.getElementById("conc-stat-pendientes").textContent = pendientes;
-  document.getElementById("conc-stat-verificados").textContent = verificados;
+  document.getElementById("conc-stat-verificados").textContent = porcentajeAvance + "%";
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
 
   const fBuscar = document.getElementById("conc-f-buscar").value.trim().toLowerCase();
@@ -4063,12 +4073,8 @@ function spRenderConc(){
   const list = document.getElementById("conc-list");
   list.innerHTML = rowsPendientes.length ? rowsPendientes.map(r=> {
     const v = verificaciones[r.id];
-    const cantWms = Math.abs(r.unajust);
     let nota = "";
-    if(v){
-      const falta = cantWms - v.cantidadEncontrada;
-      nota = `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Se concilió ${v.cantidadEncontrada} de ${cantWms}, falta${falta===1?"":"n"} ${falta}.</div>`;
-    }else{
+    if(!v){
       const st = statsPorCodigo[r.codAlternat];
       if(st.completos > 0) nota = `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Se concilió ${st.completos} caso(s) de este código aparte — este sigue pendiente.</div>`;
     }
@@ -4078,7 +4084,7 @@ function spRenderConc(){
         <span class="conc-card-title">${escapeHtml(r.producto || r.desc)}</span>
         ${concEstadoBadge(v || null)}
       </div>
-      <div class="conc-card-grid">${concCardCampos(r)}</div>
+      <div class="conc-card-grid">${concCardCampos(r, v)}</div>
       ${nota}
       <div class="conc-card-actions">
         <button type="button" class="btn btn-primary conc-verificar-btn" data-id="${r.id}">${v ? "Completar" : "Verificar"}</button>
