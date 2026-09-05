@@ -7032,18 +7032,26 @@ document.getElementById("sp-costos-import-btn").addEventListener("click", async 
       costo: parseFloat(spBuscaCampo(fila, ["COSTO","Costo"])) || 0,
       familia: String(spBuscaCampo(fila, ["FAMILIA","Familia"])).trim() || null,
     })).filter(c => c.cod_alternat);
-    if(!costos.length){
+    // Si el tarifario trae el mismo COD_ALTERNO repetido (p.ej. quedó duplicado al corregir
+    // precios a mano), el upsert por lote falla con "ON CONFLICT DO UPDATE command cannot
+    // affect row a second time" porque Postgres no puede tocar la misma fila dos veces en un
+    // solo INSERT. Se deduplica quedándonos con la última aparición de cada código (la más
+    // reciente en el archivo, que es la corregida) antes de armar los lotes.
+    const costosPorCodigo = new Map();
+    costos.forEach(c => costosPorCodigo.set(c.cod_alternat, c));
+    const costosUnicos = Array.from(costosPorCodigo.values());
+    if(!costosUnicos.length){
       statusEl.textContent = "⚠️ No se encontraron filas válidas (revisa que tenga columnas COD_ALTERNO, PRODUCTO, COSTO, FAMILIA).";
     }else{
       const LOTE = 500;
       let importados = 0;
-      for(let i = 0; i < costos.length; i += LOTE){
-        const lote = costos.slice(i, i + LOTE);
+      for(let i = 0; i < costosUnicos.length; i += LOTE){
+        const lote = costosUnicos.slice(i, i + LOTE);
         const { error } = await sb.from("ssoma_sp_costos").upsert(lote, { onConflict: "cod_alternat" });
         if(error){ throw new Error(error.message); }
         importados += lote.length;
         statusEl.style.display = "block";
-        statusEl.textContent = `Actualizando… ${importados}/${costos.length}`;
+        statusEl.textContent = `Actualizando… ${importados}/${costosUnicos.length}`;
       }
       await spCargarCostos(true);
       spRender(); spRenderConc(); spRenderHistorial();
