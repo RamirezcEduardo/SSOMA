@@ -1930,6 +1930,25 @@
       <div id="bp-tab-conciliacion" style="display:none;">
         <p class="section-desc">Los casos Ubicado/Cancelado/Consumido del cruce con la caja WMS (Paso 2) se concilian solos. Lo que quede pendiente acá lo puedes conciliar a mano: busca el Nro LPN en Historial Inventario y, si reaparece con movimiento, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
 
+        <div class="import-card">
+          <div class="import-card-head">
+            <div>
+              <div class="import-card-title">🔍 Cruce con historial de productos encontrados</div>
+              <div class="import-card-sub">Sube el historial que te pasan (Fecha, Cód Alternat, Ubicación, Encontrado) — concilia solo los pendientes cuyo código aparece encontrado en una fecha posterior a cuando se reportó perdido. Si el mismo código tiene más de un caso pendiente, no toca ninguno (queda para revisar a mano).</div>
+            </div>
+            <button type="button" class="btn btn-primary" id="bp-hist-encontrados-import-btn" disabled>Cruzar y conciliar</button>
+          </div>
+          <div class="import-drop-row">
+            <label class="import-drop" for="bp-file-hist-encontrados" id="bp-drop-hist-encontrados">
+              <input type="file" id="bp-file-hist-encontrados" accept=".xlsx,.xls,.csv" hidden>
+              <span class="import-drop-icon">🗂️</span>
+              <span class="import-drop-title">Historial de encontrados</span>
+              <span class="import-drop-hint" id="bp-file-hist-encontrados-name">Arrastra el archivo o haz clic para elegirlo</span>
+            </label>
+          </div>
+          <div class="import-status" id="bp-hist-encontrados-import-status" style="display:none;"></div>
+        </div>
+
         <div class="stats-row stats-row-3" style="margin-top:18px;">
           <div class="stat-card">
             <div class="stat-label">Pendientes de verificar</div>
@@ -5372,6 +5391,88 @@ document.getElementById("bp-wms-import-btn").addEventListener("click", async (e)
   statusEl.style.display = "block";
   btn.textContent = original;
   document.getElementById("bp-wms-import-btn").disabled = !document.getElementById("bp-file-wms").files[0];
+});
+
+document.getElementById("bp-file-hist-encontrados").addEventListener("change", ()=>{
+  const f = document.getElementById("bp-file-hist-encontrados").files[0];
+  document.getElementById("bp-file-hist-encontrados-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bp-drop-hist-encontrados").classList.toggle("filled", !!f);
+  document.getElementById("bp-hist-encontrados-import-btn").disabled = !f;
+});
+/* Cruce con el historial manual de "productos encontrados" (Recepción/Auditoría): a
+   diferencia de la caja WMS (Paso 2, que trae Nro LPN — clave única y sin ambigüedad),
+   este archivo solo trae Cod Alternat, y el mismo código puede reaparecer muchas veces
+   en el historial por incidentes distintos a lo largo del tiempo. Para no conciliar el
+   caso equivocado: (1) el hallazgo tiene que ser de una fecha igual o posterior a cuando
+   el caso se reportó perdido — un hallazgo de antes es de otro incidente con el mismo
+   producto, no de este caso; (2) si hay más de un caso pendiente con el mismo código, no
+   se toca ninguno automático (no hay forma de saber cuál de los dos encontraron) — quedan
+   para conciliar a mano. */
+async function bpCruceHistorialEncontrados(file){
+  const filas = await spParseWorkbookFile(file);
+  const hallazgosPorCodigo = {};
+  filas.forEach(fila=>{
+    const cod = String(spBuscaCampo(fila, ["Codigo Alterno","Código Alterno","Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim();
+    const fecha = wmsParseFecha(spBuscaCampo(fila, ["Fecha"]));
+    if(!cod || !fecha) return;
+    const ubicacion = String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim();
+    if(!hallazgosPorCodigo[cod]) hallazgosPorCodigo[cod] = [];
+    hallazgosPorCodigo[cod].push({ fecha, ubicacion });
+  });
+
+  const pendientesPorCodigo = {};
+  bpData.forEach(r=>{
+    if(bpVerificaciones[r.id]) return;
+    if(!pendientesPorCodigo[r.codAlternat]) pendientesPorCodigo[r.codAlternat] = [];
+    pendientesPorCodigo[r.codAlternat].push(r);
+  });
+
+  const actorId = miUsuario ? miUsuario.id : null;
+  const nuevos = [];
+  let ambiguos = 0;
+  Object.entries(pendientesPorCodigo).forEach(([cod, casos])=>{
+    const hallazgos = hallazgosPorCodigo[cod];
+    if(!hallazgos || !hallazgos.length) return;
+    if(casos.length > 1){ ambiguos += casos.length; return; }
+    const caso = casos[0];
+    const fechaCaso = new Date(caso.fecha + "T00:00:00");
+    const hallazgo = hallazgos.filter(h => h.fecha >= fechaCaso).sort((a,b)=> a.fecha - b.fecha)[0];
+    if(!hallazgo) return;
+    nuevos.push({
+      registro_id: caso.id,
+      sustento: `Encontrado en ${hallazgo.ubicacion || "ubicación no especificada"} el ${bpFmtFecha(hallazgo.fecha)} (cruce con historial de productos encontrados).`,
+      foto: null,
+      verificado_por_id: actorId,
+      fecha: new Date().toISOString(),
+    });
+  });
+  if(!nuevos.length) return { conciliados: 0, ambiguos, error: null };
+  const { error } = await sb.from("ssoma_bp_verificaciones").upsert(nuevos, { onConflict: "registro_id" });
+  return { conciliados: nuevos.length, ambiguos, error };
+}
+document.getElementById("bp-hist-encontrados-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget; const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Cruzando…";
+  const statusEl = document.getElementById("bp-hist-encontrados-import-status");
+  statusEl.style.display = "none";
+  try{
+    const file = document.getElementById("bp-file-hist-encontrados").files[0];
+    const { conciliados, ambiguos, error } = await bpCruceHistorialEncontrados(file);
+    if(error){
+      statusEl.textContent = "❌ No se pudo cruzar: " + error.message;
+    }else if(conciliados === 0 && ambiguos === 0){
+      statusEl.textContent = "⚠️ Ningún código del historial coincide con un caso pendiente reportado después de esa fecha.";
+    }else{
+      await bpLoadData();
+      const nota = ambiguos > 0 ? ` ${ambiguos} caso(s) con el mismo código en más de un pendiente — revísalos a mano.` : "";
+      statusEl.textContent = `✅ ${conciliados} caso(s) conciliados por cruce con el historial de encontrados.${nota}`;
+    }
+  }catch(err){
+    statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
+  }
+  statusEl.style.display = "block";
+  btn.textContent = original;
+  document.getElementById("bp-hist-encontrados-import-btn").disabled = !document.getElementById("bp-file-hist-encontrados").files[0];
 });
 
 let bpCurrentId = null;
