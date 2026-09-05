@@ -2272,7 +2272,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <textarea id="tj-descripcion" placeholder="Detalla qué se espera del destinatario"></textarea>
         </div>
         <div class="field" style="margin-top:14px;margin-bottom:0;display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="tj-semanal" style="width:auto;margin:0;">
+          <input type="checkbox" id="tj-semanal" autocomplete="off" style="width:auto;margin:0;">
           <label for="tj-semanal" style="margin:0;font-weight:600;">Tarea semanal (reporte diario lun–sáb, domingo opcional; cierra sola el domingo)</label>
         </div>
         <div class="grid3" style="margin-top:16px;">
@@ -2382,7 +2382,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <textarea id="tarea-descripcion" placeholder="Detalla qué se espera del supervisor"></textarea>
         </div>
         <div class="field" style="margin-top:14px;margin-bottom:0;display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="tarea-semanal" style="width:auto;margin:0;">
+          <input type="checkbox" id="tarea-semanal" autocomplete="off" style="width:auto;margin:0;">
           <label for="tarea-semanal" style="margin:0;font-weight:600;">Tarea semanal (reporte diario lun–sáb, domingo opcional; cierra sola el domingo)</label>
         </div>
         <div class="grid3" style="margin-top:16px;">
@@ -6257,6 +6257,11 @@ document.getElementById("tarea-semanal").addEventListener("change", (e)=>{
   document.getElementById("tarea-fecha-limite-label").innerHTML = on ? `Semana (elige cualquier día)<span class="req">*</span>` : `Fecha límite<span class="req">*</span>`;
   document.getElementById("tarea-hora-limite-field").style.display = on ? "none" : "";
 });
+// Algunos navegadores restauran el estado marcado de un checkbox al recargar la
+// página (bfcache/autofill), aunque el HTML no lo declare "checked" — se fuerza
+// desmarcado al cargar para que "Tarea semanal" nunca quede activo sin que alguien
+// lo haya tildado en esta misma sesión.
+document.getElementById("tarea-semanal").checked = false;
 
 document.getElementById("tc-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
@@ -6360,6 +6365,9 @@ document.getElementById("tj-semanal").addEventListener("change", (e)=>{
   document.getElementById("tj-fecha-limite-label").innerHTML = on ? `Semana (elige cualquier día)<span class="req">*</span>` : `Fecha límite<span class="req">*</span>`;
   document.getElementById("tj-hora-limite-field").style.display = on ? "none" : "";
 });
+// Mismo resguardo que en "tarea-semanal": evita que un checkbox restaurado por el
+// navegador tras un refresh quede marcado sin que la persona lo haya tildado.
+document.getElementById("tj-semanal").checked = false;
 
 document.getElementById("tj-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
