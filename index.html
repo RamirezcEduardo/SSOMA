@@ -803,6 +803,11 @@
     font-weight:300;
   }
   .img-empty:hover{border-color:var(--red);color:var(--red);background:var(--red-tint);}
+  /* "Tomar foto" / "Galería" como mitades separadas del mismo tile — un solo input nativo
+     a veces abre la cámara directo en el APK sin dar opción de galería. */
+  .img-empty-split{flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;font-size:15px;}
+  .img-empty-half{flex:1;width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .img-empty-half:first-child{border-bottom:1.5px dashed var(--border);}
   .img-thumb{width:100%;height:100%;object-fit:cover;display:block;border:1px solid var(--border);border-radius:8px;}
   .img-remove{
     position:absolute;top:4px;right:4px;
@@ -3194,7 +3199,10 @@ function renderImageWidget(key){
     <div class="img-slot">
       ${img
         ? `<img src="${img}" class="img-thumb"><button type="button" class="img-remove" data-key="${key}" data-idx="${i}">×</button>`
-        : `<label class="img-empty"><input type="file" accept="image/*" class="img-input" data-key="${key}" data-idx="${i}" hidden>+</label>`
+        : `<div class="img-empty img-empty-split">
+             <label class="img-empty-half" title="Tomar foto">📷<input type="file" accept="image/*" capture="environment" class="img-input" data-key="${key}" data-idx="${i}" hidden></label>
+             <label class="img-empty-half" title="Elegir de galería">🖼️<input type="file" accept="image/*" class="img-input" data-key="${key}" data-idx="${i}" hidden></label>
+           </div>`
       }
     </div>
   `).join("");
