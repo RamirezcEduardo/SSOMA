@@ -6239,15 +6239,15 @@ function tareaEstadoCell(t){
 }
 function tareaEvidenciaCell(t){
   const partes = [];
-  if(t.archivo_cierre) partes.push("📎 " + escapeHtml(t.archivo_cierre.nombre));
-  if(t.fotos_cierre && t.fotos_cierre.length) partes.push(`📷 ${t.fotos_cierre.length} foto${t.fotos_cierre.length>1?"s":""}`);
+  if(t.archivo_cierre_nombre) partes.push("📎 " + escapeHtml(t.archivo_cierre_nombre));
+  if(t.fotos_cierre_count) partes.push(`📷 ${t.fotos_cierre_count} foto${t.fotos_cierre_count>1?"s":""}`);
   return partes.length ? partes.join(" · ") : "—";
 }
 function renderAvanceLog(t){
   if(!t.avances || !t.avances.length) return `<div style="font-size:12px;color:var(--muted);margin-top:10px;">Todavía no hay avances registrados esta semana.</div>`;
   return `<div class="avance-log">${t.avances.map(a=>{
-    const chipDoc = a.archivo ? `<span class="avance-chip">📄 ${escapeHtml(a.archivo.nombre)}</span>` : "";
-    const chipFotos = (a.fotos && a.fotos.length) ? `<span class="avance-chip">📷 ${a.fotos.length} foto${a.fotos.length>1?"s":""}</span>` : "";
+    const chipDoc = a.archivo_nombre ? `<span class="avance-chip">📄 ${escapeHtml(a.archivo_nombre)}</span>` : "";
+    const chipFotos = a.fotos_count ? `<span class="avance-chip">📷 ${a.fotos_count} foto${a.fotos_count>1?"s":""}</span>` : "";
     return `<div class="avance-row"><span class="avance-day">${formatDate(a.fecha).slice(0,5)}</span><span class="avance-note">${escapeHtml(a.nota)}${chipDoc}${chipFotos}</span></div>`;
   }).join("")}</div>`;
 }
@@ -6371,9 +6371,16 @@ document.addEventListener("click", (e)=>{
   }
 });
 
+/* Nota sobre archivo_cierre_nombre/fotos_cierre_count (y sus equivalentes en avances):
+   son metadatos livianos — el contenido pesado (fotos/documentos en base64) NO se trae
+   acá. Antes esta función traía todo el contenido completo en cada carga, y como se
+   dispara en cada visibilitychange (la app vuelve a primer plano), eso multiplicaba el
+   tráfico real muchísimas veces por sesión y agotó la cuota de egress. El contenido
+   completo solo se pide bajo demanda en tiOpenModal(), al abrir "Ver informe" de una
+   tarea puntual. */
 async function trLoadTareas(){
   const { data, error } = await sb.from("ssoma_tareas")
-    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, fotos_cierre, finalizado_at, created_at, es_semanal, semana_inicio, comentario_cierre")
+    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre_nombre, fotos_cierre_count, finalizado_at, created_at, es_semanal, semana_inicio, comentario_cierre")
     .order("created_at", { ascending: false });
   if(error){ console.error("No se pudieron cargar las tareas:", error.message); return; }
 
@@ -6381,7 +6388,7 @@ async function trLoadTareas(){
   const avancesPorTarea = {};
   if(tareaIdsSemanales.length){
     const { data: avancesData, error: avancesError } = await sb.from("ssoma_tareas_avances")
-      .select("id, tarea_id, fecha, nota, archivo, fotos, creado_por_id, created_at")
+      .select("id, tarea_id, fecha, nota, archivo_nombre, fotos_count, creado_por_id, created_at")
       .in("tarea_id", tareaIdsSemanales)
       .order("fecha", { ascending: false });
     if(avancesError) console.error("No se pudieron cargar los avances:", avancesError.message);
@@ -6929,6 +6936,8 @@ document.getElementById("tf-guardar-btn").addEventListener("click", async ()=>{
     const { error } = await sb.from("ssoma_tareas").update({
       archivo_cierre: archivoCierre,
       fotos_cierre: fotosCierre,
+      archivo_cierre_nombre: archivoCierre ? archivoCierre.nombre : null,
+      fotos_cierre_count: fotosCierre.length,
       finalizado_at: new Date().toISOString(),
       comentario_cierre: comentario || null,
     }).eq("id", tfCurrentId);
@@ -6999,6 +7008,8 @@ document.getElementById("ta-guardar-btn").addEventListener("click", async ()=>{
     const t = tareasData.find(x=> x.id === taCurrentId);
     const { error } = await sb.from("ssoma_tareas_avances").upsert({
       tarea_id: taCurrentId, fecha: ssomaFormatISO(new Date()), nota, archivo, fotos: fotosAvance,
+      archivo_nombre: archivo ? archivo.nombre : null,
+      fotos_count: fotosAvance.length,
       creado_por_id: miUsuario ? miUsuario.id : null,
     }, { onConflict: "tarea_id,fecha" });
     btn.disabled = false; btn.textContent = original;
@@ -7121,25 +7132,33 @@ function teCancelarTarea(id){
 }
 
 /* ---- Ver informe de la tarea (disponible para cualquiera que pueda ver la tarea) ---- */
-function tiOpenModal(id){
-  const t = tareasData.find(x=>x.id === id);
-  if(!t) return;
-  const e = tareaEstado(t);
-  const partesEvidencia = [];
-  if(t.archivo_cierre){
-    const esImagen = (t.archivo_cierre.tipo || "").startsWith("image/");
-    partesEvidencia.push(esImagen
-      ? `<img src="${t.archivo_cierre.contenido}" alt="Evidencia" class="img-preview-trigger" data-src="${t.archivo_cierre.contenido}" style="max-width:120px;max-height:100px;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);display:block;">`
-      : `<a href="${t.archivo_cierre.contenido}" download="${escapeHtml(t.archivo_cierre.nombre)}" target="_blank" class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</a>`);
+function tiEvidenciaHtml(archivoCierre, fotosCierre){
+  const partes = [];
+  if(archivoCierre){
+    const esImagen = (archivoCierre.tipo || "").startsWith("image/");
+    partes.push(esImagen
+      ? `<img src="${archivoCierre.contenido}" alt="Evidencia" class="img-preview-trigger" data-src="${archivoCierre.contenido}" style="max-width:120px;max-height:100px;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);display:block;">`
+      : `<a href="${archivoCierre.contenido}" download="${escapeHtml(archivoCierre.nombre)}" target="_blank" class="evidencia-chip">📎 ${escapeHtml(archivoCierre.nombre)}</a>`);
   }
-  if(t.fotos_cierre && t.fotos_cierre.length){
-    partesEvidencia.push(`<div style="display:flex;flex-wrap:wrap;gap:8px;">${t.fotos_cierre.map(f=>
+  if(fotosCierre && fotosCierre.length){
+    partes.push(`<div style="display:flex;flex-wrap:wrap;gap:8px;">${fotosCierre.map(f=>
       `<img src="${f.contenido}" alt="${escapeHtml(f.nombre)}" class="img-preview-trigger" data-src="${f.contenido}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);">`
     ).join("")}</div>`);
   }
-  const evidenciaHtml = partesEvidencia.length
-    ? `<div style="display:flex;flex-direction:column;gap:8px;">${partesEvidencia.join("")}</div>`
+  return partes.length
+    ? `<div style="display:flex;flex-direction:column;gap:8px;">${partes.join("")}</div>`
     : `<div class="hint">Sin evidencia todavía.</div>`;
+}
+/* El contenido pesado (archivo_cierre/fotos_cierre completos, con las fotos en base64)
+   se trae acá bajo demanda, solo para la tarea que se está viendo — no en trLoadTareas(),
+   que solo maneja los metadatos livianos (nombre/cantidad) para no re-transferir todas
+   las fotos de todas las tareas en cada carga de la lista. */
+async function tiOpenModal(id){
+  const t = tareasData.find(x=>x.id === id);
+  if(!t) return;
+  const e = tareaEstado(t);
+  const evidenciaId = "ti-evidencia-" + id;
+  const hayEvidenciaPendiente = !t.es_semanal && (t.archivo_cierre_nombre || t.fotos_cierre_count);
   document.getElementById("ti-modal-body").innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:16px;">
       <h4 style="margin:0;font-size:16px;color:var(--text);">${escapeHtml(t.titulo)}</h4>
@@ -7159,10 +7178,20 @@ function tiOpenModal(id){
     </div>
     ${t.es_semanal
       ? `<div class="field" style="margin-top:14px;margin-bottom:0;"><label>Avances de la semana</label>${renderSemanaStrip(t)}${renderAvanceLog(t)}</div>`
-      : `<div class="field" style="margin-top:14px;margin-bottom:0;"><label>Evidencia</label>${evidenciaHtml}</div>`
+      : `<div class="field" style="margin-top:14px;margin-bottom:0;"><label>Evidencia</label><div id="${evidenciaId}">${hayEvidenciaPendiente ? `<div class="hint">Cargando evidencia…</div>` : tiEvidenciaHtml(null, [])}</div></div>`
     }
   `;
   document.getElementById("tarea-informe-modal").classList.add("show");
+  if(hayEvidenciaPendiente){
+    const { data: full, error } = await sb.from("ssoma_tareas")
+      .select("archivo_cierre, fotos_cierre")
+      .eq("id", id)
+      .single();
+    const wrap = document.getElementById(evidenciaId);
+    if(!wrap) return; // el usuario ya cerró el modal
+    if(error){ wrap.innerHTML = `<div class="hint">No se pudo cargar la evidencia: ${escapeHtml(error.message)}</div>`; return; }
+    wrap.innerHTML = tiEvidenciaHtml(full.archivo_cierre, full.fotos_cierre);
+  }
 }
 function tiCloseModal(){
   document.getElementById("tarea-informe-modal").classList.remove("show");
