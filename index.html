@@ -889,6 +889,12 @@
   .acc-item-row .a-meta{font-size:11px;color:var(--muted);margin-top:2px;}
   .evidencia-chip{font-size:11px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:4px;}
 
+  .foto-chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .foto-chip-list:empty{display:none;}
+  .foto-chip{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 6px 4px 10px;font-size:11px;color:var(--text-soft);max-width:180px;}
+  .foto-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .foto-chip button{border:none;background:var(--panel);color:var(--muted);width:18px;height:18px;border-radius:50%;font-size:12px;line-height:1;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;}
+
   .modal-overlay{
     display:none;
     position:fixed;inset:0;
@@ -2885,9 +2891,15 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <input type="file" id="tf-archivo" accept=".xlsx,.xls,.docx,.doc,.pdf">
       </div>
       <div class="field" style="margin-bottom:10px;">
-        <label>O una foto como evidencia</label>
-        <input type="file" id="tf-foto" accept="image/*">
-        <div class="hint">Sube el archivo o la foto — con uno de los dos alcanza.</div>
+        <label>O hasta 5 fotos como evidencia</label>
+        <input type="file" id="tf-foto" accept="image/*" multiple hidden>
+        <input type="file" id="tf-foto-camara" accept="image/*" capture="environment" hidden>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-ghost" id="tf-foto-camara-btn" style="flex:1;">📷 Tomar foto</button>
+          <button type="button" class="btn btn-ghost" id="tf-foto-galeria-btn" style="flex:1;">🖼️ Galería</button>
+        </div>
+        <div class="foto-chip-list" id="tf-foto-lista"></div>
+        <div class="hint" id="tf-foto-nombre">Sube el archivo o hasta 5 fotos — con uno de los dos alcanza.</div>
       </div>
       <div class="field" style="margin-bottom:4px;">
         <label>Comentario (opcional)</label>
@@ -2917,9 +2929,15 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <input type="file" id="ta-archivo" accept=".xlsx,.xls,.docx,.doc,.pdf">
       </div>
       <div class="field" style="margin-bottom:4px;">
-        <label>O una foto como evidencia</label>
-        <input type="file" id="ta-foto" accept="image/*">
-        <div class="hint">La evidencia es opcional — el avance de texto ya alcanza para registrar el día.</div>
+        <label>O hasta 5 fotos como evidencia</label>
+        <input type="file" id="ta-foto" accept="image/*" multiple hidden>
+        <input type="file" id="ta-foto-camara" accept="image/*" capture="environment" hidden>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-ghost" id="ta-foto-camara-btn" style="flex:1;">📷 Tomar foto</button>
+          <button type="button" class="btn btn-ghost" id="ta-foto-galeria-btn" style="flex:1;">🖼️ Galería</button>
+        </div>
+        <div class="foto-chip-list" id="ta-foto-lista"></div>
+        <div class="hint" id="ta-foto-nombre">La evidencia es opcional — el avance de texto ya alcanza para registrar el día.</div>
       </div>
       <span class="login-error" id="ta-modal-error"></span>
       <button type="button" class="btn btn-primary" id="ta-guardar-btn" style="width:100%;margin-top:6px;">Guardar avance</button>
@@ -6099,13 +6117,18 @@ function tareaEstadoCell(t){
   }
   return tareaEstadoBadge(e);
 }
+function tareaEvidenciaCell(t){
+  const partes = [];
+  if(t.archivo_cierre) partes.push("📎 " + escapeHtml(t.archivo_cierre.nombre));
+  if(t.fotos_cierre && t.fotos_cierre.length) partes.push(`📷 ${t.fotos_cierre.length} foto${t.fotos_cierre.length>1?"s":""}`);
+  return partes.length ? partes.join(" · ") : "—";
+}
 function renderAvanceLog(t){
   if(!t.avances || !t.avances.length) return `<div style="font-size:12px;color:var(--muted);margin-top:10px;">Todavía no hay avances registrados esta semana.</div>`;
   return `<div class="avance-log">${t.avances.map(a=>{
-    const chip = a.archivo
-      ? (a.archivo.tipo && a.archivo.tipo.startsWith("image/") ? `<span class="avance-chip">📷 foto</span>` : `<span class="avance-chip">📄 ${escapeHtml(a.archivo.nombre)}</span>`)
-      : "";
-    return `<div class="avance-row"><span class="avance-day">${formatDate(a.fecha).slice(0,5)}</span><span class="avance-note">${escapeHtml(a.nota)}${chip}</span></div>`;
+    const chipDoc = a.archivo ? `<span class="avance-chip">📄 ${escapeHtml(a.archivo.nombre)}</span>` : "";
+    const chipFotos = (a.fotos && a.fotos.length) ? `<span class="avance-chip">📷 ${a.fotos.length} foto${a.fotos.length>1?"s":""}</span>` : "";
+    return `<div class="avance-row"><span class="avance-day">${formatDate(a.fecha).slice(0,5)}</span><span class="avance-note">${escapeHtml(a.nota)}${chipDoc}${chipFotos}</span></div>`;
   }).join("")}</div>`;
 }
 function tareaDiasEntre(a,b){
@@ -6230,7 +6253,7 @@ document.addEventListener("click", (e)=>{
 
 async function trLoadTareas(){
   const { data, error } = await sb.from("ssoma_tareas")
-    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, finalizado_at, created_at, es_semanal, semana_inicio, comentario_cierre")
+    .select("id, titulo, descripcion, destinatario_id, destinatario_rol, asignado_por_id, asignado_por_rol, delegado_a_id, prioridad, fecha_limite, hora_limite, archivo_cierre, fotos_cierre, finalizado_at, created_at, es_semanal, semana_inicio, comentario_cierre")
     .order("created_at", { ascending: false });
   if(error){ console.error("No se pudieron cargar las tareas:", error.message); return; }
 
@@ -6238,7 +6261,7 @@ async function trLoadTareas(){
   const avancesPorTarea = {};
   if(tareaIdsSemanales.length){
     const { data: avancesData, error: avancesError } = await sb.from("ssoma_tareas_avances")
-      .select("id, tarea_id, fecha, nota, archivo, creado_por_id, created_at")
+      .select("id, tarea_id, fecha, nota, archivo, fotos, creado_por_id, created_at")
       .in("tarea_id", tareaIdsSemanales)
       .order("fecha", { ascending: false });
     if(avancesError) console.error("No se pudieron cargar los avances:", avancesError.message);
@@ -6334,7 +6357,7 @@ function trRenderCoordinador(){
       <td>${tareaLimiteCell(t)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
       <td>${tareaEstadoCell(t)}</td>
-      <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
+      <td>${tareaEvidenciaCell(t)}</td>
       <td>${tareaAccionesCell(t, actorId, "coordinador")}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="9" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
@@ -6477,7 +6500,7 @@ function trRenderJefatura(){
       <td>${tareaLimiteCell(t)}</td>
       <td>${escapeHtml(t.prioridad)}</td>
       <td>${tareaEstadoCell(t)}</td>
-      <td>${t.archivo_cierre ? "📎 " + escapeHtml(t.archivo_cierre.nombre) : "—"}</td>
+      <td>${tareaEvidenciaCell(t)}</td>
       <td>${tareaAccionesCell(t, actorId, "jefatura")}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="9" style="text-align:center;color:var(--muted);">Todavía no asignas tareas.</td></tr>`;
@@ -6589,7 +6612,7 @@ function renderTareaCard(t, mostrarDestinatario){
   const btnInforme = `<button type="button" class="btn btn-ghost ti-informe-btn" data-id="${t.id}" style="padding:8px 14px;font-size:12px;">Ver informe</button>`;
   const footer = e === "finalizada"
     ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;flex-wrap:wrap;">
-         <span class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</span>
+         <span class="evidencia-chip">${tareaEvidenciaCell(t)}</span>
          <span style="color:var(--muted);">Finalizada el ${formatDate(t.finalizado_at.slice(0,10))}</span>
          ${btnInforme}
        </div>`
@@ -6683,13 +6706,74 @@ function trRenderSupervisor(){
   });
 }
 
+/* "Tomar foto" / "Galería" como botones separados en vez de un solo <input type=file>
+   nativo: en el APK, ese input único a veces abre la cámara directo sin dar opción de
+   galería (comportamiento del selector nativo de Android, no controlable solo con el
+   atributo accept). Se guarda un array propio de hasta 5 fotos por modal (acumulando
+   tanto capturas de cámara como selecciones de galería, que sí permite elegir varias
+   de una vez), en vez de depender de la FileList nativa de un solo input. */
+const FOTOS_EVIDENCIA_MAX = 5;
+const fotosSeleccionadas = { tf: [], ta: [] };
+function renderFotoChips(prefix){
+  const lista = document.getElementById(`${prefix}-foto-lista`);
+  lista.innerHTML = fotosSeleccionadas[prefix].map((f, i) => `
+    <span class="foto-chip"><span>${escapeHtml(f.name)}</span><button type="button" data-idx="${i}" aria-label="Quitar">×</button></span>
+  `).join("");
+  lista.querySelectorAll("button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      fotosSeleccionadas[prefix].splice(Number(btn.dataset.idx), 1);
+      renderFotoChips(prefix);
+    });
+  });
+}
+function agregarFotos(prefix, files){
+  const fotos = fotosSeleccionadas[prefix];
+  for(const f of files){
+    if(fotos.length >= FOTOS_EVIDENCIA_MAX) break;
+    fotos.push(f);
+  }
+  renderFotoChips(prefix);
+}
+function resetFotos(prefix){
+  fotosSeleccionadas[prefix] = [];
+  document.getElementById(`${prefix}-foto`).value = "";
+  document.getElementById(`${prefix}-foto-camara`).value = "";
+  renderFotoChips(prefix);
+}
+function wireFotoCamaraGaleria(prefix){
+  const inputGaleria = document.getElementById(`${prefix}-foto`);
+  const inputCamara = document.getElementById(`${prefix}-foto-camara`);
+  document.getElementById(`${prefix}-foto-galeria-btn`).addEventListener("click", ()=> inputGaleria.click());
+  document.getElementById(`${prefix}-foto-camara-btn`).addEventListener("click", ()=> inputCamara.click());
+  inputGaleria.addEventListener("change", ()=>{
+    agregarFotos(prefix, Array.from(inputGaleria.files));
+    inputGaleria.value = "";
+  });
+  inputCamara.addEventListener("change", ()=>{
+    agregarFotos(prefix, Array.from(inputCamara.files));
+    inputCamara.value = "";
+  });
+}
+wireFotoCamaraGaleria("tf");
+wireFotoCamaraGaleria("ta");
+/* Convierte cada File a {nombre, tipo, contenido} (dataURL) — reemplaza accReadFileAsDataUrl
+   (pensada para un solo archivo) cuando hay que guardar varias fotos a la vez. */
+function fotosADataUrl(files){
+  return Promise.all(files.map(f => new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ev => resolve({ nombre: f.name, tipo: f.type, contenido: ev.target.result });
+    reader.onerror = reject;
+    reader.readAsDataURL(f);
+  })));
+}
+
 function tfOpenModal(id){
   const t = tareasData.find(x=>x.id === id);
   if(!t) return;
   tfCurrentId = id;
   document.getElementById("tf-modal-titulo").textContent = t.titulo;
   document.getElementById("tf-archivo").value = "";
-  document.getElementById("tf-foto").value = "";
+  resetFotos("tf");
   document.getElementById("tf-comentario").value = "";
   document.getElementById("tf-modal-error").textContent = "";
   document.getElementById("tarea-finalizar-modal").classList.add("show");
@@ -6703,32 +6787,32 @@ document.getElementById("tarea-finalizar-modal").addEventListener("click", (e)=>
   if(e.target.id === "tarea-finalizar-modal") tfCloseModal();
 });
 
-document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
+document.getElementById("tf-guardar-btn").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("tf-modal-error");
   errorEl.textContent = "";
   if(tfCurrentId == null) return;
   const docFile = document.getElementById("tf-archivo").files[0];
-  const fotoFile = document.getElementById("tf-foto").files[0];
-  const file = docFile || fotoFile;
-  if(!file){
-    errorEl.textContent = "Sube el archivo de sustento o una foto como evidencia.";
+  const fotos = fotosSeleccionadas.tf;
+  if(!docFile && !fotos.length){
+    errorEl.textContent = "Sube el archivo de sustento o al menos una foto como evidencia.";
     return;
   }
   if(docFile && !/\.(xlsx|xls|docx|doc|pdf)$/i.test(docFile.name)){
     errorEl.textContent = "Formato no válido. Sube un Excel, Word o PDF.";
     return;
   }
-  if(fotoFile && !fotoFile.type.startsWith("image/")){
-    errorEl.textContent = "El archivo de evidencia debe ser una imagen.";
-    return;
-  }
+  const btn = document.getElementById("tf-guardar-btn");
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
   const comentario = document.getElementById("tf-comentario").value.trim();
-  accReadFileAsDataUrl(file, async dataUrl => {
+  const guardar = async (archivoCierre, fotosCierre) => {
     const { error } = await sb.from("ssoma_tareas").update({
-      archivo_cierre: { nombre: file.name, tipo: file.type, contenido: dataUrl },
+      archivo_cierre: archivoCierre,
+      fotos_cierre: fotosCierre,
       finalizado_at: new Date().toISOString(),
       comentario_cierre: comentario || null,
     }).eq("id", tfCurrentId);
+    btn.disabled = false; btn.textContent = original;
     if(error){ errorEl.textContent = "No se pudo finalizar la tarea: " + error.message; return; }
     const tFinalizada = tareasData.find(x=> x.id === tfCurrentId);
     if(tFinalizada){
@@ -6741,7 +6825,13 @@ document.getElementById("tf-guardar-btn").addEventListener("click", ()=>{
     }
     tfCloseModal();
     await trLoadTareas();
-  });
+  };
+  const fotosCierre = fotos.length ? await fotosADataUrl(fotos) : [];
+  if(docFile){
+    accReadFileAsDataUrl(docFile, dataUrl => guardar({ nombre: docFile.name, tipo: docFile.type, contenido: dataUrl }, fotosCierre));
+  }else{
+    guardar(null, fotosCierre);
+  }
 });
 
 /* ---- Tareas semanales: registrar el avance del día (no cierra la tarea) ---- */
@@ -6757,7 +6847,7 @@ function taOpenModal(id){
   const existente = (t.avances || []).find(a=> a.fecha === hoy);
   document.getElementById("ta-nota").value = existente ? existente.nota : "";
   document.getElementById("ta-archivo").value = "";
-  document.getElementById("ta-foto").value = "";
+  resetFotos("ta");
   document.getElementById("ta-modal-error").textContent = "";
   document.getElementById("tarea-avance-modal").classList.add("show");
 }
@@ -6770,29 +6860,28 @@ document.getElementById("tarea-avance-modal").addEventListener("click", (e)=>{
   if(e.target.id === "tarea-avance-modal") taCloseModal();
 });
 
-document.getElementById("ta-guardar-btn").addEventListener("click", ()=>{
+document.getElementById("ta-guardar-btn").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("ta-modal-error");
   errorEl.textContent = "";
   if(taCurrentId == null) return;
   const nota = document.getElementById("ta-nota").value.trim();
   if(!nota){ errorEl.textContent = "Escribe el avance de hoy."; return; }
   const docFile = document.getElementById("ta-archivo").files[0];
-  const fotoFile = document.getElementById("ta-foto").files[0];
-  const file = docFile || fotoFile;
+  const fotos = fotosSeleccionadas.ta;
   if(docFile && !/\.(xlsx|xls|docx|doc|pdf)$/i.test(docFile.name)){
     errorEl.textContent = "Formato no válido. Sube un Excel, Word o PDF.";
     return;
   }
-  if(fotoFile && !fotoFile.type.startsWith("image/")){
-    errorEl.textContent = "El archivo de evidencia debe ser una imagen.";
-    return;
-  }
-  const guardar = async (archivo)=>{
+  const btn = document.getElementById("ta-guardar-btn");
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  const guardar = async (archivo, fotosAvance)=>{
     const t = tareasData.find(x=> x.id === taCurrentId);
     const { error } = await sb.from("ssoma_tareas_avances").upsert({
-      tarea_id: taCurrentId, fecha: ssomaFormatISO(new Date()), nota, archivo,
+      tarea_id: taCurrentId, fecha: ssomaFormatISO(new Date()), nota, archivo, fotos: fotosAvance,
       creado_por_id: miUsuario ? miUsuario.id : null,
     }, { onConflict: "tarea_id,fecha" });
+    btn.disabled = false; btn.textContent = original;
     if(error){ errorEl.textContent = "No se pudo guardar el avance: " + error.message; return; }
     if(t){
       ssomaNotificarPush(
@@ -6804,8 +6893,12 @@ document.getElementById("ta-guardar-btn").addEventListener("click", ()=>{
     taCloseModal();
     await trLoadTareas();
   };
-  if(file) accReadFileAsDataUrl(file, dataUrl => guardar({ nombre: file.name, tipo: file.type, contenido: dataUrl }));
-  else guardar(null);
+  const fotosAvance = fotos.length ? await fotosADataUrl(fotos) : [];
+  if(docFile){
+    accReadFileAsDataUrl(docFile, dataUrl => guardar({ nombre: docFile.name, tipo: docFile.type, contenido: dataUrl }, fotosAvance));
+  }else{
+    guardar(null, fotosAvance);
+  }
 });
 
 /* ---- Editar / cancelar una tarea (por si se equivocaron al asignarla) ---- */
@@ -6912,13 +7005,21 @@ function tiOpenModal(id){
   const t = tareasData.find(x=>x.id === id);
   if(!t) return;
   const e = tareaEstado(t);
-  let evidenciaHtml = `<div class="hint">Sin evidencia todavía.</div>`;
+  const partesEvidencia = [];
   if(t.archivo_cierre){
     const esImagen = (t.archivo_cierre.tipo || "").startsWith("image/");
-    evidenciaHtml = esImagen
-      ? `<img src="${t.archivo_cierre.contenido}" alt="Evidencia" class="ti-evidencia-img" style="max-width:240px;max-height:180px;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);display:block;">`
-      : `<a href="${t.archivo_cierre.contenido}" download="${escapeHtml(t.archivo_cierre.nombre)}" target="_blank" class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</a>`;
+    partesEvidencia.push(esImagen
+      ? `<img src="${t.archivo_cierre.contenido}" alt="Evidencia" class="img-preview-trigger" data-src="${t.archivo_cierre.contenido}" style="max-width:120px;max-height:100px;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);display:block;">`
+      : `<a href="${t.archivo_cierre.contenido}" download="${escapeHtml(t.archivo_cierre.nombre)}" target="_blank" class="evidencia-chip">📎 ${escapeHtml(t.archivo_cierre.nombre)}</a>`);
   }
+  if(t.fotos_cierre && t.fotos_cierre.length){
+    partesEvidencia.push(`<div style="display:flex;flex-wrap:wrap;gap:8px;">${t.fotos_cierre.map(f=>
+      `<img src="${f.contenido}" alt="${escapeHtml(f.nombre)}" class="img-preview-trigger" data-src="${f.contenido}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;cursor:zoom-in;border:1px solid var(--border);">`
+    ).join("")}</div>`);
+  }
+  const evidenciaHtml = partesEvidencia.length
+    ? `<div style="display:flex;flex-direction:column;gap:8px;">${partesEvidencia.join("")}</div>`
+    : `<div class="hint">Sin evidencia todavía.</div>`;
   document.getElementById("ti-modal-body").innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:16px;">
       <h4 style="margin:0;font-size:16px;color:var(--text);">${escapeHtml(t.titulo)}</h4>
@@ -6942,8 +7043,6 @@ function tiOpenModal(id){
     }
   `;
   document.getElementById("tarea-informe-modal").classList.add("show");
-  const img = document.querySelector("#ti-modal-body .ti-evidencia-img");
-  if(img) img.addEventListener("click", ()=> openImageLightbox(t.archivo_cierre.contenido));
 }
 function tiCloseModal(){
   document.getElementById("tarea-informe-modal").classList.remove("show");
