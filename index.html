@@ -1992,7 +1992,7 @@
       <div class="section-head">
         <h2 class="section-title">🔒 Historial de Encontrados — Short Pick</h2>
       </div>
-      <p class="section-desc">Cruce con el historial de productos encontrados que te pasa Recepción/Auditoría (Fecha, Cód Alternat, Ubicación, Encontrado). Concilia los faltantes pendientes de Short Pick cuyo código aparece en el historial — si el mismo código tiene más de un pendiente a la vez, se desambigua por la cantidad encontrada; si tampoco calza, no toca ninguno.</p>
+      <p class="section-desc">Cruce con el historial de productos encontrados que te pasa Recepción/Auditoría (Fecha, Cód Alternat, Ubicación, Encontrado). Concilia por neteo: suma lo encontrado de un código contra la suma de todo lo pendiente de ese mismo código — si alcanza para cubrirlo, concilia todos esos pendientes (aunque sean varios); si no alcanza, no toca nada de ese código.</p>
 
       <div class="import-card">
         <div class="import-card-head">
@@ -5438,28 +5438,35 @@ document.getElementById("sp-file-hist-encontrados").addEventListener("change", (
   document.getElementById("sp-hist-encontrados-import-btn").disabled = !f;
 });
 /* Cruce con el historial manual de "productos encontrados" de Short Pick (Recepción/Auditoría):
-   a diferencia de la caja WMS, este archivo solo trae Cod Alternat. La fecha de este archivo es
-   cuándo se encontró el producto — no tiene relación con la fecha en que el faltante se creó en
-   el sistema (son procesos independientes), así que NO se usa para filtrar ni para decidir si
-   aplica.
-   Si un código tiene un solo pendiente, se concilia directo con el hallazgo más reciente. Si
-   tiene varios a la vez, se desambigua por Cantidad: el hallazgo se empareja con el único
-   pendiente cuya cantidad (Un Ajust) calce exacto — si dos piden la misma cantidad, o ningún
-   hallazgo calza, esos quedan sin tocar para conciliar a mano.
+   a diferencia de la caja WMS, este archivo solo trae Cod Alternat, no un id único por caso. La
+   fecha de este archivo es cuándo se encontró el producto — no tiene relación con la fecha en
+   que el faltante se creó en el sistema (son procesos independientes), así que NO se usa para
+   filtrar ni para decidir si aplica.
+   Se concilia por NETEO: se suma todo lo encontrado de ese código en el historial y se compara
+   contra la suma de todo lo pendiente de ese mismo código. Si lo encontrado alcanza para cubrir
+   todo lo pendiente (aunque sean varios casos), se concilian todos como completos — así el
+   ejemplo real: encontrado 22 de un código, 5 pendientes de ese código que entre todos suman 22
+   (o menos), se netean y se concilian los 5. Si lo encontrado no alcanza a cubrir la suma total
+   de lo pendiente, no se toca nada de ese código — no hay forma de saber a cuál(es) caso(s)
+   puntuales corresponde el hallazgo parcial, así que queda para revisar a mano.
    ssoma_sp_verificaciones no tiene un campo de texto libre como el "sustento" de Bultos
-   Perdidos — el motivo queda implícito en estado/cantidad_encontrada/otra_ubicacion, igual
-   que cuando se verifica a mano desde el modal de Conciliación. */
+   Perdidos — el motivo queda implícito en estado/cantidad_encontrada, igual que cuando se
+   verifica a mano desde el modal de Conciliación. */
 async function spCruceHistorialEncontrados(file){
   const filas = await spParseWorkbookFile(file);
-  const hallazgosPorCodigo = {};
+  const hallazgosPorCodigo = {}; // cod -> { total, masReciente: {fecha, ubicacion} }
   filas.forEach(fila=>{
     const cod = String(spBuscaCampo(fila, ["Codigo Alterno","Código Alterno","Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim();
     const fecha = wmsParseFecha(spBuscaCampo(fila, ["Fecha"]));
     if(!cod || !fecha) return;
     const ubicacion = String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim();
-    const cantidad = parseInt(spBuscaCampo(fila, ["Encontrado","Cantidad"]), 10);
-    if(!hallazgosPorCodigo[cod]) hallazgosPorCodigo[cod] = [];
-    hallazgosPorCodigo[cod].push({ fecha, ubicacion, cantidad: isNaN(cantidad) ? null : cantidad });
+    const cantidadRaw = parseInt(spBuscaCampo(fila, ["Encontrado","Cantidad"]), 10);
+    const cantidad = isNaN(cantidadRaw) ? 0 : cantidadRaw;
+    if(!hallazgosPorCodigo[cod]) hallazgosPorCodigo[cod] = { total: 0, masReciente: null };
+    hallazgosPorCodigo[cod].total += cantidad;
+    if(!hallazgosPorCodigo[cod].masReciente || fecha > hallazgosPorCodigo[cod].masReciente.fecha){
+      hallazgosPorCodigo[cod].masReciente = { fecha, ubicacion };
+    }
   });
 
   const pendientesPorCodigo = {};
@@ -5471,43 +5478,27 @@ async function spCruceHistorialEncontrados(file){
 
   const actorId = miUsuario ? miUsuario.id : null;
   const nuevos = [];
-  let ambiguos = 0;
-  const construirVerificacion = (caso, hallazgo) => {
-    const cantWms = Math.abs(caso.unajust);
-    const cantidadEncontrada = hallazgo.cantidad === null ? cantWms : Math.min(hallazgo.cantidad, cantWms);
-    const estado = (hallazgo.cantidad === null || hallazgo.cantidad >= cantWms) ? "completo" : "parcial";
-    const mismaUbicacion = hallazgo.ubicacion && caso.ubicacion
-      && hallazgo.ubicacion.trim().toUpperCase() === caso.ubicacion.trim().toUpperCase();
-    return {
-      registro_id: caso.id, estado, cantidad_encontrada: cantidadEncontrada,
-      otra_ubicacion: !!(hallazgo.ubicacion && !mismaUbicacion), foto: null,
-      verificado_por_id: actorId, fecha: new Date().toISOString(),
-    };
-  };
+  let sinCubrir = 0;
   Object.entries(pendientesPorCodigo).forEach(([cod, casos])=>{
-    const hallazgos = hallazgosPorCodigo[cod];
-    if(!hallazgos || !hallazgos.length) return;
-    if(casos.length === 1){
-      const hallazgo = [...hallazgos].sort((a,b)=> b.fecha - a.fecha)[0];
-      nuevos.push(construirVerificacion(casos[0], hallazgo));
-      return;
-    }
-    // Varios pendientes con el mismo código: solo se resuelve el que calza exacto por
-    // cantidad (Un Ajust) y sin ambigüedad frente a los demás.
-    const porResolver = new Set(casos);
-    [...hallazgos].sort((a,b)=> b.fecha - a.fecha).forEach(h=>{
-      if(h.cantidad === null) return;
-      const candidatos = casos.filter(c => porResolver.has(c) && Math.abs(c.unajust) === h.cantidad);
-      if(candidatos.length === 1){
-        nuevos.push(construirVerificacion(candidatos[0], h));
-        porResolver.delete(candidatos[0]);
-      }
+    const hallazgo = hallazgosPorCodigo[cod];
+    if(!hallazgo) return;
+    const totalPendiente = casos.reduce((s,c)=> s + Math.abs(c.unajust), 0);
+    if(hallazgo.total < totalPendiente){ sinCubrir += casos.length; return; }
+    casos.forEach(caso=>{
+      const cantWms = Math.abs(caso.unajust);
+      const ubicacionHallazgo = hallazgo.masReciente ? hallazgo.masReciente.ubicacion : "";
+      const mismaUbicacion = ubicacionHallazgo && caso.ubicacion
+        && ubicacionHallazgo.trim().toUpperCase() === caso.ubicacion.trim().toUpperCase();
+      nuevos.push({
+        registro_id: caso.id, estado: "completo", cantidad_encontrada: cantWms,
+        otra_ubicacion: !!(ubicacionHallazgo && !mismaUbicacion), foto: null,
+        verificado_por_id: actorId, fecha: new Date().toISOString(),
+      });
     });
-    ambiguos += porResolver.size;
   });
-  if(!nuevos.length) return { conciliados: 0, ambiguos, error: null };
+  if(!nuevos.length) return { conciliados: 0, sinCubrir, error: null };
   const { error } = await sb.from("ssoma_sp_verificaciones").upsert(nuevos, { onConflict: "registro_id" });
-  return { conciliados: nuevos.length, ambiguos, error };
+  return { conciliados: nuevos.length, sinCubrir, error };
 }
 document.getElementById("sp-hist-encontrados-import-btn").addEventListener("click", async (e)=>{
   if(!esUsuarioPrivado()) return; // resguardo: la vista está oculta para todos menos este usuario
@@ -5517,15 +5508,15 @@ document.getElementById("sp-hist-encontrados-import-btn").addEventListener("clic
   statusEl.style.display = "none";
   try{
     const file = document.getElementById("sp-file-hist-encontrados").files[0];
-    const { conciliados, ambiguos, error } = await spCruceHistorialEncontrados(file);
+    const { conciliados, sinCubrir, error } = await spCruceHistorialEncontrados(file);
     if(error){
       statusEl.textContent = "❌ No se pudo cruzar: " + error.message;
-    }else if(conciliados === 0 && ambiguos === 0){
+    }else if(conciliados === 0 && sinCubrir === 0){
       statusEl.textContent = "⚠️ Ningún código del historial coincide con un pendiente.";
     }else{
       await spLoadData();
-      const nota = ambiguos > 0 ? ` ${ambiguos} caso(s) con el mismo código en más de un pendiente — revísalos a mano.` : "";
-      statusEl.textContent = `✅ ${conciliados} caso(s) conciliados por cruce con el historial de encontrados.${nota}`;
+      const nota = sinCubrir > 0 ? ` ${sinCubrir} caso(s) cuyo código aparece en el historial pero lo encontrado no alcanza a cubrir todo lo pendiente de ese código — revísalos a mano.` : "";
+      statusEl.textContent = `✅ ${conciliados} caso(s) conciliados por cruce con el historial de encontrados (neteando por código).${nota}`;
     }
   }catch(err){
     statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
