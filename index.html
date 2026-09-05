@@ -1934,7 +1934,7 @@
           <div class="import-card-head">
             <div>
               <div class="import-card-title">🔍 Cruce con historial de productos encontrados</div>
-              <div class="import-card-sub">Sube el historial que te pasan (Fecha, Cód Alternat, Ubicación, Encontrado) — concilia los pendientes cuyo código aparece en el historial. Si el mismo código tiene más de un caso pendiente a la vez, no toca ninguno (queda para revisar a mano, no hay forma de saber cuál de los dos encontraron).</div>
+              <div class="import-card-sub">Sube el historial que te pasan (Fecha, Cód Alternat, Ubicación, Encontrado) — concilia los pendientes cuyo código aparece en el historial. Si el mismo código tiene más de un caso pendiente a la vez, se desambigua por la cantidad encontrada; si tampoco calza, no toca ninguno (queda para revisar a mano).</div>
             </div>
             <button type="button" class="btn btn-primary" id="bp-hist-encontrados-import-btn" disabled>Cruzar y conciliar</button>
           </div>
@@ -5404,10 +5404,12 @@ document.getElementById("bp-file-hist-encontrados").addEventListener("change", (
    este archivo solo trae Cod Alternat. La fecha de este archivo es cuándo se encontró el
    producto — no tiene relación con la fecha en que el caso se creó en el sistema (puede
    ser antes o después, son procesos independientes), así que NO se usa para filtrar ni
-   para decidir si aplica. El único resguardo posible: si hay más de un caso pendiente con
-   el mismo código a la vez, no se toca ninguno automático (no hay forma de saber cuál de
-   los dos encontraron) — quedan para conciliar a mano. Si hay un solo pendiente con ese
-   código, se concilia con el hallazgo más reciente del archivo. */
+   para decidir si aplica.
+   Si un código tiene un solo caso pendiente, se concilia directo con el hallazgo más
+   reciente. Si tiene varios a la vez (mismo producto perdido más de una vez), se
+   desambigua por Cantidad: el hallazgo se empareja con el único caso pendiente cuya
+   cantidad reportada calce exacto — si dos casos piden la misma cantidad, o ningún
+   hallazgo calza, esos quedan sin tocar para conciliar a mano. */
 async function bpCruceHistorialEncontrados(file){
   const filas = await spParseWorkbookFile(file);
   const hallazgosPorCodigo = {};
@@ -5416,8 +5418,9 @@ async function bpCruceHistorialEncontrados(file){
     const fecha = wmsParseFecha(spBuscaCampo(fila, ["Fecha"]));
     if(!cod || !fecha) return;
     const ubicacion = String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim();
+    const cantidad = parseInt(spBuscaCampo(fila, ["Encontrado","Cantidad"]), 10);
     if(!hallazgosPorCodigo[cod]) hallazgosPorCodigo[cod] = [];
-    hallazgosPorCodigo[cod].push({ fecha, ubicacion });
+    hallazgosPorCodigo[cod].push({ fecha, ubicacion, cantidad: isNaN(cantidad) ? null : cantidad });
   });
 
   const pendientesPorCodigo = {};
@@ -5430,19 +5433,33 @@ async function bpCruceHistorialEncontrados(file){
   const actorId = miUsuario ? miUsuario.id : null;
   const nuevos = [];
   let ambiguos = 0;
+  const construirVerificacion = (caso, hallazgo) => ({
+    registro_id: caso.id,
+    sustento: `Encontrado en ${hallazgo.ubicacion || "ubicación no especificada"} el ${bpFmtFecha(hallazgo.fecha)}${hallazgo.cantidad !== null ? ` (${hallazgo.cantidad} unid.)` : ""} (cruce con historial de productos encontrados).`,
+    foto: null,
+    verificado_por_id: actorId,
+    fecha: new Date().toISOString(),
+  });
   Object.entries(pendientesPorCodigo).forEach(([cod, casos])=>{
     const hallazgos = hallazgosPorCodigo[cod];
     if(!hallazgos || !hallazgos.length) return;
-    if(casos.length > 1){ ambiguos += casos.length; return; }
-    const caso = casos[0];
-    const hallazgo = [...hallazgos].sort((a,b)=> b.fecha - a.fecha)[0];
-    nuevos.push({
-      registro_id: caso.id,
-      sustento: `Encontrado en ${hallazgo.ubicacion || "ubicación no especificada"} el ${bpFmtFecha(hallazgo.fecha)} (cruce con historial de productos encontrados).`,
-      foto: null,
-      verificado_por_id: actorId,
-      fecha: new Date().toISOString(),
+    if(casos.length === 1){
+      const hallazgo = [...hallazgos].sort((a,b)=> b.fecha - a.fecha)[0];
+      nuevos.push(construirVerificacion(casos[0], hallazgo));
+      return;
+    }
+    // Varios casos pendientes con el mismo código: solo se resuelve el que calza
+    // exacto por cantidad y sin ambigüedad frente a los demás.
+    const porResolver = new Set(casos);
+    [...hallazgos].sort((a,b)=> b.fecha - a.fecha).forEach(h=>{
+      if(h.cantidad === null) return;
+      const candidatos = casos.filter(c => porResolver.has(c) && c.cantidad === h.cantidad);
+      if(candidatos.length === 1){
+        nuevos.push(construirVerificacion(candidatos[0], h));
+        porResolver.delete(candidatos[0]);
+      }
     });
+    ambiguos += porResolver.size;
   });
   if(!nuevos.length) return { conciliados: 0, ambiguos, error: null };
   const { error } = await sb.from("ssoma_bp_verificaciones").upsert(nuevos, { onConflict: "registro_id" });
