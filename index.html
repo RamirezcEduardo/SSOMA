@@ -2027,6 +2027,20 @@
         </div>
         <div class="import-status" id="sp-hist-encontrados-import-status" style="display:none;"></div>
       </div>
+
+      <div id="sp-hist-encontrados-huerfanos-wrap" style="display:none;margin-top:18px;">
+        <p class="section-desc">Códigos del historial que no corresponden a ningún registro de Shortpick (ni pendiente ni ya conciliado) — no hay nada que hacer con ellos acá, puede que sean de otro proceso o el código esté mal digitado en el historial.</p>
+        <button type="button" class="section-subhead collapsible-toggle" id="sp-hist-encontrados-huerfanos-toggle" aria-expanded="true">
+          ⚠ Códigos sin match en Shortpick · <span id="sp-hist-encontrados-huerfanos-count">0</span>
+          <span class="collapsible-chevron">⌄</span>
+        </button>
+        <div class="table-wrap collapsible-body" id="sp-hist-encontrados-huerfanos-tabla-wrap">
+          <table class="data-table" id="sp-hist-encontrados-huerfanos-tabla">
+            <thead><tr><th>Cod Alternat</th><th>Encontrado (unid.)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- INVENTARIO · AUDITORÍA SIN UBICACIÓN (conectado a Supabase: ssoma_su_registros / ssoma_su_verificaciones) -->
@@ -5507,6 +5521,11 @@ document.getElementById("bp-wms-import-btn").addEventListener("click", async (e)
   document.getElementById("bp-wms-import-btn").disabled = !document.getElementById("bp-file-wms").files[0];
 });
 
+document.getElementById("sp-hist-encontrados-huerfanos-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
 document.getElementById("sp-file-hist-encontrados").addEventListener("change", ()=>{
   const f = document.getElementById("sp-file-hist-encontrados").files[0];
   document.getElementById("sp-file-hist-encontrados-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
@@ -5546,11 +5565,19 @@ async function spCruceHistorialEncontrados(file){
   });
 
   const pendientesPorCodigo = {};
+  const codigosEnShortpick = new Set();
   spData.forEach(r=>{
+    codigosEnShortpick.add(r.codAlternat);
     if(spEstaCompleto(r.id)) return; // ya completo, no hace falta tocarlo — un parcial sigue elegible por si ahora alcanza
     if(!pendientesPorCodigo[r.codAlternat]) pendientesPorCodigo[r.codAlternat] = [];
     pendientesPorCodigo[r.codAlternat].push(r);
   });
+  // Códigos del historial que no corresponden a NINGÚN registro de Shortpick (ni pendiente
+  // ni ya conciliado) — no hay nada que cruzar con ellos, se informan aparte.
+  const huerfanos = Object.entries(hallazgosPorCodigo)
+    .filter(([cod]) => !codigosEnShortpick.has(cod))
+    .map(([cod, h]) => ({ cod, cantidad: h.total }))
+    .sort((a,b)=> a.cod.localeCompare(b.cod));
 
   const actorId = miUsuario ? miUsuario.id : null;
   const nuevos = [];
@@ -5587,9 +5614,9 @@ async function spCruceHistorialEncontrados(file){
       }
     });
   });
-  if(!nuevos.length) return { completados: 0, parciales: 0, error: null };
+  if(!nuevos.length) return { completados: 0, parciales: 0, huerfanos, error: null };
   const { error } = await sb.from("ssoma_sp_verificaciones").upsert(nuevos, { onConflict: "registro_id" });
-  return { completados, parciales, error };
+  return { completados, parciales, huerfanos, error };
 }
 document.getElementById("sp-hist-encontrados-import-btn").addEventListener("click", async (e)=>{
   if(!esUsuarioPrivado()) return; // resguardo: la vista está oculta para todos menos este usuario
@@ -5599,15 +5626,27 @@ document.getElementById("sp-hist-encontrados-import-btn").addEventListener("clic
   statusEl.style.display = "none";
   try{
     const file = document.getElementById("sp-file-hist-encontrados").files[0];
-    const { completados, parciales, error } = await spCruceHistorialEncontrados(file);
+    const { completados, parciales, huerfanos, error } = await spCruceHistorialEncontrados(file);
     if(error){
       statusEl.textContent = "❌ No se pudo cruzar: " + error.message;
-    }else if(completados === 0 && parciales === 0){
-      statusEl.textContent = "⚠️ Ningún código del historial coincide con un pendiente.";
     }else{
-      await spLoadData();
-      const nota = parciales > 0 ? ` ${parciales} caso(s) quedaron con avance parcial (lo encontrado no alcanzó a cubrirlos completos) — siguen en Conciliación con el detalle de cuánto falta.` : "";
-      statusEl.textContent = `✅ ${completados} caso(s) conciliados completos por cruce con el historial de encontrados.${nota}`;
+      if(completados === 0 && parciales === 0){
+        statusEl.textContent = "⚠️ Ningún código del historial coincide con un pendiente.";
+      }else{
+        await spLoadData();
+        const nota = parciales > 0 ? ` ${parciales} caso(s) quedaron con avance parcial (lo encontrado no alcanzó a cubrirlos completos) — siguen en Conciliación con el detalle de cuánto falta.` : "";
+        statusEl.textContent = `✅ ${completados} caso(s) conciliados completos por cruce con el historial de encontrados.${nota}`;
+      }
+      const huerfanosWrap = document.getElementById("sp-hist-encontrados-huerfanos-wrap");
+      if(huerfanos.length){
+        huerfanosWrap.style.display = "block";
+        document.getElementById("sp-hist-encontrados-huerfanos-count").textContent = huerfanos.length;
+        document.querySelector("#sp-hist-encontrados-huerfanos-tabla tbody").innerHTML = huerfanos.map(h=>
+          `<tr><td>${escapeHtml(h.cod)}</td><td class="num">${h.cantidad}</td></tr>`
+        ).join("");
+      }else{
+        huerfanosWrap.style.display = "none";
+      }
     }
   }catch(err){
     statusEl.textContent = "❌ No se pudo leer el archivo: " + err.message;
