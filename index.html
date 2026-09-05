@@ -1158,6 +1158,16 @@
         <button class="navitem" data-view="tareas-coordinador"><span class="dot" style="background:#2563EB;"></span><span class="label">Coordinador · Asignar Tareas</span></button>
         <button class="navitem" data-view="tareas-supervisor"><span class="dot" style="background:#16A34A;"></span><span class="label">Tareas</span></button>
       </div>
+
+      <button type="button" class="navgroup-header" id="navgroup-privado-toggle" aria-expanded="false" style="margin-top:10px;display:none;">
+        <span class="navgroup-icon">🔒</span>
+        <span class="navgroup-title">Privado</span>
+        <span class="navgroup-count">1</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-privado-body" style="display:none;">
+        <button class="navitem" data-view="bp-encontrados-privado"><span class="dot" style="background:#111827;"></span><span class="label">Historial de Encontrados</span></button>
+      </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
       <div class="account-row">Usuario: <strong id="account-nombre"></strong></div>
@@ -1928,26 +1938,7 @@
 
       <!-- Conciliación Bultos Perdidos: pestaña aparte dentro del mismo panel, no un módulo distinto -->
       <div id="bp-tab-conciliacion" style="display:none;">
-        <p class="section-desc">Los casos Ubicado/Cancelado/Consumido del cruce con la caja WMS (Paso 2) se concilian solos. Lo que quede pendiente acá lo puedes conciliar a mano: busca el Nro LPN en Historial Inventario y, si reaparece con movimiento, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>.</p>
-
-        <div class="import-card">
-          <div class="import-card-head">
-            <div>
-              <div class="import-card-title">🔍 Cruce con historial de productos encontrados</div>
-              <div class="import-card-sub">Sube el historial que te pasan (Fecha, Cód Alternat, Ubicación, Encontrado) — concilia los pendientes cuyo código aparece en el historial. Si el mismo código tiene más de un caso pendiente a la vez, se desambigua por la cantidad encontrada; si tampoco calza, no toca ninguno (queda para revisar a mano).</div>
-            </div>
-            <button type="button" class="btn btn-primary" id="bp-hist-encontrados-import-btn" disabled>Cruzar y conciliar</button>
-          </div>
-          <div class="import-drop-row">
-            <label class="import-drop" for="bp-file-hist-encontrados" id="bp-drop-hist-encontrados">
-              <input type="file" id="bp-file-hist-encontrados" accept=".xlsx,.xls,.csv" hidden>
-              <span class="import-drop-icon">🗂️</span>
-              <span class="import-drop-title">Historial de encontrados</span>
-              <span class="import-drop-hint" id="bp-file-hist-encontrados-name">Arrastra el archivo o haz clic para elegirlo</span>
-            </label>
-          </div>
-          <div class="import-status" id="bp-hist-encontrados-import-status" style="display:none;"></div>
-        </div>
+        <p class="section-desc">Los casos Ubicado/Cancelado/Consumido del cruce con la caja WMS (Paso 2) se concilian solos. Lo que quede pendiente acá lo puedes conciliar a mano: busca el Nro LPN en Historial Inventario y, si reaparece con movimiento, márcalo Ubicado con el sustento — una vez conciliado pasa a <b>Historial</b>. El cruce con el historial de productos encontrados de Recepción/Auditoría se hace desde <b>🔒 Historial de Encontrados</b>, en el menú.</p>
 
         <div class="stats-row stats-row-3" style="margin-top:18px;">
           <div class="stat-card">
@@ -1992,6 +1983,34 @@
         </div>
 
         <div class="conc-card-list" id="bp-hist-list" style="margin-top:18px;"><div class="empty">No hay verificaciones que coincidan con el filtro.</div></div>
+      </div>
+    </section>
+
+    <!-- Cruce con historial de productos encontrados (Bultos Perdidos) — apartado privado,
+         solo visible para la cuenta configurada en PRIVADO_USUARIO_ID (ver esUsuarioPrivado()). -->
+    <section class="panel" id="panel-bp-encontrados-privado">
+      <div class="section-head">
+        <h2 class="section-title">🔒 Historial de Encontrados — Bultos Perdidos</h2>
+      </div>
+      <p class="section-desc">Cruce con el historial de productos encontrados que te pasa Recepción/Auditoría (Fecha, Cód Alternat, Ubicación, Encontrado). Concilia los casos pendientes de Bultos Perdidos cuyo código aparece en el historial — si el mismo código tiene más de un caso pendiente a la vez, se desambigua por la cantidad encontrada; si tampoco calza, no toca ninguno.</p>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">🔍 Cruce con historial de productos encontrados</div>
+            <div class="import-card-sub">Sube el archivo tal cual te lo pasan (columnas Fecha, Código Alterno, Descripción, Ubicación, Encontrado, Valorizado).</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bp-hist-encontrados-import-btn" disabled>Cruzar y conciliar</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bp-file-hist-encontrados" id="bp-drop-hist-encontrados">
+            <input type="file" id="bp-file-hist-encontrados" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">🗂️</span>
+            <span class="import-drop-title">Historial de encontrados</span>
+            <span class="import-drop-hint" id="bp-file-hist-encontrados-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="bp-hist-encontrados-import-status" style="display:none;"></div>
       </div>
     </section>
 
@@ -3018,6 +3037,23 @@ function renderUserBadge(){
   document.getElementById("sidebar-account").style.display = "flex";
 }
 
+// Apartado "Privado" (cruce con historial de encontrados de Bultos Perdidos): visible y
+// usable solo por esta cuenta puntual — no es un rol, es esta persona específica.
+const PRIVADO_USUARIO_ID = 1; // abrahamprado en b2c_users
+function esUsuarioPrivado(){
+  return !!(currentSession && currentSession.usuario && currentSession.usuario.id === PRIVADO_USUARIO_ID);
+}
+function renderAccesoPrivado(){
+  const visible = esUsuarioPrivado();
+  document.getElementById("navgroup-privado-toggle").style.display = visible ? "" : "none";
+  document.getElementById("navgroup-privado-body").style.display = visible ? "" : "none";
+  // Si por algún motivo esta vista quedó activa (ej. sesión cambiada sin recargar), no la
+  // dejamos como pantalla actual para quien no es el usuario autorizado.
+  if(!visible && document.getElementById("panel-bp-encontrados-privado").classList.contains("active")){
+    irAVista("racs");
+  }
+}
+
 async function checkSession(){
   let token = null;
   try{ token = localStorage.getItem(SESSION_KEY); }catch(e){}
@@ -3031,6 +3067,7 @@ async function checkSession(){
   currentSession = data;
   showApp();
   renderUserBadge();
+  renderAccesoPrivado();
   init();
 }
 
@@ -3059,6 +3096,7 @@ document.getElementById("login-form").addEventListener("submit", async (e)=>{
   document.getElementById("login-form").reset();
   showApp();
   renderUserBadge();
+  renderAccesoPrivado();
   init();
 });
 
@@ -5466,6 +5504,7 @@ async function bpCruceHistorialEncontrados(file){
   return { conciliados: nuevos.length, ambiguos, error };
 }
 document.getElementById("bp-hist-encontrados-import-btn").addEventListener("click", async (e)=>{
+  if(!esUsuarioPrivado()) return; // resguardo: la vista está oculta para todos menos este usuario
   const btn = e.currentTarget; const original = btn.textContent;
   btn.disabled = true; btn.textContent = "Cruzando…";
   const statusEl = document.getElementById("bp-hist-encontrados-import-status");
