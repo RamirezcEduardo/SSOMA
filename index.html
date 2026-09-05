@@ -2751,7 +2751,9 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
 
       <div class="field" id="conc-foto-wrap" style="display:none;">
-        <label>Foto de evidencia</label>
+        <label>¿Dónde exactamente lo encontró?<span class="req">*</span></label>
+        <input type="text" id="conc-ubicacion-encontrada" placeholder="Ej. EA-03-32-20-05">
+        <label style="margin-top:12px;display:block;">Foto de evidencia (opcional)</label>
         <label class="import-drop" for="conc-foto" id="conc-drop-foto" style="padding:14px;">
           <input type="file" accept="image/*" id="conc-foto" hidden>
           <span class="import-drop-icon">📷</span>
@@ -3834,6 +3836,7 @@ async function spLoadData(){
     (verData || []).forEach(v=>{
       verificaciones[v.registro_id] = {
         estado: v.estado, cantidadEncontrada: v.cantidad_encontrada, otraUbicacion: v.otra_ubicacion,
+        ubicacionEncontrada: v.ubicacion_encontrada || "",
         fotoNombre: v.foto && v.foto.nombre ? v.foto.nombre : "", foto: v.foto || null, fecha: spFmtFechaHora(new Date(v.fecha)),
       };
     });
@@ -4119,7 +4122,9 @@ function spRenderHistorial(){
   const list = document.getElementById("hist-list");
   list.innerHTML = rows.length ? rows.map(r=>{
     const v = verificaciones[r.id];
-    const ubicacionTexto = v.otraUbicacion ? "Encontrado en otra ubicación" : "Encontrado en la ubicación indicada";
+    const ubicacionTexto = v.otraUbicacion
+      ? `Encontrado en otra ubicación${v.ubicacionEncontrada ? ": " + v.ubicacionEncontrada : ""}`
+      : "Encontrado en la ubicación indicada";
     return `
     <div class="conc-card">
       <div class="conc-card-top">
@@ -4154,6 +4159,7 @@ function concOpenModal(rowId){
   document.getElementById("conc-cantidad-encontrada").max = cantWms;
   document.getElementById("conc-modal-error").textContent = "";
   document.getElementById("conc-foto").value = "";
+  document.getElementById("conc-ubicacion-encontrada").value = "";
 
   document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("conc-cantidad-wrap").style.display = "none";
@@ -4161,6 +4167,7 @@ function concOpenModal(rowId){
   document.getElementById("conc-foto-wrap").style.display = "none";
 
   const existing = verificaciones[rowId];
+  if(existing) document.getElementById("conc-ubicacion-encontrada").value = existing.ubicacionEncontrada || "";
   if(existing && existing.otraUbicacion && existing.fotoNombre){
     document.getElementById("conc-foto-name").textContent = existing.fotoNombre;
     document.getElementById("conc-drop-foto").classList.add("filled");
@@ -4241,13 +4248,15 @@ document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>
   }
   const otraUbicacion = activeUbicacionBtn.dataset.val === "otra";
 
+  const ubicacionEncontrada = document.getElementById("conc-ubicacion-encontrada").value.trim();
+  if(otraUbicacion && !ubicacionEncontrada){
+    errorEl.textContent = "Escribe dónde exactamente lo encontró.";
+    return;
+  }
+
   const fotoInput = document.getElementById("conc-foto");
   const fotoFile = fotoInput.files[0];
   const previa = verificaciones[concCurrentRowId];
-  if(otraUbicacion && !fotoFile && !(previa && previa.fotoNombre)){
-    errorEl.textContent = "Sube una foto del producto encontrado en otra ubicación.";
-    return;
-  }
 
   const guardarBtn = document.getElementById("conc-guardar-btn");
   const originalLabel = guardarBtn.textContent;
@@ -4258,7 +4267,8 @@ document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>
     const actorId = miUsuario ? miUsuario.id : null;
     const { error } = await sb.from("ssoma_sp_verificaciones").upsert({
       registro_id: concCurrentRowId, estado, cantidad_encontrada: cantidadEncontrada,
-      otra_ubicacion: otraUbicacion, foto: otraUbicacion ? fotoJson : null,
+      otra_ubicacion: otraUbicacion, ubicacion_encontrada: otraUbicacion ? ubicacionEncontrada : null,
+      foto: otraUbicacion ? fotoJson : null,
       verificado_por_id: actorId, fecha: new Date().toISOString(),
     }, { onConflict: "registro_id" });
     guardarBtn.disabled = false;
@@ -4331,6 +4341,7 @@ const SP_COLUMNAS_HISTORIAL = [
   { header: "Estado verificación", get: r => verificaciones[r.id] ? verificaciones[r.id].estado : "" },
   { header: "Cant. encontrada", get: r => verificaciones[r.id] ? verificaciones[r.id].cantidadEncontrada : "" },
   { header: "Otra ubicación", get: r => verificaciones[r.id] && verificaciones[r.id].otraUbicacion ? "Sí" : "No" },
+  { header: "Ubicación encontrada", get: r => verificaciones[r.id] ? (verificaciones[r.id].ubicacionEncontrada || "") : "" },
   { header: "Verificado el", get: r => (verificaciones[r.id] ? verificaciones[r.id].fecha : "").slice(0, 10) },
 ];
 document.getElementById("hist-export-btn").addEventListener("click", ()=>{
