@@ -1934,7 +1934,7 @@
           <div class="import-card-head">
             <div>
               <div class="import-card-title">🔍 Cruce con historial de productos encontrados</div>
-              <div class="import-card-sub">Sube el historial que te pasan (Fecha, Cód Alternat, Ubicación, Encontrado) — concilia solo los pendientes cuyo código aparece encontrado en una fecha posterior a cuando se reportó perdido. Si el mismo código tiene más de un caso pendiente, no toca ninguno (queda para revisar a mano).</div>
+              <div class="import-card-sub">Sube el historial que te pasan (Fecha, Cód Alternat, Ubicación, Encontrado) — concilia los pendientes cuyo código aparece en el historial. Si el mismo código tiene más de un caso pendiente a la vez, no toca ninguno (queda para revisar a mano, no hay forma de saber cuál de los dos encontraron).</div>
             </div>
             <button type="button" class="btn btn-primary" id="bp-hist-encontrados-import-btn" disabled>Cruzar y conciliar</button>
           </div>
@@ -5401,13 +5401,13 @@ document.getElementById("bp-file-hist-encontrados").addEventListener("change", (
 });
 /* Cruce con el historial manual de "productos encontrados" (Recepción/Auditoría): a
    diferencia de la caja WMS (Paso 2, que trae Nro LPN — clave única y sin ambigüedad),
-   este archivo solo trae Cod Alternat, y el mismo código puede reaparecer muchas veces
-   en el historial por incidentes distintos a lo largo del tiempo. Para no conciliar el
-   caso equivocado: (1) el hallazgo tiene que ser de una fecha igual o posterior a cuando
-   el caso se reportó perdido — un hallazgo de antes es de otro incidente con el mismo
-   producto, no de este caso; (2) si hay más de un caso pendiente con el mismo código, no
-   se toca ninguno automático (no hay forma de saber cuál de los dos encontraron) — quedan
-   para conciliar a mano. */
+   este archivo solo trae Cod Alternat. La fecha de este archivo es cuándo se encontró el
+   producto — no tiene relación con la fecha en que el caso se creó en el sistema (puede
+   ser antes o después, son procesos independientes), así que NO se usa para filtrar ni
+   para decidir si aplica. El único resguardo posible: si hay más de un caso pendiente con
+   el mismo código a la vez, no se toca ninguno automático (no hay forma de saber cuál de
+   los dos encontraron) — quedan para conciliar a mano. Si hay un solo pendiente con ese
+   código, se concilia con el hallazgo más reciente del archivo. */
 async function bpCruceHistorialEncontrados(file){
   const filas = await spParseWorkbookFile(file);
   const hallazgosPorCodigo = {};
@@ -5435,9 +5435,7 @@ async function bpCruceHistorialEncontrados(file){
     if(!hallazgos || !hallazgos.length) return;
     if(casos.length > 1){ ambiguos += casos.length; return; }
     const caso = casos[0];
-    const fechaCaso = new Date(caso.fecha + "T00:00:00");
-    const hallazgo = hallazgos.filter(h => h.fecha >= fechaCaso).sort((a,b)=> a.fecha - b.fecha)[0];
-    if(!hallazgo) return;
+    const hallazgo = [...hallazgos].sort((a,b)=> b.fecha - a.fecha)[0];
     nuevos.push({
       registro_id: caso.id,
       sustento: `Encontrado en ${hallazgo.ubicacion || "ubicación no especificada"} el ${bpFmtFecha(hallazgo.fecha)} (cruce con historial de productos encontrados).`,
@@ -5461,7 +5459,7 @@ document.getElementById("bp-hist-encontrados-import-btn").addEventListener("clic
     if(error){
       statusEl.textContent = "❌ No se pudo cruzar: " + error.message;
     }else if(conciliados === 0 && ambiguos === 0){
-      statusEl.textContent = "⚠️ Ningún código del historial coincide con un caso pendiente reportado después de esa fecha.";
+      statusEl.textContent = "⚠️ Ningún código del historial coincide con un caso pendiente.";
     }else{
       await bpLoadData();
       const nota = ambiguos > 0 ? ` ${ambiguos} caso(s) con el mismo código en más de un pendiente — revísalos a mano.` : "";
