@@ -1794,8 +1794,12 @@
         </div>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-        <button type="button" class="btn btn-ghost" id="conc-export-btn">📤 Exportar pendientes</button>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:14px;">
+        <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
+          <label>Buscar por Cod Alternat</label>
+          <input type="text" id="conc-f-buscar" placeholder="Ej. 142346">
+        </div>
+        <button type="button" class="btn btn-ghost" id="conc-export-btn" style="margin-left:auto;">📤 Exportar pendientes</button>
       </div>
 
       <div class="conc-card-list" id="conc-list" style="margin-top:10px;"></div>
@@ -3990,6 +3994,7 @@ function spRender(){
 spLoadData();
 document.getElementById("sp-f-semana").addEventListener("change", spRender);
 document.getElementById("sp-f-subarea").addEventListener("change", spRender);
+document.getElementById("conc-f-buscar").addEventListener("input", spRenderConc);
 
 document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
@@ -4039,7 +4044,9 @@ function spRenderConc(){
   document.getElementById("conc-stat-verificados").textContent = verificados;
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
 
-  const rowsPendientes = spData.filter(r=> !verificaciones[r.id]).sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  const fBuscar = document.getElementById("conc-f-buscar").value.trim().toLowerCase();
+  let rowsPendientes = spData.filter(r=> !verificaciones[r.id]).sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  if(fBuscar) rowsPendientes = rowsPendientes.filter(r=> (r.codAlternat || "").toLowerCase().includes(fBuscar));
   const list = document.getElementById("conc-list");
   list.innerHTML = rowsPendientes.length ? rowsPendientes.map(r=> `
     <div class="conc-card">
@@ -4051,7 +4058,7 @@ function spRenderConc(){
       <div class="conc-card-actions">
         <button type="button" class="btn btn-primary conc-verificar-btn" data-id="${r.id}">Verificar</button>
       </div>
-    </div>`).join("") : `<div class="empty">No hay faltantes pendientes de verificar.</div>`;
+    </div>`).join("") : `<div class="empty">${fBuscar ? "Ningún pendiente coincide con ese código." : "No hay faltantes pendientes de verificar."}</div>`;
 
   list.querySelectorAll(".conc-verificar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> concOpenModal(Number(btn.dataset.id)));
