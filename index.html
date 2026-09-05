@@ -1720,7 +1720,7 @@
       </button>
       <div class="table-wrap collapsible-body" id="sp-sincosto-wrap">
         <table class="data-table" id="sp-sincosto-table">
-          <thead><tr><th>Cod Alternat</th><th>Producto</th><th>Registros</th><th>Unidades</th><th>Costo unitario (S/)</th></tr></thead>
+          <thead><tr><th>Cod Alternat</th><th>Producto</th><th>Registros</th><th>Unidades</th><th>Costo unitario (S/)</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -3618,17 +3618,24 @@ function spProceso(orden){ return TB_PROCESO[spSubProceso(orden)] || "—"; }
    vez (ya en paralelo gracias a sbSelectAll, pero sigue siendo trabajo de más). Pasa forzar:true
    solo donde el catálogo mismo acaba de cambiar (subida de tarifario, edición de un precio). */
 let costosMap = {};
+let costosConfirmadoMap = {}; // cod_alternat -> true si S/0.00 ya fue confirmado como precio real (no pendiente)
 let costosMapCargado = false;
 async function spCargarCostos(forzar){
   if(costosMapCargado && !forzar) return;
-  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, costo");
+  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, costo, costo_confirmado");
   if(error){ console.error("No se pudo cargar el catálogo de costos:", error.message); return; }
   costosMap = {};
-  (data || []).forEach(c => { costosMap[c.cod_alternat] = (c.costo === null || c.costo === undefined) ? null : Number(c.costo); });
+  costosConfirmadoMap = {};
+  (data || []).forEach(c => {
+    costosMap[c.cod_alternat] = (c.costo === null || c.costo === undefined) ? null : Number(c.costo);
+    costosConfirmadoMap[c.cod_alternat] = !!c.costo_confirmado;
+  });
   costosMapCargado = true;
 }
 function spCosto(codAlternat){ return costosMap[codAlternat] || 0; }
-function spTienePrecio(codAlternat){ return !!costosMap[codAlternat]; } // false = sin precio o cargado en 0
+// true = tiene un precio real cargado, O ya se confirmó que S/0.00 es su precio real
+// (sin el segundo caso, un producto genuinamente gratis quedaba pendiente para siempre).
+function spTienePrecio(codAlternat){ return !!costosMap[codAlternat] || !!costosConfirmadoMap[codAlternat]; }
 function spValorizado(row){
   if(row.valorizado !== undefined && row.valorizado !== null) return row.valorizado;
   return spCosto(row.codAlternat) * Math.abs(row.unajust);
@@ -3815,7 +3822,10 @@ function spRender(){
       <td class="num">${esAdmin()
         ? `<input type="number" step="0.01" min="0" class="sp-costo-nuevo-input" data-cod="${escapeHtml(cod)}" data-producto="${escapeHtml(e.producto)}" placeholder="0.00" style="width:90px;">`
         : `<span style="color:var(--muted);">— (pide a un administrador)</span>`}</td>
-    </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;color:var(--muted);">Todos los productos de este filtro tienen costo cargado.</td></tr>`;
+      <td>${esAdmin()
+        ? `<button type="button" class="btn btn-ghost sp-costo-cero-btn" data-cod="${escapeHtml(cod)}" data-producto="${escapeHtml(e.producto)}" style="padding:6px 10px;font-size:12px;white-space:nowrap;">Es S/0 real</button>`
+        : ""}</td>
+    </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:var(--muted);">Todos los productos de este filtro tienen costo cargado.</td></tr>`;
 
   sincostoBody.querySelectorAll(".sp-costo-nuevo-input").forEach(input=>{
     input.addEventListener("change", async (e)=>{
@@ -3824,9 +3834,25 @@ function spRender(){
       if(isNaN(costo) || costo < 0){ e.target.value = ""; return; }
       e.target.disabled = true;
       const { error } = await sb.from("ssoma_sp_costos")
-        .upsert({ cod_alternat: cod, producto: e.target.dataset.producto, costo }, { onConflict: "cod_alternat" });
+        .upsert({ cod_alternat: cod, producto: e.target.dataset.producto, costo, costo_confirmado: true }, { onConflict: "cod_alternat" });
       e.target.disabled = false;
       if(error){ alert("No se pudo guardar el costo: " + error.message); return; }
+      await spCargarCostos(true);
+      spRender();
+    });
+  });
+  // "Es S/0 real": para productos genuinamente gratis (ej. promocionales) — sin esto,
+  // no había forma de sacarlos de "sin valor unitario" salvo ponerles un precio falso,
+  // porque costo=0 y "sin precio cargado" se veían exactamente igual.
+  sincostoBody.querySelectorAll(".sp-costo-cero-btn").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      const cod = e.target.dataset.cod;
+      if(!confirm(`¿Confirmas que "${e.target.dataset.producto}" (${cod}) realmente vale S/0.00?`)) return;
+      e.target.disabled = true;
+      const { error } = await sb.from("ssoma_sp_costos")
+        .upsert({ cod_alternat: cod, producto: e.target.dataset.producto, costo: 0, costo_confirmado: true }, { onConflict: "cod_alternat" });
+      e.target.disabled = false;
+      if(error){ alert("No se pudo confirmar: " + error.message); return; }
       await spCargarCostos(true);
       spRender();
     });
@@ -6986,23 +7012,23 @@ document.getElementById("sp-costos-export-modal-close").addEventListener("click"
 document.getElementById("sp-costos-export-modal").addEventListener("click", (e)=>{
   if(e.target.id === "sp-costos-export-modal") document.getElementById("sp-costos-export-modal").classList.remove("show");
 });
-/* PRECIO "pendiente" = sin costo cargado O cargado en 0 — en ambos casos no suma nada al
-   valorizado, así que cuenta como que aún falta ponerle precio real. */
-function spCostoEsPendiente(costo){ return costo === null || costo === undefined || Number(costo) === 0; }
+/* PRECIO "pendiente" = sin costo cargado O cargado en 0 sin confirmar — un costo en 0 ya
+   confirmado (producto genuinamente gratis, ej. promocional) no cuenta como pendiente. */
+function spCostoEsPendiente(costo, confirmado){ return !confirmado && (costo === null || costo === undefined || Number(costo) === 0); }
 async function spExportarCatalogo(btn, soloPendientes){
   const originalLabel = btn.textContent;
   btn.disabled = true;
-  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia", q => q.order("cod_alternat"));
+  const { data, error } = await sbSelectAll("ssoma_sp_costos", "cod_alternat, producto, costo, familia, costo_confirmado", q => q.order("cod_alternat"));
   btn.disabled = false;
   if(error){ alert("No se pudo exportar el catálogo: " + error.message); return; }
-  const filas = soloPendientes ? (data || []).filter(r => spCostoEsPendiente(r.costo)) : (data || []);
+  const filas = soloPendientes ? (data || []).filter(r => spCostoEsPendiente(r.costo, r.costo_confirmado)) : (data || []);
   descargarCsv(
     soloPendientes ? "catalogo_pendientes_precio.csv" : "catalogo_costos.csv",
     [
       { header: "COD_ALTERNO", get: r => r.cod_alternat },
       { header: "PRODUCTO", get: r => r.producto || "" },
       { header: "FAMILIA", get: r => r.familia || "" },
-      { header: "PRECIO", get: r => spCostoEsPendiente(r.costo) ? "No cuenta con precio establecido" : Number(r.costo).toFixed(2) },
+      { header: "PRECIO", get: r => spCostoEsPendiente(r.costo, r.costo_confirmado) ? "No cuenta con precio establecido" : Number(r.costo).toFixed(2) },
     ],
     filas
   );
@@ -7031,6 +7057,7 @@ document.getElementById("sp-costos-import-btn").addEventListener("click", async 
       producto: String(spBuscaCampo(fila, ["PRODUCTO","Producto"])).trim() || null,
       costo: parseFloat(spBuscaCampo(fila, ["COSTO","Costo"])) || 0,
       familia: String(spBuscaCampo(fila, ["FAMILIA","Familia"])).trim() || null,
+      costo_confirmado: true, // el tarifario es la fuente oficial — un COSTO en 0 ahí es real, no "sin revisar"
     })).filter(c => c.cod_alternat);
     // Si el tarifario trae el mismo COD_ALTERNO repetido (p.ej. quedó duplicado al corregir
     // precios a mano), el upsert por lote falla con "ON CONFLICT DO UPDATE command cannot
