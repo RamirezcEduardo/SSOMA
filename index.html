@@ -2242,9 +2242,12 @@
       </div>
 
       <div style="margin-top:22px;border:1px solid var(--orange);border-radius:10px;background:var(--orange-tint);padding:14px 16px;">
-        <button type="button" class="section-subhead collapsible-toggle" id="bolsa-candidatos-toggle" aria-expanded="false" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;width:100%;text-transform:none;letter-spacing:normal;margin:0;font-family:inherit;">
-          <div style="font-weight:700;font-size:13.5px;color:var(--amber-text);display:flex;align-items:center;gap:6px;">⚠ Candidatos a disputa — revisar antes de que pasen a cobro <span class="collapsible-chevron">⌄</span></div>
-          <div style="font-size:12.5px;color:var(--muted);font-weight:400;"><span id="bolsa-candidatos-count">0</span> líneas · S/ <span id="bolsa-candidatos-monto">0.00</span> en juego</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div style="font-size:12.5px;color:var(--muted);"><span id="bolsa-candidatos-count">0</span> líneas · S/ <span id="bolsa-candidatos-monto">0.00</span> en juego</div>
+          <button type="button" class="btn btn-ghost" id="bolsa-candidatos-export-btn" style="padding:6px 10px;font-size:11px;">📤 Exportar para el auditor</button>
+        </div>
+        <button type="button" class="section-subhead collapsible-toggle" id="bolsa-candidatos-toggle" aria-expanded="false" style="display:flex;align-items:center;gap:6px;width:100%;text-transform:none;letter-spacing:normal;margin:0;font-family:inherit;font-weight:700;font-size:13.5px;color:var(--amber-text);">
+          ⚠ Candidatos a disputa — revisar antes de que pasen a cobro <span class="collapsible-chevron">⌄</span>
         </button>
         <div class="table-wrap collapsible-body" id="bolsa-candidatos-wrap" style="margin-top:10px;">
           <table class="data-table" id="bolsa-candidatos-table">
@@ -4784,6 +4787,33 @@ function bolsaRender(){
 bolsaLoadAuditLineas();
 document.getElementById("bolsa-f-semana").addEventListener("change", bolsaRender);
 document.getElementById("bolsa-f-motivo").addEventListener("change", bolsaRender);
+
+/* Exportar los candidatos a disputa tal como los arma bolsaRender() (mismo filtro:
+   considera=true y ya sea marcados "en_disputa" por el cruce automático, o con un motivo
+   que la regla no reconoce) — listo para mandarle al auditor. Después, cuando el auditor
+   responda si acepta o rechaza cada uno, el cambio se registra a mano en el desplegable
+   Estado de la tabla de detalle (Aceptar/Descartar), no reimportando este archivo. */
+const BOLSA_COLUMNAS_CANDIDATOS = [
+  { header: "Cod Producto", get: r => r.codProducto },
+  { header: "Producto", get: r => r.producto },
+  { header: "Familia", get: r => r.familia },
+  { header: "Ubicación", get: r => r.ubicacion },
+  { header: "Tipo", get: r => r.tipo },
+  { header: "Motivo OP", get: r => r.motivo },
+  { header: "Fecha", get: r => r.fecha },
+  { header: "Semana", get: r => r.semana },
+  { header: "Monto reversado (S/)", get: r => r.monto.toFixed(2) },
+  { header: "Por qué se disputa", get: r => r.sustento || (r.reglaDesconocida ? "Motivo no visto antes — confirmar si va en Considerar/No considerar." : "") },
+];
+document.getElementById("bolsa-candidatos-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Candidatos a disputa (Control de Bolsa)",
+    obtenerFilas: () => bolsaAuditLineas.filter(r => r.considera && (r.estado === "en_disputa" || r.reglaDesconocida)),
+    campoFecha: r => r.fecha,
+    columnas: BOLSA_COLUMNAS_CANDIDATOS,
+    nombreArchivo: "bolsa_candidatos_disputa.csv",
+  });
+});
 
 /* Clic en cada tarjeta del dashboard -> explica qué muestra y cómo se calcula. */
 document.querySelectorAll("#panel-inventario-bolsa .bolsa-stat-clickable").forEach(card=>{
