@@ -1437,6 +1437,17 @@
         </div>
       </div>
 
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+        <div class="field" style="min-width:180px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="lev-f-semana"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
+          <label>Buscar por nombre</label>
+          <input type="text" id="lev-f-buscar" placeholder="Observador, trabajador o responsable del levantamiento">
+        </div>
+      </div>
+
       <div class="list-head">
         <div class="filters" style="gap:6px;">
           <button class="btn btn-ghost lev-tab active" data-tab="pendiente" style="padding:8px 14px;font-size:12px;">Pendientes</button>
@@ -8049,19 +8060,60 @@ document.querySelectorAll(".lev-tab").forEach(btn=>{
   });
 });
 
+/* Semana calendario (lunes a domingo) de una fecha "YYYY-MM-DD" — a diferencia de los
+   filtros de Semana de Inventario (que vienen ya armados del WMS), acá no hay una columna
+   "Semana" propia: los reportes RACS solo traen su fecha, así que se agrupa por semana
+   calendario a partir de esa fecha. */
+function levSemanaLunes(fechaISO){
+  if(!fechaISO) return "";
+  const d = new Date(fechaISO + "T00:00:00");
+  if(isNaN(d)) return "";
+  const dow = (d.getDay() + 6) % 7; // 0=lunes
+  d.setDate(d.getDate() - dow);
+  return ssomaFormatISO(d);
+}
+function levSemanaLabel(lunesISO){
+  const inicio = new Date(lunesISO + "T00:00:00");
+  const fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
+  const fmt = d => String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
+  return "Semana del " + fmt(inicio) + " al " + fmt(fin);
+}
+function levRenderFiltroSemana(){
+  const sel = document.getElementById("lev-f-semana");
+  const actual = sel.value;
+  const semanas = [...new Set(reports.map(r => levSemanaLunes(r.fecha)).filter(Boolean))].sort().reverse();
+  sel.innerHTML = '<option value="">Todas</option>' + semanas.map(s => `<option value="${s}">${levSemanaLabel(s)}</option>`).join("");
+  if(semanas.includes(actual)) sel.value = actual;
+}
+document.getElementById("lev-f-semana").addEventListener("change", renderLevList);
+document.getElementById("lev-f-buscar").addEventListener("input", renderLevList);
+
 function renderLevList(){
   const list = document.getElementById("lev-list");
   if(!list) return;
 
-  const pendientes = reports.filter(r => (r.estado || "Pendiente") === "Pendiente");
-  const levantados = reports.filter(r => r.estado === "Levantado");
+  levRenderFiltroSemana();
+  const semanaSel = document.getElementById("lev-f-semana").value;
+  const busqueda = bpNormaliza(document.getElementById("lev-f-buscar").value.trim());
+  const filtrados = reports.filter(r=>{
+    if(semanaSel && levSemanaLunes(r.fecha) !== semanaSel) return false;
+    if(busqueda){
+      const nombres = [r.observador, r.trabajador, r.levantamiento && r.levantamiento.responsable]
+        .filter(Boolean).map(bpNormaliza).join(" | ");
+      if(!nombres.includes(busqueda)) return false;
+    }
+    return true;
+  });
+
+  const pendientes = filtrados.filter(r => (r.estado || "Pendiente") === "Pendiente");
+  const levantados = filtrados.filter(r => r.estado === "Levantado");
   document.getElementById("lev-pend-count").textContent = pendientes.length;
   document.getElementById("lev-done-count").textContent = levantados.length;
 
   let shown;
   if(levTab === "pendiente") shown = pendientes;
   else if(levTab === "levantado") shown = levantados;
-  else shown = reports;
+  else shown = filtrados;
   shown = shown.slice().reverse();
 
   if(shown.length === 0){
@@ -8145,9 +8197,16 @@ function renderLevList(){
       if(!confirm("¿Eliminar este reporte?")) return;
       const r = reports.find(x => x.id === btn.dataset.id);
       if(!r) return;
+      btn.disabled = true;
       const { error } = await sb.from("ssoma_racs_reports").delete().eq("id", r.dbId);
-      if(error){ alert("No se pudo eliminar: " + error.message); return; }
-      await loadReports();
+      if(error){ btn.disabled = false; alert("No se pudo eliminar: " + error.message); return; }
+      // Se saca localmente en vez de recargar todo desde Supabase — loadReports() trae los
+      // 96 reportes completos con sus fotos en base64 (~5 MB) solo para reflejar un borrado,
+      // lo que hacía sentir la acción lenta sin necesidad.
+      reports = reports.filter(x => x.id !== r.id);
+      renderList();
+      renderLevList();
+      updateStats();
     });
   });
 
