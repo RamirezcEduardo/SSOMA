@@ -3109,9 +3109,15 @@ function renderAccesoPrivado(){
   if(!visible && document.getElementById("panel-sp-encontrados-privado").classList.contains("active")){
     irAVista("racs");
   }
-  // Fecha de RACS: de solo lectura para todos (se autocompleta con hoy) salvo para el
-  // usuario privado, que puede corregirla a mano (ej. reportes cargados con atraso).
-  document.getElementById("f-fecha").readOnly = !visible;
+  renderRacsFechaPermiso();
+}
+
+/* Fecha de RACS: de solo lectura para todos (se autocompleta con hoy) salvo para el usuario
+   privado y los Supervisores SSOMA, que pueden corregirla a mano (ej. reportes cargados con
+   atraso). esSsomaU/miUsuario se resuelven en trLoadUsuarios(), que puede terminar después
+   del login — por eso esto se vuelve a evaluar también ahí, no solo acá. */
+function renderRacsFechaPermiso(){
+  document.getElementById("f-fecha").readOnly = !(esUsuarioPrivado() || esSsomaU(miUsuario));
 }
 
 async function checkSession(){
@@ -6145,6 +6151,7 @@ async function trLoadUsuarios(){
   miUsuario = (currentSession && currentSession.usuario) ? (usuariosPorId[currentSession.usuario.id] || null) : null;
   trPopulateSelectors();
   aplicarVisibilidadNav();
+  renderRacsFechaPermiso();
 }
 
 /* Controla qué grupos/ítems del menú lateral ve cada quien según su puesto real en Adecco KPI.
