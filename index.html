@@ -4679,20 +4679,27 @@ function bolsaFindCol(headerRow, candidates){
 }
 /* Recorre todas las hojas del libro y devuelve la primera que tenga TODAS las
    columnas pedidas (por nombre, sin importar mayúsculas/tildes) — así no depende
-   de que la hoja se llame exactamente "Data". */
+   de que la hoja se llame exactamente "Data" NI de que el encabezado esté en la
+   primera fila: reportes como "Pendientes de Operación" traen varias hojas (Resumen
+   Unidades, Responsables, "Bultos Pendientes", etc.) y dentro de la hoja que sí sirve
+   el encabezado real puede venir 2-3 filas más abajo (título/resumen antes). Se revisan
+   las primeras 10 filas de cada hoja buscando la que trae todas las columnas pedidas. */
 function bolsaPickSheet(wb, requiredCandidateLists){
   for(const name of wb.SheetNames){
     const json = XLSX.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:true, defval:"", blankrows:false });
     if(!json.length) continue;
-    const header = json[0];
-    const cols = {};
-    let ok = true;
-    for(const [key, cands] of Object.entries(requiredCandidateLists)){
-      const idx = bolsaFindCol(header, cands);
-      if(idx === -1){ ok = false; break; }
-      cols[key] = idx;
+    const maxHeaderRow = Math.min(10, json.length);
+    for(let headerIdx = 0; headerIdx < maxHeaderRow; headerIdx++){
+      const header = json[headerIdx];
+      const cols = {};
+      let ok = true;
+      for(const [key, cands] of Object.entries(requiredCandidateLists)){
+        const idx = bolsaFindCol(header, cands);
+        if(idx === -1){ ok = false; break; }
+        cols[key] = idx;
+      }
+      if(ok) return { sheetName: name, header, rows: json.slice(headerIdx + 1), cols };
     }
-    if(ok) return { sheetName: name, header, rows: json.slice(1), cols };
   }
   return null;
 }
@@ -5737,38 +5744,67 @@ function bpUpdateImportState(){
 }
 document.getElementById("bp-file").addEventListener("change", bpUpdateImportState);
 
-/* Import real: DATA LATAM (bruto), primera hoja, encabezados en fila 1. Solo entran las filas
-   con Ubicación en la whitelist de zonas Drop/Control de Inventario 01-01, o Proceso = Sin
-   Ubicación/Por ubicar (sin importar la ubicación). Control de Inventario 01-01 vinculado al
-   proceso Reinyectado se cataloga como "consulta_reinyectado" en vez de un pendiente normal.
-   Se salta cualquier Nro LPN que ya esté cargado, para poder reimportar DATA LATAM día a día
-   sin duplicar casos que siguen pendientes de una carga anterior. */
+/* Import real: acepta tanto un export crudo de DATA LATAM (hoja única, encabezado en la
+   fila 1) como el reporte consolidado "Pendientes de Operación" (varias hojas — Resumen
+   Unidades, Responsables, "Bultos Pendientes", etc. — con el encabezado real unas filas
+   más abajo, después de un título/resumen). bolsaPickSheet() busca en todas las hojas y en
+   las primeras filas de cada una la que trae Ubicacion+Proceso+Nro LPN+Cod Alternat, así no
+   depende de que sea la primera hoja ni de que el encabezado esté en la fila 1.
+   Solo entran las filas con Ubicación en la whitelist de zonas Drop/Control de Inventario, o
+   Proceso = Sin Ubicación/Por ubicar/Perdido ERU (sin importar la ubicación). Control de
+   Inventario 01-01 vinculado al proceso Reinyectado se cataloga como "consulta_reinyectado"
+   en vez de un pendiente normal. Se salta cualquier Nro LPN que ya esté cargado, para poder
+   reimportar día a día sin duplicar casos que siguen pendientes de una carga anterior. */
 async function bpImportarRegistros(file){
   await spCargarCostos();
-  const filas = await spParseWorkbookFile(file);
+  const wb = await bolsaReadWorkbook(file);
+  const hoja = bolsaPickSheet(wb, {
+    ubicacion: ["Ubicacion", "Ubicación"], proceso: ["Proceso"], nroLpn: ["Nro LPN"], codAlternat: ["Cod Alternat"],
+  });
+  if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Ubicacion, Proceso, Nro LPN y Cod Alternat. Revisa que sea el export "DATA LATAM" o el reporte "Pendientes de Operación" (hoja "Bultos Pendientes"), sin editar los encabezados.`);
+  const idx = {
+    fecha: bolsaFindCol(hoja.header, ["Fe y Hr Crea", "Fecha"]),
+    caducidad: bolsaFindCol(hoja.header, ["Fecha de Caducidad", "Fecha de caducidad"]),
+    valTot: bolsaFindCol(hoja.header, ["Val tot"]),
+    producto: bolsaFindCol(hoja.header, ["Producto"]),
+    descripcion: bolsaFindCol(hoja.header, ["Descripcion", "Descripción"]),
+    cantidad: bolsaFindCol(hoja.header, ["Cantidad actual"]),
+    ubicacionAnterior: bolsaFindCol(hoja.header, ["Ubicación Anterior", "Ubicacion Anterior"]),
+    estado: bolsaFindCol(hoja.header, ["Estado"]),
+    area: bolsaFindCol(hoja.header, ["Área", "Area"]),
+    familia: bolsaFindCol(hoja.header, ["Familia"]),
+    responsable: bolsaFindCol(hoja.header, ["Responsable"]),
+    supervisor: bolsaFindCol(hoja.header, ["Supervisor"]),
+    semana: bolsaFindCol(hoja.header, ["Sem", "Semana"]),
+    nroLote: bolsaFindCol(hoja.header, ["Nro de lote"]),
+    nroOc: bolsaFindCol(hoja.header, ["Nro OC"]),
+    usuarioRecepcion: bolsaFindCol(hoja.header, ["Usuario de recepción", "Usuario de recepcion"]),
+  };
+  const campo = (row, i) => i === -1 ? "" : (row[i] ?? "");
+
   const actorId = miUsuario ? miUsuario.id : null;
   const lpnExistentes = new Set(bpData.map(r => r.nroLpn));
   const vistosEnEsteArchivo = new Set();
-  const registros = filas
-    .filter(fila=>{
-      const ubicacion = bpNormaliza(spBuscaCampo(fila, ["Ubicacion","Ubicación"]));
-      const proceso = bpNormaliza(spBuscaCampo(fila, ["Proceso"]));
+  const registros = hoja.rows
+    .filter(row=>{
+      const ubicacion = bpNormaliza(campo(row, hoja.cols.ubicacion));
+      const proceso = bpNormaliza(campo(row, hoja.cols.proceso));
       return BP_UBICACION_WHITELIST.has(ubicacion) || BP_PROCESO_WHITELIST.has(proceso);
     })
-    .map(fila=>{
-      const fechaRaw = spBuscaCampo(fila, ["Fe y Hr Crea","Fecha"]);
+    .map(row=>{
+      const fechaRaw = campo(row, idx.fecha);
       let fechaDt = wmsParseFecha(fechaRaw) || new Date();
-      const caducidadRaw = spBuscaCampo(fila, ["Fecha de Caducidad","Fecha de caducidad"]);
+      const caducidadRaw = campo(row, idx.caducidad);
       const caducidadDt = wmsParseFecha(caducidadRaw);
-      const valTot = spBuscaCampo(fila, ["Val tot"]);
-      const nroLpn = String(spBuscaCampo(fila, ["Nro LPN"])).trim();
-      const ubicacion = String(spBuscaCampo(fila, ["Ubicacion","Ubicación"])).trim();
-      const proceso = String(spBuscaCampo(fila, ["Proceso"])).trim();
+      const valTot = campo(row, idx.valTot);
+      const nroLpn = String(campo(row, hoja.cols.nroLpn)).trim();
+      const ubicacion = String(campo(row, hoja.cols.ubicacion)).trim();
+      const proceso = String(campo(row, hoja.cols.proceso)).trim();
       const ubicacionNorm = bpNormaliza(ubicacion);
       const procesoNorm = bpNormaliza(proceso);
       const categoria = (ubicacionNorm === "CONTROL-INVENTARIO-01-01" && procesoNorm.includes("REINYECT")) ? "consulta_reinyectado" : "normal";
-      const codAlternat = String(spBuscaCampo(fila, ["Cod Alternat"])).trim();
-      const cantidad = parseInt(spBuscaCampo(fila, ["Cantidad actual"]), 10) || 0;
+      const codAlternat = String(campo(row, hoja.cols.codAlternat)).trim();
+      const cantidad = parseInt(campo(row, idx.cantidad), 10) || 0;
       /* Si el archivo no trae Val tot, se calcula con el catálogo compartido de costos
          (el mismo de Auditoría Shortpick) — el tarifario aplica a todo Inventario. */
       const valorizadoArchivo = valTot === "" ? null : parseFloat(valTot);
@@ -5778,23 +5814,23 @@ async function bpImportarRegistros(file){
         fecha: fechaDt.toISOString(),
         nro_lpn: nroLpn,
         cod_alternat: codAlternat,
-        codigo_barras: String(spBuscaCampo(fila, ["Producto"])).trim() || null,
-        descripcion: String(spBuscaCampo(fila, ["Descripcion","Descripción"])).trim(),
+        codigo_barras: String(campo(row, idx.producto)).trim() || null,
+        descripcion: String(campo(row, idx.descripcion)).trim(),
         cantidad,
-        ubicacion_anterior: String(spBuscaCampo(fila, ["Ubicación Anterior","Ubicacion Anterior"])).trim() || null,
+        ubicacion_anterior: String(campo(row, idx.ubicacionAnterior)).trim() || null,
         ubicacion: ubicacion || null,
         proceso: proceso || null,
-        estado_latam: String(spBuscaCampo(fila, ["Estado"])).trim() || null,
+        estado_latam: String(campo(row, idx.estado)).trim() || null,
         categoria,
-        area: String(spBuscaCampo(fila, ["Área","Area"])).trim() || null,
-        familia: String(spBuscaCampo(fila, ["Familia"])).trim() || null,
-        responsable: String(spBuscaCampo(fila, ["Responsable"])).trim() || null,
-        supervisor: String(spBuscaCampo(fila, ["Supervisor"])).trim() || null,
-        semana: String(spBuscaCampo(fila, ["Sem","Semana"])).trim() || null,
-        nro_lote: String(spBuscaCampo(fila, ["Nro de lote"])).trim() || null,
+        area: String(campo(row, idx.area)).trim() || null,
+        familia: String(campo(row, idx.familia)).trim() || null,
+        responsable: String(campo(row, idx.responsable)).trim() || null,
+        supervisor: String(campo(row, idx.supervisor)).trim() || null,
+        semana: String(campo(row, idx.semana)).trim() || null,
+        nro_lote: String(campo(row, idx.nroLote)).trim() || null,
         fecha_caducidad: caducidadDt && !isNaN(caducidadDt.getTime()) ? bpFmtFecha(caducidadDt) : null,
-        nro_oc: String(spBuscaCampo(fila, ["Nro OC"])).trim() || null,
-        usuario_recepcion: String(spBuscaCampo(fila, ["Usuario de recepción","Usuario de recepcion"])).trim() || null,
+        nro_oc: String(campo(row, idx.nroOc)).trim() || null,
+        usuario_recepcion: String(campo(row, idx.usuarioRecepcion)).trim() || null,
         valorizado,
         creado_por_id: actorId,
       };
