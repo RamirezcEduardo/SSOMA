@@ -5369,6 +5369,7 @@ document.getElementById("bavance-import-btn").addEventListener("click", async ()
   statusEl.className = "import-status";
 
   try{
+    await spCargarCostos();
     const wbWms = await bolsaReadWorkbook(file);
     const hojaWms = bolsaPickSheet(wbWms, {
       fecha: ["Fe y Hr Crea", "Fecha"], historial: ["Historial de actividad"],
@@ -5379,7 +5380,6 @@ document.getElementById("bavance-import-btn").addEventListener("click", async ()
     const idxProductoWms = bolsaFindCol(hojaWms.header, ["Producto"]);
 
     const motivosMap = bolsaWmsBuildMotivosMap(wbWms);
-    const costosMap = bolsaWmsBuildCostosMap(wbWms);
 
     const lineas = [];
     let filasIgnoradasPorTipo = 0;
@@ -5403,8 +5403,7 @@ document.getElementById("bavance-import-btn").addEventListener("click", async ()
       } else {
         motivo = bolsaClasificarWms({ ubicacion, historial, pantalla, codRazon }).motivo;
       }
-      const costo = costosMap.map.get(codAlternat);
-      const valorizado = costo != null ? unAjust * costo : null;
+      const valorizado = spCosto(codAlternat) * unAjust;
 
       lineas.push({
         fecha: fecha ? bolsaFechaLabel(fecha) : null,
