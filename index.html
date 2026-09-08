@@ -1156,6 +1156,7 @@
         <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="inventario-bolsa"><span class="dot" style="background:#CA8A04;"></span><span class="label">Control de Bolsa</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="bolsa-avance"><span class="dot" style="background:#0891B2;"></span><span class="label">Avance de Bolsa</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -2311,6 +2312,81 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <div style="margin-top:8px;">🔗 El auditor cobra lo que <b>no encontró</b> (lo asume perdido). La app suma el <b>neto</b> de todos tus ajustes de ese SKU en la semana (positivos y negativos): si el neto es positivo, se encontró más de lo que se perdió; si el neto da exactamente 0, tu propio WMS ya neteó internamente el ajuste — probable <b>falso positivo</b> del auditor. En ambos casos la línea se marca sola como <b>"En disputa"</b> al importar. Sin ningún registro del SKU en esa semana no se marca nada: no hay con qué sustentar la disputa.</div>
           <div style="margin-top:8px;">Usa <b>Disputar</b> / <b>Descartar</b> / <b>Aceptar</b> por fila para ver cómo cambia la cascada — es lo que reduce el "Neto final a pagar".</div>
         </div>
+      </div>
+    </section>
+
+    <!-- INVENTARIO · AVANCE DE BOLSA (estimado propio, sin auditor de por medio) -->
+    <section class="panel" id="panel-bolsa-avance">
+      <div class="section-head">
+        <h2 class="section-title">Inventario — Avance de Bolsa</h2>
+        <span class="count-pill" id="bavance-count">0 líneas</span>
+      </div>
+      <p class="section-desc">Estimado propio y corrido del trimestre, construido solo con tus exports diarios del WMS — sin esperar el archivo del auditor. Sirve para llevar el pulso antes del número oficial; cuando llegue el archivo real, se compara contra <b>Control de Bolsa</b>.</p>
+
+      <div class="help-tip" style="margin-bottom:16px;">
+        <span class="ic">⚠</span>
+        <div>Esto es un <b>estimado</b>, no el número oficial: usa la misma tabla de motivos que Control de Bolsa, pero calculada solo desde el WMS (sin la clasificación real del auditor). Puede diferir un poco del número final del trimestre.</div>
+      </div>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Subir WMS de hoy</div>
+            <div class="import-card-sub">Sube el export del día ("Historial Inventario" / "Plantilla_CD") — se suma al acumulado del trimestre. Repetir el mismo archivo no duplica (se avisa antes).</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bavance-import-btn" disabled>Sumar al acumulado</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bavance-file-wms" id="bavance-drop-wms">
+            <input type="file" id="bavance-file-wms" accept=".xlsx,.xls,.xlsb,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Ajustes de inventario (bruto WMS) de hoy</span>
+            <span class="import-drop-hint" id="bavance-file-wms-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="bavance-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="field" style="max-width:220px;margin:14px 0 6px;">
+        <label>Semana</label>
+        <select id="bavance-f-semana"><option value="">Todas</option></select>
+      </div>
+
+      <div class="stats-row stats-row-3">
+        <div class="stat-card">
+          <div class="stat-label">Total detectado (estimado)</div>
+          <div class="stat-value" id="bavance-stat-total">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Excluido por regla (estimado)</div>
+          <div class="stat-value" id="bavance-stat-excluido" style="color:var(--green);">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Considera — bruto (estimado)</div>
+          <div class="stat-value" id="bavance-stat-considera" style="color:var(--red);">S/ 0</div>
+        </div>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="bavance-motivo-toggle" aria-expanded="false">
+        Por Motivo · solo lo que Considera (estimado)
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="bavance-motivo-wrap">
+        <table class="data-table" id="bavance-motivo-table">
+          <thead><tr><th>Motivo</th><th>Monto (S/)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="bavance-detalle-toggle" aria-expanded="false">
+        Detalle de líneas
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="bavance-detalle-wrap">
+        <table class="data-table" id="bavance-detalle-table">
+          <thead><tr><th>Fecha</th><th>Semana</th><th>Cod Producto</th><th>Producto</th><th>Ubicación</th><th>Motivo</th><th>Un. Ajust</th><th>Monto (S/)</th><th>Considera</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
 
@@ -5175,6 +5251,227 @@ document.getElementById("bolsa-detalle-toggle").addEventListener("click", (e)=>{
   const expanded = btn.getAttribute("aria-expanded") === "true";
   btn.setAttribute("aria-expanded", String(!expanded));
 });
+
+/* ============ Inventario · Avance de Bolsa (estimado propio, sin auditor de por medio) ============
+   Reusa todo el pipeline de parseo/clasificación del WMS de Control de Bolsa (bolsaPickSheet,
+   bolsaWmsBuildMotivosMap/CostosMap, bolsaClasificarWms, BOLSA_WMS_HISTORIALES_VALIDOS), pero
+   SIN cruzar contra un archivo del auditor: cada línea válida se guarda tal cual, acumulándose
+   día a día en ssoma_bolsa_avance_lineas, para llevar un estimado corrido del "Considera bruto"
+   antes de que llegue el archivo real del trimestre. */
+
+// Motivo (tal como lo devuelve bolsaClasificarWms / la hoja Motivos del propio archivo) -> ¿cuenta
+// o no? Sembrado con las equivalencias que se pueden confirmar con claridad contra las reglas
+// reales de Control de Bolsa (BOLSA_REGLAS_CONSIDERA); lo que no se reconoce cuenta como "sí
+// considera" por seguridad (mismo criterio que el resto de la app). Ajustar cuando se compare
+// el estimado de un trimestre contra el archivo real del auditor.
+const BOLSA_AVANCE_REGLAS_CONSIDERA = {
+  "AJUSTE ACTIVO": true, "VAS": true, "AJUSTE PERDIDO": true, "AJUSTES SIN UBICACIÓN": true,
+  "CREACION LPN": true, "CREACION LPN VAS": true, "CREACION LPN AUT": true, "CREACION LPN MRM": true,
+  "AJUSTE LPN": true, "SHORT PICK": true, "SHORT PICK IP6": true, "CREACION DE LPN CTR": true,
+  "REGULARIZACION": true, "AJUSTE PTA": true, "AJUSTES CARTONES WMS": true,
+  "AJUSTES CARTONES LAVORO": true, "AJUSTES CARTONES IP6": true, "CARTONES EN LOCAL": true,
+  "AJUSTE MERMA": true, "AJUSTE REABASTO": true, "POR REVISAR": true, "REVISAR CREACION": true,
+  "REVISAR UBICACIÓN": true, "REVISAR AJUSTE LPN IP6": true, "REVISAR AJUSTE IP6": true,
+  "CC_IP6": true, "PP_CERO": true, "AJUSTE / CRUCE 0001": true,
+  "CREACION MULTISKU": false,
+};
+function bolsaAvanceConsidera(motivo){
+  const key = String(motivo || "").trim();
+  return key in BOLSA_AVANCE_REGLAS_CONSIDERA ? BOLSA_AVANCE_REGLAS_CONSIDERA[key] : true;
+}
+
+let bavanceLineas = [];
+
+async function bolsaAvanceLoadLineas(){
+  const { data, error } = await sbSelectAll("ssoma_bolsa_avance_lineas", "*", q => q.order("fecha", { ascending: false }));
+  if(error){ console.error("No se pudieron cargar las líneas de Avance de Bolsa:", error.message); return; }
+  bavanceLineas = (data || []).map(r => ({
+    id: r.id, fecha: r.fecha, semana: r.semana || "", codAlternat: r.cod_alternat,
+    producto: r.producto || "", ubicacion: r.ubicacion || "", motivo: r.motivo || "",
+    unAjust: Number(r.un_ajust), valorizado: r.valorizado != null ? Number(r.valorizado) : null,
+    considera: r.considera,
+  }));
+  bolsaAvanceRenderFiltro();
+  bolsaAvanceRender();
+}
+
+function bolsaAvanceRenderFiltro(){
+  const sel = document.getElementById("bavance-f-semana");
+  const actual = sel.value;
+  const semanas = [...new Set(bavanceLineas.map(r=>r.semana))].filter(Boolean).sort();
+  sel.innerHTML = '<option value="">Todas</option>' + semanas.map(s=>`<option value="${s}">${s}</option>`).join("");
+  if(semanas.includes(actual)) sel.value = actual;
+}
+document.getElementById("bavance-f-semana").addEventListener("change", bolsaAvanceRender);
+
+function bolsaAvanceRender(){
+  const sem = document.getElementById("bavance-f-semana").value;
+  const rows = bavanceLineas.filter(r => !sem || r.semana === sem);
+  document.getElementById("bavance-count").textContent = rows.length + (rows.length===1 ? " línea" : " líneas");
+
+  const monto = r => r.valorizado != null ? r.valorizado : 0;
+  const total = rows.reduce((s,r)=>s+monto(r),0);
+  const excluido = rows.filter(r=>!r.considera).reduce((s,r)=>s+monto(r),0);
+  const considera = rows.filter(r=>r.considera).reduce((s,r)=>s+monto(r),0);
+  document.getElementById("bavance-stat-total").textContent = "S/ " + total.toFixed(2);
+  document.getElementById("bavance-stat-excluido").textContent = "S/ " + excluido.toFixed(2);
+  document.getElementById("bavance-stat-considera").textContent = "S/ " + considera.toFixed(2);
+
+  const porMotivo = new Map();
+  rows.filter(r=>r.considera).forEach(r=>{
+    const key = r.motivo || "(sin motivo)";
+    porMotivo.set(key, (porMotivo.get(key) || 0) + monto(r));
+  });
+  const motivoBody = document.querySelector("#bavance-motivo-table tbody");
+  const motivosOrdenados = [...porMotivo.entries()].sort((a,b)=>a[1]-b[1]);
+  motivoBody.innerHTML = motivosOrdenados.length ? motivosOrdenados.map(([m, v])=>`
+    <tr><td>${escapeHtml(m)}</td><td class="num" style="color:${v<0?'var(--red)':'var(--green)'};">${v.toFixed(2)}</td></tr>
+  `).join("") : `<tr><td colspan="2" style="text-align:center;color:var(--muted);">Sube el WMS de hoy para ver este desglose.</td></tr>`;
+
+  const detalleBody = document.querySelector("#bavance-detalle-table tbody");
+  const rowsSorted = [...rows].sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||""));
+  detalleBody.innerHTML = rowsSorted.length ? rowsSorted.slice(0, 2000).map(r=>`
+    <tr>
+      <td>${escapeHtml(r.fecha||"")}</td>
+      <td>${escapeHtml(r.semana)}</td>
+      <td>${escapeHtml(r.codAlternat)}</td>
+      <td>${escapeHtml(r.producto)}</td>
+      <td>${escapeHtml(r.ubicacion)}</td>
+      <td>${escapeHtml(r.motivo)}</td>
+      <td class="num">${r.unAjust}</td>
+      <td class="num">${monto(r).toFixed(2)}</td>
+      <td>${r.considera ? "Sí" : "No"}</td>
+    </tr>
+  `).join("") : `<tr><td colspan="9" style="text-align:center;color:var(--muted);">Todavía no has subido nada.</td></tr>`;
+  if(rowsSorted.length > 2000){
+    detalleBody.innerHTML += `<tr><td colspan="9" style="text-align:center;color:var(--muted);">Mostrando las 2,000 más recientes de ${rowsSorted.length}.</td></tr>`;
+  }
+}
+
+document.getElementById("bavance-file-wms").addEventListener("change", ()=>{
+  const f = document.getElementById("bavance-file-wms").files[0];
+  document.getElementById("bavance-file-wms-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bavance-drop-wms").classList.toggle("filled", !!f);
+  document.getElementById("bavance-import-btn").disabled = !f;
+});
+
+document.getElementById("bavance-import-btn").addEventListener("click", async ()=>{
+  const btn = document.getElementById("bavance-import-btn");
+  const file = document.getElementById("bavance-file-wms").files[0];
+
+  const chequeo = await importVerificarDuplicado("bolsa_avance", file);
+  if(!chequeo.ok) return;
+
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Procesando…";
+  const statusEl = document.getElementById("bavance-import-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wbWms = await bolsaReadWorkbook(file);
+    const hojaWms = bolsaPickSheet(wbWms, {
+      fecha: ["Fe y Hr Crea", "Fecha"], historial: ["Historial de actividad"],
+      pantalla: ["Nombre pantalla"], codRazon: ["Cod Razon"],
+      ubicacion: ["Ubicacion", "Ubicación"], codAlternat: ["Cod Alternat"], unAjust: ["Un Ajust"],
+    });
+    if(!hojaWms) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Fe y Hr Crea, Historial de actividad, Nombre pantalla, Cod Razon, Ubicacion, Cod Alternat y Un Ajust. Revisa que sea el export "Historial Inventario" del WMS, sin procesar.`);
+    const idxProductoWms = bolsaFindCol(hojaWms.header, ["Producto"]);
+
+    const motivosMap = bolsaWmsBuildMotivosMap(wbWms);
+    const costosMap = bolsaWmsBuildCostosMap(wbWms);
+
+    const lineas = [];
+    let filasIgnoradasPorTipo = 0;
+    hojaWms.rows.forEach(row => {
+      const codAlternatRaw = row[hojaWms.cols.codAlternat];
+      if(!codAlternatRaw) return;
+      const codAlternat = String(codAlternatRaw).trim();
+      const unAjust = parseFloat(row[hojaWms.cols.unAjust]);
+      if(isNaN(unAjust) || unAjust === 0) return;
+      const historial = String(row[hojaWms.cols.historial] || "");
+      const historialCodigo = (historial.match(/^\s*(\d+)\s*-/) || [])[1];
+      if(!historialCodigo || !BOLSA_WMS_HISTORIALES_VALIDOS.has(historialCodigo)){ filasIgnoradasPorTipo++; return; }
+      const pantalla = String(row[hojaWms.cols.pantalla] || "");
+      const codRazon = String(row[hojaWms.cols.codRazon] || "");
+      const ubicacion = String(row[hojaWms.cols.ubicacion] || "");
+      const fecha = wmsParseFecha(row[hojaWms.cols.fecha]);
+
+      let motivo;
+      if(motivosMap.ok){
+        motivo = motivosMap.map.get([historial, pantalla, codRazon].join("||")) || "";
+      } else {
+        motivo = bolsaClasificarWms({ ubicacion, historial, pantalla, codRazon }).motivo;
+      }
+      const costo = costosMap.map.get(codAlternat);
+      const valorizado = costo != null ? unAjust * costo : null;
+
+      lineas.push({
+        fecha: fecha ? bolsaFechaLabel(fecha) : null,
+        semana: bolsaSemanaLabel(fecha),
+        cod_alternat: codAlternat,
+        producto: idxProductoWms !== -1 ? String(row[idxProductoWms] || "") : "",
+        ubicacion,
+        motivo: motivo === "SIN CLASIFICAR" ? "" : motivo,
+        un_ajust: unAjust,
+        valorizado,
+        considera: bolsaAvanceConsidera(motivo),
+        archivo_origen: file.name,
+      });
+    });
+
+    if(!lineas.length){
+      statusEl.textContent = "⚠️ Ningún movimiento válido en este archivo (revisa que sea el export crudo del WMS, sin filtrar).";
+      statusEl.className = "import-status error";
+      statusEl.style.display = "block";
+      return;
+    }
+
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < lineas.length; i += LOTE){
+      const lote = lineas.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_bolsa_avance_lineas").insert(lote);
+      if(error) throw new Error("No se pudo guardar en Supabase: " + error.message);
+      guardadas += lote.length;
+      statusEl.textContent = `Guardando… ${guardadas}/${lineas.length}`;
+      statusEl.style.display = "block";
+    }
+    await importRegistrarLog("bolsa_avance", file, chequeo.hash, guardadas);
+    await bolsaAvanceLoadLineas();
+
+    let msg = `✅ Se sumaron ${guardadas} líneas al acumulado`;
+    if(filasIgnoradasPorTipo) msg += ` (${filasIgnoradasPorTipo} filas de picking/empaque ignoradas)`;
+    msg += ".";
+    statusEl.textContent = msg;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+    document.getElementById("bavance-file-wms").value = "";
+    document.getElementById("bavance-file-wms-name").textContent = "Arrastra el archivo o haz clic para elegirlo";
+    document.getElementById("bavance-drop-wms").classList.remove("filled");
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = original;
+    btn.disabled = !document.getElementById("bavance-file-wms").files[0];
+  }
+});
+
+document.getElementById("bavance-motivo-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+document.getElementById("bavance-detalle-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+
+bolsaAvanceLoadLineas();
 
 
 /* ---- Inventario · Auditoría Bultos Perdidos (conectado a Supabase: ssoma_bp_registros / ssoma_bp_verificaciones) ----
