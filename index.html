@@ -5485,15 +5485,18 @@ bolsaAvanceLoadLineas();
 let bpData = [];
 let bpVerificaciones = {};
 
-/* Whitelist real de Ubicación (zonas Drop + Control de Inventario 01-01) y de Proceso
-   (Sin Ubicación/Por ubicar, sin importar la ubicación) para decidir qué filas de DATA LATAM
-   entran como candidatas a "Perdido". Comparación sin tildes ni mayúsculas/minúsculas. */
+/* Whitelist real de Ubicación (zonas Drop, Control de Inventario, Sin Ubicación, PTA) y de
+   Proceso (Sin Ubicación/Por ubicar/Perdido ERU, sin importar la ubicación) para decidir qué
+   filas de DATA LATAM entran como candidatas a "Perdido". Comparación sin tildes ni mayúsculas/
+   minúsculas. Confirmada y ampliada con Eduardo el 08/09 — antes tenía "MERC-CI" en vez de
+   "MER-CI" en Almac/Knapp1/Sda, por lo que esas zonas nunca habían matcheado ninguna fila real. */
 const BP_UBICACION_WHITELIST = new Set([
-  "DROP-ALMAC-MERC-CI", "DROP-ESTANT-MERC-CI", "DROP-KNAPP1-MERC-CI", "DROP-REAB-MERC-CI",
-  "DROP-REABAS-MERC-CI", "DROP-RECEP-MERC-CI", "DROP-SDA-MERC-CI",
-  "DROP-LI-DEV-INCIDENCIA-PICKING", "DROP-SLOTTING-0-0", "CONTROL-INVENTARIO-01-01",
+  "DROP-ALMAC-MER-CI", "DROP-ESTANT-MERC-CI", "DROP-KNAPP1-MER-CI", "DROP-REAB-MERC-CI",
+  "DROP-REABAS-MERC-CI", "DROP-RECEP-MERC-CI", "DROP-RECEP-PN-CJ", "DROP-SDA-MER-CI", "DROP-MZ-MER-CI",
+  "DROP-LI-DEV-INCIDENCIA-PICKING", "DROP-SLOTTING-0-0", "CONTROL-INVENTARIO-01-01", "CONTROL-INVENTARIO-04-04",
+  "SIN-UBICACION-ABASTEC-01-01", "SIN-UBICACION-PICKING-01-01", "PTA-40-E-00", "PTA-DROP-09-00-00",
 ]);
-const BP_PROCESO_WHITELIST = new Set(["SIN UBICACION", "POR UBICAR"]);
+const BP_PROCESO_WHITELIST = new Set(["SIN UBICACION", "POR UBICAR", "PERDIDO ERU"]);
 function bpNormaliza(s){
   return String(s || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
