@@ -4839,6 +4839,20 @@ document.getElementById("bolsa-file-wms").addEventListener("change", bolsaUpdate
 document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=>{
   const btn = e.currentTarget;
   const originalLabel = btn.textContent;
+  const fileAuditoria = document.getElementById("bolsa-file-auditoria").files[0];
+  const fileWms = document.getElementById("bolsa-file-wms").files[0];
+
+  // Huella por archivo (igual que Shortpick/Sin Ubicación) — reemplaza al dedup fila-a-fila
+  // que tenía el insert de auditoría: ese comparaba fecha+cod+tipo+motivo+monto+ubicacion y
+  // descartaba en silencio cualquier fila que coincidiera, pero el archivo real trae grupos
+  // de filas que coinciden exactamente en esos 6 campos siendo eventos distintos — se perdían
+  // líneas reales de auditoría sin avisar. Ahora se avisa ANTES de importar si el archivo
+  // completo ya se cargó, y adentro se inserta todo tal cual, sin descartar nada por fila.
+  const chequeoAud = await importVerificarDuplicado("bolsa_auditoria", fileAuditoria);
+  if(!chequeoAud.ok) return;
+  const chequeoWms = await importVerificarDuplicado("bolsa_wms", fileWms);
+  if(!chequeoWms.ok) return;
+
   btn.disabled = true;
   btn.textContent = "Importando y calculando…";
   const statusEl = document.getElementById("bolsa-import-status");
@@ -4846,9 +4860,6 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
   statusEl.className = "import-status";
 
   try{
-    const fileAuditoria = document.getElementById("bolsa-file-auditoria").files[0];
-    const fileWms = document.getElementById("bolsa-file-wms").files[0];
-
     const [wbAuditoria, wbWms] = await Promise.all([bolsaReadWorkbook(fileAuditoria), bolsaReadWorkbook(fileWms)]);
 
     const hojaAuditoria = bolsaPickSheet(wbAuditoria, {
@@ -5019,9 +5030,12 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
     });
 
     // Guarda el detalle de auditoría (y su estado de disputa) en Supabase — antes solo vivía
-    // en este array de JS y se perdía al recargar. ignoreDuplicates hace que, si reimportas
-    // el mismo reporte (o uno que repite semanas ya cargadas), NO se pise una línea que ya
-    // marcaste Disputar/Descartar/Aceptar — solo se insertan las líneas realmente nuevas.
+    // en este array de JS y se perdía al recargar. Se inserta todo tal cual (sin dedup fila a
+    // fila): ese dedup comparaba fecha+cod+tipo+motivo+monto+ubicacion y descartaba en silencio
+    // cualquier fila que coincidiera, pero el archivo real trae grupos de filas que coinciden
+    // exactamente en esos 6 campos siendo eventos distintos — se perdían líneas reales. Ahora
+    // la protección contra reimportar el mismo archivo por error es la huella de arriba
+    // (importVerificarDuplicado), no un descarte silencioso fila por fila.
     const filasParaAuditoria = bolsaAuditLineas.map(r => ({
       fecha: r.fecha, semana: r.semana, cod_producto: r.codProducto, producto: r.producto || "",
       familia: r.familia, ubicacion: r.ubicacion, tipo: r.tipo, motivo_op: r.motivo,
@@ -5031,13 +5045,14 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
     let guardadasAuditoria = 0;
     for(let i = 0; i < filasParaAuditoria.length; i += LOTE){
       const lote = filasParaAuditoria.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bolsa_auditoria_lineas")
-        .upsert(lote, { onConflict: "fecha,cod_producto,tipo,motivo_op,monto_reversado,ubicacion", ignoreDuplicates: true });
+      const { error } = await sb.from("ssoma_bolsa_auditoria_lineas").insert(lote);
       if(error) throw new Error(`Se calculó la cascada, pero no se pudo guardar el detalle de auditoría en Supabase: ${error.message}`);
       guardadasAuditoria += lote.length;
       statusEl.textContent = `Guardando detalle de auditoría en Supabase… ${guardadasAuditoria}/${filasParaAuditoria.length}`;
       statusEl.style.display = "block";
     }
+    await importRegistrarLog("bolsa_auditoria", fileAuditoria, chequeoAud.hash, guardadasAuditoria);
+    await importRegistrarLog("bolsa_wms", fileWms, chequeoWms.hash, guardadas);
     await bolsaLoadAuditLineas(); // trae todo de vuelta desde Supabase (ya con ids reales y estados previos intactos)
 
     let msg = `✅ Importado: ${filasParaAuditoria.length} líneas de auditoría (hoja "${hojaAuditoria.sheetName}") + ${bolsaWmsLineas.length} líneas de WMS válidas (hoja "${hojaWms.sheetName}"`;
