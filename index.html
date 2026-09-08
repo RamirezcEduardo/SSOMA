@@ -3098,6 +3098,9 @@ function renderAccesoPrivado(){
   if(!visible && document.getElementById("panel-sp-encontrados-privado").classList.contains("active")){
     irAVista("racs");
   }
+  // Fecha de RACS: de solo lectura para todos (se autocompleta con hoy) salvo para el
+  // usuario privado, que puede corregirla a mano (ej. reportes cargados con atraso).
+  document.getElementById("f-fecha").readOnly = !visible;
 }
 
 async function checkSession(){
@@ -7746,8 +7749,11 @@ document.getElementById("export-csv").addEventListener("click", ()=>{
     r.descripcion || "",
     (r.evidencia && r.evidencia.length) ? r.evidencia.length + " foto(s) adjunta(s)" : "Sin fotos"
   ]);
+  // Separador ";" (no ",") \u2014 igual que el resto de exports de la app. Con coma, un Excel
+  // configurado en espa\u00F1ol/regional (separador de listas ";") no reconoce el delimitador y
+  // mete todo el reporte apretado en una sola columna.
   const csv = [headers, ...rows].map(row =>
-    row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+    row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(";")
   ).join("\n");
   const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
@@ -7923,8 +7929,11 @@ document.getElementById("comp-export-csv").addEventListener("click", ()=>{
       ...COMP_PREGUNTAS.map(p => r.respuestas[p.id] || ""),
       siCount, pct+"%", r.observaciones, (r.evidencia && r.evidencia.length) ? r.evidencia.length + " foto(s)" : "Sin fotos"];
   });
+  // Separador ";" (no ",") — igual que el resto de exports de la app. Con coma, un Excel
+  // configurado en español/regional (separador de listas ";") no reconoce el delimitador y
+  // mete todo el reporte apretado en una sola columna.
   const csv = [headers, ...rows].map(row =>
-    row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+    row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(";")
   ).join("\n");
   const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
