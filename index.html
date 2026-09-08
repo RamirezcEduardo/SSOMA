@@ -2353,17 +2353,20 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
 
       <div class="stats-row stats-row-3">
-        <div class="stat-card">
-          <div class="stat-label">Total detectado (estimado)</div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Suma NETA (ajustes positivos menos negativos) de todo lo detectado en el WMS del periodo filtrado — incluye motivos que cuentan y motivos excluidos. Un negativo significa que las bajas de inventario pesan más que las altas.">
+          <div class="stat-label">Total detectado (estimado) <span class="bolsa-info-ic">ⓘ</span></div>
           <div class="stat-value" id="bavance-stat-total">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Excluido por regla (estimado)</div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Suma neta de los motivos que, según BOLSA_AVANCE_REGLAS_CONSIDERA, no cuentan contra ti (equivalente estimado a la hoja &quot;No considerar&quot; del auditor en Control de Bolsa).">
+          <div class="stat-label">Excluido por regla (estimado) <span class="bolsa-info-ic">ⓘ</span></div>
           <div class="stat-value" id="bavance-stat-excluido" style="color:var(--green);">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Considera — bruto (estimado)</div>
+        <div class="stat-card bolsa-stat-clickable" data-explain="Suma NETA (positivos y negativos) de los motivos que sí cuentan — mismo criterio que &quot;Considera — bruto&quot; en Control de Bolsa, a propósito: para poder comparar directo contra el número real cuando llegue el archivo del auditor. Un negativo es normal — significa que, en neto, hay más pérdida que ganancia detectada.">
+          <div class="stat-label">Considera — bruto (estimado) <span class="bolsa-info-ic">ⓘ</span></div>
           <div class="stat-value" id="bavance-stat-considera" style="color:var(--red);">S/ 0</div>
+          <div class="bolsa-stat-explain"></div>
         </div>
       </div>
 
@@ -4912,7 +4915,7 @@ document.getElementById("bolsa-candidatos-export-btn").addEventListener("click",
 });
 
 /* Clic en cada tarjeta del dashboard -> explica qué muestra y cómo se calcula. */
-document.querySelectorAll("#panel-inventario-bolsa .bolsa-stat-clickable").forEach(card=>{
+document.querySelectorAll("#panel-inventario-bolsa .bolsa-stat-clickable, #panel-bolsa-avance .bolsa-stat-clickable").forEach(card=>{
   const explainEl = card.querySelector(".bolsa-stat-explain");
   explainEl.textContent = card.dataset.explain;
   card.addEventListener("click", ()=>{
