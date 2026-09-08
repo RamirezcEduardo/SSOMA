@@ -1308,7 +1308,7 @@
           <span class="form-note" id="form-error"></span>
           <div style="display:flex;gap:10px;">
             <button type="button" class="btn btn-ghost" id="racs-reset">Limpiar</button>
-            <button type="submit" class="btn btn-primary">Guardar reporte</button>
+            <button type="submit" class="btn btn-primary" id="racs-submit-btn">Guardar reporte</button>
           </div>
         </div>
       </form>
@@ -1410,7 +1410,7 @@
           <span class="form-note" id="comp-form-error"></span>
           <div style="display:flex;gap:10px;">
             <button type="button" class="btn btn-ghost" id="comp-reset">Limpiar</button>
-            <button type="submit" class="btn btn-primary">Guardar evaluación</button>
+            <button type="submit" class="btn btn-primary" id="comp-submit-btn">Guardar evaluación</button>
           </div>
         </div>
       </form>
@@ -1584,7 +1584,7 @@
             <span class="form-note" id="acc-error"></span>
             <div style="display:flex;gap:10px;">
               <button type="button" class="btn btn-ghost" id="acc-reset">Limpiar</button>
-              <button type="submit" class="btn btn-primary">Registrar reporte</button>
+              <button type="submit" class="btn btn-primary" id="acc-submit-btn">Registrar reporte</button>
             </div>
           </div>
         </form>
@@ -1633,7 +1633,7 @@
           <span class="form-note" id="charla-form-error"></span>
           <div style="display:flex;gap:10px;">
             <button type="button" class="btn btn-ghost" id="charla-reset">Limpiar</button>
-            <button type="submit" class="btn btn-primary">Guardar charla</button>
+            <button type="submit" class="btn btn-primary" id="charla-submit-btn">Guardar charla</button>
           </div>
         </div>
       </form>
@@ -7693,8 +7693,16 @@ document.getElementById("racs-reset").addEventListener("click", ()=>{
 
 document.getElementById("racs-form").addEventListener("submit", async (e)=>{
   e.preventDefault();
+  // Evita el doble-guardado: si la conexión anda lenta, un segundo clic mientras el primer
+  // insert todavía está en vuelo creaba dos reportes RACS distintos para el mismo hallazgo.
+  const submitBtn = document.getElementById("racs-submit-btn");
+  if(submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  const submitBtnLabel = submitBtn.textContent;
+  submitBtn.textContent = "Guardando…";
   const errorEl = document.getElementById("form-error");
   errorEl.textContent = "";
+  try{
 
   const observadorId = document.getElementById("f-observador").value;
   const ubicacionId = document.getElementById("f-ubicacion").value;
@@ -7755,6 +7763,10 @@ document.getElementById("racs-form").addEventListener("submit", async (e)=>{
   clearImages("acto");
   clearImages("cond");
   selectedTipo = "";
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = submitBtnLabel;
+  }
 });
 
 document.getElementById("export-csv").addEventListener("click", ()=>{
@@ -7896,8 +7908,15 @@ document.getElementById("comp-reset").addEventListener("click", ()=>{
 
 document.getElementById("comp-form").addEventListener("submit", async (e)=>{
   e.preventDefault();
+  // Evita el doble-guardado por lentitud de conexión (ver mismo fix en racs-form).
+  const submitBtn = document.getElementById("comp-submit-btn");
+  if(submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  const submitBtnLabel = submitBtn.textContent;
+  submitBtn.textContent = "Guardando…";
   const errorEl = document.getElementById("comp-form-error");
   errorEl.textContent = "";
+  try{
 
   const supervisorId = document.getElementById("c-supervisor").value;
   const fecha = document.getElementById("c-fecha").value;
@@ -7934,6 +7953,10 @@ document.getElementById("comp-form").addEventListener("submit", async (e)=>{
   renderChecklist();
   document.getElementById("c-fecha").value = ssomaFormatISO(new Date());
   clearImages("comp");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = submitBtnLabel;
+  }
 });
 
 document.getElementById("comp-export-csv").addEventListener("click", ()=>{
@@ -8022,8 +8045,15 @@ document.getElementById("charla-reset").addEventListener("click", ()=>{
 
 document.getElementById("charla-form").addEventListener("submit", async (e)=>{
   e.preventDefault();
+  // Evita el doble-guardado por lentitud de conexión (ver mismo fix en racs-form).
+  const submitBtn = document.getElementById("charla-submit-btn");
+  if(submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  const submitBtnLabel = submitBtn.textContent;
+  submitBtn.textContent = "Guardando…";
   const errorEl = document.getElementById("charla-form-error");
   errorEl.textContent = "";
+  try{
 
   const fecha = document.getElementById("charla-fecha").value;
   const responsableId = document.getElementById("charla-responsable").value;
@@ -8054,6 +8084,10 @@ document.getElementById("charla-form").addEventListener("submit", async (e)=>{
   document.getElementById("charla-form").reset();
   document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
   clearImages("charla");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = submitBtnLabel;
+  }
 });
 
 let levTab = "pendiente";
@@ -8450,8 +8484,15 @@ document.getElementById("acc-reset").addEventListener("click", accResetForm);
 
 document.getElementById("acc-form").addEventListener("submit", async (e)=>{
   e.preventDefault();
+  // Evita el doble-guardado por lentitud de conexión (ver mismo fix en racs-form).
+  const submitBtn = document.getElementById("acc-submit-btn");
+  if(submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  const submitBtnLabel = submitBtn.textContent;
+  submitBtn.textContent = "Guardando…";
   const errorEl = document.getElementById("acc-error");
   errorEl.textContent = "";
+  try{
 
   const fecha = document.getElementById("acc-fecha").value;
   const reportanteId = document.getElementById("acc-reportante").value;
@@ -8504,6 +8545,10 @@ document.getElementById("acc-form").addEventListener("submit", async (e)=>{
 
   accResetForm();
   await loadAccidentes();
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = submitBtnLabel;
+  }
 });
 
 /* ---- Informes de accidentes/incidentes ---- */
