@@ -2222,6 +2222,10 @@
           <label>Motivo OP</label>
           <select id="bolsa-f-motivo"><option value="">Todos</option></select>
         </div>
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Código Alterno</label>
+          <input type="text" id="bolsa-f-codigo" placeholder="Ej. 137325">
+        </div>
       </div>
 
       <div class="stats-row" style="margin-top:18px;">
@@ -4772,7 +4776,8 @@ function bolsaRenderFilters(){
 function bolsaFilteredLineas(){
   const sem = document.getElementById("bolsa-f-semana").value;
   const mot = document.getElementById("bolsa-f-motivo").value;
-  return bolsaAuditLineas.filter(r => (!sem || r.semana === sem) && (!mot || r.motivo === mot));
+  const cod = document.getElementById("bolsa-f-codigo").value.trim().toLowerCase();
+  return bolsaAuditLineas.filter(r => (!sem || r.semana === sem) && (!mot || r.motivo === mot) && (!cod || (r.codProducto || "").toLowerCase().includes(cod)));
 }
 
 function bolsaEstadoBadge(estado){
@@ -4893,6 +4898,7 @@ function bolsaRender(){
 bolsaLoadAuditLineas();
 document.getElementById("bolsa-f-semana").addEventListener("change", bolsaRender);
 document.getElementById("bolsa-f-motivo").addEventListener("change", bolsaRender);
+document.getElementById("bolsa-f-codigo").addEventListener("input", bolsaRender);
 
 /* Exportar los candidatos a disputa tal como los arma bolsaRender() (mismo filtro:
    considera=true y ya sea marcados "en_disputa" por el cruce automático, o con un motivo
