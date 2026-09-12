@@ -5004,9 +5004,9 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
    Fuente: reporte "Pendientes de Operación" (hoja "Bultos Pendientes", encabezado
    enterrado — bolsaPickSheet ya sabe buscarlo). Se filtra por Proceso y se clasifica
    en dos listas: perdidos (Por Ubicar + Perdido ERU) y sin_ubicacion (Sin Ubicación).
-   Cada fila se guarda por su Nro LPN (único) — reimportar el mismo reporte actualiza
-   el registro existente (upsert) en vez de duplicarlo, y si un LPN ya marcado
-   "recuperado" reaparece pendiente en el archivo nuevo, se resetea a pendiente. */
+   Cada fila se guarda por su Nro LPN (único) — si un LPN ya está cargado (de cualquier
+   import anterior), no se vuelve a insertar: se detecta como duplicado y se cuenta
+   aparte en el mensaje final, sin pisar el registro existente (ni su estado). */
 let bpoRegistros = [];
 let bpoTabActivo = "perdidos";
 
@@ -5165,7 +5165,11 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
     });
     if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Proceso, Responsable, Supervisor, Familia, Nro LPN, Producto, Cod Alternat, Descripcion, Cantidad actual, Nro de lote, Val tot y Sem. Revisa que sea el reporte "Pendientes de Operación" tal cual, con la hoja "Bultos Pendientes".`);
 
+    // Un Nro LPN ya cargado (de cualquier import anterior) no se vuelve a guardar — se cuenta
+    // como duplicado y se avisa en el mensaje final, en vez de pisar o reinsertar el registro.
+    const lpnExistentes = new Set(bpoRegistros.map(r => r.nroLpn));
     let ignoradasSinLpn = 0;
+    let duplicadas = 0;
     const filas = [];
     hoja.rows.forEach(row => {
       const procesoRaw = String(row[hoja.cols.proceso] || "").trim();
@@ -5173,6 +5177,8 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
       if(!clasificacion) return; // no es Perdido ERU / Por Ubicar / Sin Ubicación — no es de este módulo
       const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
       if(!nroLpn){ ignoradasSinLpn++; return; }
+      if(lpnExistentes.has(nroLpn)){ duplicadas++; return; } // ya está cargado — no se vuelve a insertar
+      lpnExistentes.add(nroLpn); // también evita duplicar dentro del mismo archivo
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const valTot = parseFloat(row[hoja.cols.valTot]);
       filas.push({
@@ -5192,28 +5198,30 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
         archivo_origen: file.name, actualizado_en: new Date().toISOString(),
       });
     });
-    if(!filas.length) throw new Error(`El archivo no trajo ninguna fila con Proceso = Perdido ERU, Por Ubicar o Sin Ubicación en la hoja "${hoja.sheetName}".`);
+    if(!filas.length && !duplicadas) throw new Error(`El archivo no trajo ninguna fila con Proceso = Perdido ERU, Por Ubicar o Sin Ubicación en la hoja "${hoja.sheetName}".`);
 
     let guardadas = 0;
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn" });
+      const { error } = await sb.from("ssoma_bpo_registros").insert(lote);
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
       statusEl.style.display = "block";
     }
-    await importRegistrarLog("bultos_pendientes_operacion", file, chequeo.hash, guardadas);
+    if(guardadas) await importRegistrarLog("bultos_pendientes_operacion", file, chequeo.hash, guardadas);
     await bpoLoadRegistros();
 
     const perdidos = filas.filter(f => f.clasificacion === "perdidos").length;
     const sinUbic = filas.filter(f => f.clasificacion === "sin_ubicacion").length;
-    let msg = `✅ Importado: ${filas.length} líneas de la hoja "${hoja.sheetName}" (${perdidos} Perdidos + ${sinUbic} Sin Ubicación). `;
-    msg += `Se guardaron/actualizaron por Nro LPN — reimportar el mismo reporte no duplica. `;
+    let msg = guardadas
+      ? `✅ Importado: ${guardadas} líneas nuevas de la hoja "${hoja.sheetName}" (${perdidos} Perdidos + ${sinUbic} Sin Ubicación). `
+      : `⚠ No se cargó ninguna línea nueva — todo lo que trae este archivo ya estaba cargado. `;
+    if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado fueron detectadas como duplicado y no se volvieron a guardar. `;
     if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas.`;
     statusEl.textContent = msg;
-    statusEl.className = "import-status success";
+    statusEl.className = guardadas ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
   }catch(err){
     console.error(err);
