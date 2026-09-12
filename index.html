@@ -737,6 +737,80 @@
   .estado-badge.recuperado{background:var(--green-tint);color:var(--green);}
   .estado-badge.recuperado::before{background:var(--green);}
 
+  /* ---- Checklist de recuperación (Bultos Perdidos / Sin Ubicación en Auditoría
+     de Inventario) — tarjetas grandes de un solo botón, pensadas para operadores
+     usando el celular en el almacén, no un dashboard de escritorio. ---- */
+  .opk-progress-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;box-shadow:var(--shadow);flex:1;}
+  .opk-progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:6px;}
+  .opk-progress-top .n{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--text);}
+  .opk-progress-top .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .opk-progress-bar{height:10px;border-radius:6px;background:var(--red-tint);overflow:hidden;display:flex;}
+  .opk-progress-fill{height:100%;background:var(--green);transition:width .2s ease;}
+  .opk-progress-foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;flex-wrap:wrap;gap:6px;}
+  .opk-progress-foot .pend{color:var(--red);font-weight:700;}
+  .opk-progress-foot .rec{color:var(--green);font-weight:700;}
+
+  .opk-toprow{display:flex;gap:14px;margin-bottom:16px;align-items:stretch;flex-wrap:wrap;}
+  .opk-search-box{flex:1;min-width:240px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;gap:10px;}
+  .opk-search{display:flex;align-items:center;gap:8px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+  .opk-search input{border:none;background:transparent;padding:0;font-size:13.5px;}
+  .opk-search input:focus{box-shadow:none;}
+
+  .opk-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media (min-width:760px){ .opk-grid{grid-template-columns:1fr 1fr;} }
+
+  .opk-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);}
+  .opk-card.done{background:var(--panel-alt);opacity:.75;}
+  .opk-card-top{display:flex;align-items:flex-start;gap:12px;}
+  .opk-check-big{
+    width:30px;height:30px;border-radius:50%;border:2.5px solid var(--border-strong);
+    background:var(--panel);flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:#fff;
+  }
+  .opk-card.done .opk-check-big{background:var(--green);border-color:var(--green);}
+  .opk-check-big.parcial{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .opk-card-body{flex:1;min-width:0;}
+  .opk-lpn-chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--text-soft);background:var(--panel-alt);border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+  .opk-card.done .opk-lpn-chip{text-decoration:line-through;}
+  .opk-prod-name{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.35;}
+  .opk-card.done .opk-prod-name{color:var(--muted);text-decoration:line-through;}
+  .opk-sub{font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .opk-qty-row{display:flex;justify-content:flex-end;align-items:flex-end;margin-top:10px;}
+  .opk-qty{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:var(--red);text-align:right;}
+  .opk-qty .u{font-size:10px;font-weight:600;color:var(--muted);display:block;text-align:right;}
+  .opk-mini-bar{height:6px;border-radius:4px;background:var(--blue-tint);overflow:hidden;margin-top:8px;}
+  .opk-mini-bar-fill{height:100%;background:var(--blue);}
+  .opk-partial-note{font-size:11px;color:var(--blue);font-weight:600;margin-top:5px;}
+  .opk-done-note{font-size:11px;color:var(--green);font-weight:600;margin-top:5px;}
+  .opk-btn-mark{
+    display:block;width:100%;margin-top:12px;padding:10px;border-radius:9px;border:none;
+    background:var(--red-tint);color:var(--red-dark);font-family:'Inter',sans-serif;font-weight:700;font-size:12.5px;cursor:pointer;
+  }
+  .opk-btn-mark.parcial{background:var(--blue-tint);color:var(--blue);}
+  .opk-empty{grid-column:1/-1;}
+
+  /* Modal de "Marcar como recuperado" — mismo modal-overlay/modal-box del resto de
+     la app; estos botones/stepper son propios de este flujo. */
+  .opk-sheet-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;
+    border-radius:10px;border:1.5px solid var(--border);background:var(--panel-alt);
+    font-family:'Inter',sans-serif;font-weight:700;font-size:13px;color:var(--text);margin-bottom:12px;cursor:pointer;
+  }
+  .opk-sheet-btn.full{border-color:var(--green);background:var(--green-tint);color:var(--green);}
+  .opk-sheet-divider{text-align:center;font-size:11px;color:var(--muted);margin:2px 0 12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .opk-stepper-box{background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px;}
+  .opk-stepper-lbl{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px;}
+  .opk-stepper{display:flex;align-items:center;justify-content:center;gap:16px;}
+  .opk-stepper-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--panel);box-shadow:var(--shadow);font-size:19px;font-weight:700;color:var(--red);cursor:pointer;}
+  .opk-stepper-val{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:var(--text);min-width:50px;display:inline-block;}
+  .opk-stepper-eq{font-size:11.5px;color:var(--muted);margin-top:8px;}
+  .opk-photo-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    padding:14px 8px;border-radius:10px;border:1.5px dashed var(--border-strong);background:var(--panel-alt);
+    font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;color:var(--text-soft);cursor:pointer;
+  }
+  .opk-photo-ic{font-size:20px;line-height:1;}
+
   .lev-tab{background:var(--panel);}
   .lev-tab.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
 
@@ -1955,22 +2029,52 @@
            el flujo desde cero (12/09) — no reescribir hasta que traiga el formato nuevo. -->
       <div id="audinv-tab-bultos-perdidos" style="display:none;">
         <div class="section-head">
-          <h2 class="section-title">Inventario — Auditoría Bultos Perdidos</h2>
+          <h2 class="section-title">Bultos Perdidos</h2>
         </div>
-        <div class="help-tip">
-          <span class="ic">🛠</span>
-          <div>Este apartado está en rediseño — próximamente el nuevo flujo.</div>
+        <p class="section-desc">Checklist de los "Perdidos" cargados en Bultos Pendientes de Operación (Perdido ERU + Por Ubicar). Reporta cuántas unidades encontraste — el valor se calcula solo con el valor unitario del producto.</p>
+        <div class="opk-toprow">
+          <div class="opk-progress-card">
+            <div class="opk-progress-top">
+              <span class="n" id="aic-bp-count">0 <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span></span>
+              <span class="lbl" id="aic-bp-pct">0% recuperado</span>
+            </div>
+            <div class="opk-progress-bar"><div class="opk-progress-fill" id="aic-bp-fill" style="width:0%;"></div></div>
+            <div class="opk-progress-foot">
+              <span class="pend" id="aic-bp-pend">S/ 0.00 pendiente</span>
+              <span class="rec" id="aic-bp-rec">S/ 0.00 recuperado</span>
+            </div>
+          </div>
+          <div class="opk-search-box">
+            <div class="opk-search"><span>🔍</span><input type="text" id="aic-bp-buscar" placeholder="Buscar por LPN o producto…"></div>
+            <select id="aic-bp-semana"><option value="">Todas</option></select>
+          </div>
         </div>
+        <div class="opk-grid" id="aic-bp-grid"></div>
       </div>
 
       <div id="audinv-tab-sin-ubicacion" style="display:none;">
         <div class="section-head">
-          <h2 class="section-title">Inventario — Auditoría Sin Ubicación</h2>
+          <h2 class="section-title">Sin Ubicación</h2>
         </div>
-        <div class="help-tip">
-          <span class="ic">🛠</span>
-          <div>Este apartado está en rediseño — próximamente el nuevo flujo.</div>
+        <p class="section-desc">Checklist de los "Sin Ubicación" cargados en Bultos Pendientes de Operación. Reporta cuántas unidades encontraste — el valor se calcula solo con el valor unitario del producto.</p>
+        <div class="opk-toprow">
+          <div class="opk-progress-card">
+            <div class="opk-progress-top">
+              <span class="n" id="aic-su-count">0 <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span></span>
+              <span class="lbl" id="aic-su-pct">0% recuperado</span>
+            </div>
+            <div class="opk-progress-bar"><div class="opk-progress-fill" id="aic-su-fill" style="width:0%;"></div></div>
+            <div class="opk-progress-foot">
+              <span class="pend" id="aic-su-pend">S/ 0.00 pendiente</span>
+              <span class="rec" id="aic-su-rec">S/ 0.00 recuperado</span>
+            </div>
+          </div>
+          <div class="opk-search-box">
+            <div class="opk-search"><span>🔍</span><input type="text" id="aic-su-buscar" placeholder="Buscar por LPN o producto…"></div>
+            <select id="aic-su-semana"><option value="">Todas</option></select>
+          </div>
         </div>
+        <div class="opk-grid" id="aic-su-grid"></div>
       </div>
     </section>
 
@@ -2270,10 +2374,15 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <thead><tr>
             <th>Proceso</th><th>Responsable</th><th>Supervisor</th><th>Sem</th><th>Familia</th>
             <th>Nro LPN</th><th>Producto</th><th>Cod Alternat</th><th>Descripcion</th>
-            <th>Cant.</th><th>Nro Lote</th><th>Val tot (S/)</th><th>Estado</th><th></th>
+            <th>Cant.</th><th>Nro Lote</th><th>Val tot (S/)</th><th>Recuperado</th><th>Estado</th>
           </tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+
+      <div class="help-tip" style="margin-top:18px;max-width:680px;">
+        <span class="ic">📌</span>
+        <div>Para marcar un bulto como recuperado (total o parcial, por unidades), hazlo desde su checklist en <b>Auditoría de Inventario</b> → pestañas <b>📦 Bultos Perdidos</b> / <b>📍 Sin Ubicación</b>. Acá solo se importa y se consulta el listado completo con su estado.</div>
       </div>
     </section>
 
@@ -2686,9 +2795,9 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="help-tab-panel" id="help-tab-inventario" style="display:none;">
       <div class="help-block">
         <h4>📦 Inventario</h4>
-        <p><b>Auditoría de Inventario</b> agrupa 3 pestañas: <b>🔍 Shortpick</b> (importa los reportes del WMS, concilia faltantes y consulta el historial), <b>📦 Bultos Perdidos</b> y <b>📍 Sin Ubicación</b> — estas dos últimas están en rediseño, próximamente el nuevo flujo.</p>
+        <p><b>Auditoría de Inventario</b> agrupa 3 pestañas: <b>🔍 Shortpick</b> (importa los reportes del WMS, concilia faltantes y consulta el historial), <b>📦 Bultos Perdidos</b> y <b>📍 Sin Ubicación</b> — estas dos últimas son un checklist que se alimenta de lo cargado en <b>Bultos Pendientes de Operación</b>: cada bulto pendiente aparece como tarjeta, y se marca como recuperado reportando cuántas <b>unidades</b> se encontraron (el sistema calcula el valor solo) — puede ser el total o una parte, indicando de forma opcional en qué área se encontró y una foto de evidencia.</p>
         <p><b>Control de Bolsa</b>: sube el reporte del auditor (Dif CD) y tu export interno del WMS a la vez, con el botón <b>Importar y calcular</b>. La app aplica la regla Considerar/No considerar, cruza ambos archivos y marca en disputa las líneas con evidencia — sea porque tu WMS encontró más de lo que se perdió, o porque el ajuste ya se neteó solo (un movimiento negativo que se compensa con uno positivo), lo que suele ser un falso positivo del auditor. Tanto el detalle de la auditoría (con lo que marques por fila en Disputar/Descartar/Aceptar) como el respaldo del WMS quedan guardados de forma permanente en Supabase — no se pierden al recargar la página ni al reimportar el mismo reporte más adelante.</p>
-        <p><b>Bultos Pendientes de Operación</b>: sube el reporte "Pendientes de Operación" tal cual — la app detecta sola la hoja "Bultos Pendientes", filtra por Proceso (Por Ubicar, Perdido ERU, Sin Ubicación) y arma dos listas: <b>Perdidos</b> (Por Ubicar + Perdido ERU) y <b>Sin Ubicación</b>. Cada línea queda guardada por su Nro LPN — reimportar el mismo reporte actualiza lo que ya tenías en vez de duplicarlo. Marca <b>Marcar recuperado</b> en cada fila cuando el bulto ya se resolvió; las tarjetas de Valorizado en juego/recuperado se actualizan solas.</p>
+        <p><b>Bultos Pendientes de Operación</b>: sube el reporte "Pendientes de Operación" tal cual — la app detecta sola la hoja "Bultos Pendientes", filtra por Proceso (Por Ubicar, Perdido ERU, Sin Ubicación) y arma dos listas: <b>Perdidos</b> (Por Ubicar + Perdido ERU) y <b>Sin Ubicación</b>. Cada línea queda guardada por su Nro LPN — si el mismo LPN ya estaba cargado, se detecta como duplicado y no se vuelve a insertar. Este apartado muestra el listado completo con su estado (Pendiente/Parcial/Recuperado); para marcar un bulto como recuperado, hazlo desde su checklist en <b>Auditoría de Inventario</b> (pestañas Bultos Perdidos / Sin Ubicación).</p>
       </div>
       </div>
 
@@ -2786,6 +2895,41 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div id="export-modal-count" style="font-size:12.5px;color:var(--muted);margin:2px 0 14px;"></div>
       <span class="login-error" id="export-modal-error"></span>
       <button type="button" class="btn btn-primary" id="export-modal-btn" style="width:100%;">Descargar CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reportar recuperación de un bulto (checklist Bultos Perdidos / Sin Ubicación en
+     Auditoría de Inventario) — un solo modal reutilizado por ambas pestañas. -->
+<div class="modal-overlay" id="bpo-recuperar-modal">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 id="bpo-rec-lpn"></h3>
+      <button class="modal-close" id="bpo-rec-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="bpo-rec-sub" style="font-size:12.5px;color:var(--muted);margin:-10px 0 16px;"></div>
+      <button type="button" class="opk-sheet-btn full" id="bpo-rec-full"></button>
+      <div class="opk-sheet-divider">o reporta parcial</div>
+      <div class="opk-stepper-box">
+        <div class="opk-stepper-lbl">Unidades encontradas</div>
+        <div class="opk-stepper">
+          <button type="button" class="opk-stepper-btn" id="bpo-rec-minus">−</button>
+          <span class="opk-stepper-val" id="bpo-rec-val">1</span>
+          <button type="button" class="opk-stepper-btn" id="bpo-rec-plus" style="color:var(--green);">+</button>
+        </div>
+        <div class="opk-stepper-eq" id="bpo-rec-eq"></div>
+      </div>
+      <div class="field" style="margin:0 0 14px;">
+        <label>¿En qué área lo encontraste? <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
+        <input type="text" id="bpo-rec-area" placeholder="Ej. Rack C-14, Zona Drop, Picking…">
+      </div>
+      <div class="field" style="margin:0 0 4px;">
+        <label>Evidencia <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
+        <div id="bpo-rec-foto-wrap" style="display:flex;gap:10px;"></div>
+      </div>
+      <span class="login-error" id="bpo-rec-error"></span>
+      <button type="button" class="btn btn-primary" id="bpo-rec-confirm" style="width:100%;margin-top:12px;padding:13px;">Confirmar</button>
     </div>
   </div>
 </div>
@@ -5020,12 +5164,25 @@ async function bpoLoadRegistros(){
     codAlternat: r.cod_alternat || "", descripcion: r.descripcion || "",
     cantidad: r.cantidad_actual === null ? null : Number(r.cantidad_actual),
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
+    unidadesRecuperadas: r.unidades_recuperadas === null ? 0 : Number(r.unidades_recuperadas),
     estado: r.estado, recuperadoEn: r.recuperado_en, archivoOrigen: r.archivo_origen || "",
     createdAt: r.created_at,
   }));
   bpoRenderFiltroSemana();
   bpoRender();
+  bpoChkRender("perdidos");
+  bpoChkRender("sin_ubicacion");
 }
+
+/* Unidades pendientes/valores derivados — el valor unitario sale del propio import
+   (Val tot ÷ Cantidad actual), así el checklist puede reportar UNIDADES encontradas
+   (lo que de verdad cuenta un operador) y calcular el valor solo, sin que nadie tenga
+   que hacer la cuenta a mano. */
+function bpoValorUnitario(r){ return r.cantidad ? (r.valTot || 0) / r.cantidad : 0; }
+function bpoPendienteUnidades(r){ return Math.max((r.cantidad || 0) - (r.unidadesRecuperadas || 0), 0); }
+function bpoValorPendiente(r){ return bpoPendienteUnidades(r) * bpoValorUnitario(r); }
+function bpoValorRecuperadoRow(r){ return (r.unidadesRecuperadas || 0) * bpoValorUnitario(r); }
+function bpoFmtUds(n){ n = Number(n) || 0; const r = Math.round(n * 100) / 100; return r.toLocaleString("es-PE"); }
 
 function bpoRenderFiltroSemana(){
   const sel = document.getElementById("bpo-f-semana");
@@ -5051,17 +5208,16 @@ function bpoRender(){
   document.getElementById("bpo-tab-count-perdidos").textContent = bpoRegistros.filter(r => r.clasificacion === "perdidos").length;
   document.getElementById("bpo-tab-count-sin-ubicacion").textContent = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion").length;
 
-  const pendientes = rows.filter(r => r.estado === "pendiente");
-  const recuperados = rows.filter(r => r.estado === "recuperado");
   document.getElementById("bpo-stat-label").textContent = bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación";
-  document.getElementById("bpo-stat-count").textContent = pendientes.length;
-  document.getElementById("bpo-stat-en-juego").textContent = bpoMoneda(pendientes.reduce((a, r) => a + (r.valTot || 0), 0));
-  document.getElementById("bpo-stat-recuperado").textContent = bpoMoneda(recuperados.reduce((a, r) => a + (r.valTot || 0), 0));
+  document.getElementById("bpo-stat-count").textContent = rows.filter(r => r.estado !== "recuperado").length;
+  document.getElementById("bpo-stat-en-juego").textContent = bpoMoneda(rows.reduce((a, r) => a + bpoValorPendiente(r), 0));
+  document.getElementById("bpo-stat-recuperado").textContent = bpoMoneda(rows.reduce((a, r) => a + bpoValorRecuperadoRow(r), 0));
   const ultima = bpoRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
   document.getElementById("bpo-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleDateString("es-PE") : "—";
 
   const semanaActiva = document.getElementById("bpo-f-semana").value;
   const tbody = document.querySelector("#bpo-table tbody");
+  const ESTADO_LABEL = { pendiente: "Pendiente", parcial: "Parcial", recuperado: "Recuperado" };
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td>${escapeHtml(r.proceso)}</td>
@@ -5076,26 +5232,10 @@ function bpoRender(){
       <td>${r.cantidad === null ? "" : r.cantidad}</td>
       <td>${escapeHtml(r.nroLote)}</td>
       <td>${(r.valTot || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td><span class="estado-badge ${r.estado}">${r.estado === "recuperado" ? "Recuperado" : "Pendiente"}</span></td>
-      <td><button type="button" class="btn btn-ghost bpo-toggle-btn" data-id="${r.id}" data-estado="${r.estado}" style="padding:4px 8px;font-size:11px;white-space:nowrap;">${r.estado === "recuperado" ? "Deshacer" : "Marcar recuperado"}</button></td>
+      <td>${bpoFmtUds(r.unidadesRecuperadas)} / ${r.cantidad === null ? "" : bpoFmtUds(r.cantidad)} uds</td>
+      <td><span class="estado-badge ${r.estado}">${ESTADO_LABEL[r.estado] || r.estado}</span></td>
     </tr>
   `).join("") || `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px;">Sin registros de ${bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación"}${semanaActiva ? " en esa semana" : ""}.</td></tr>`;
-
-  tbody.querySelectorAll(".bpo-toggle-btn").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
-      const id = Number(btn.dataset.id);
-      const nuevoEstado = btn.dataset.estado === "recuperado" ? "pendiente" : "recuperado";
-      btn.disabled = true;
-      const { error } = await sb.from("ssoma_bpo_registros")
-        .update({ estado: nuevoEstado, recuperado_en: nuevoEstado === "recuperado" ? new Date().toISOString() : null })
-        .eq("id", id);
-      btn.disabled = false;
-      if(error){ alert("No se pudo guardar el cambio: " + error.message); return; }
-      const row = bpoRegistros.find(r => r.id === id);
-      if(row){ row.estado = nuevoEstado; row.recuperadoEn = nuevoEstado === "recuperado" ? new Date().toISOString() : null; }
-      bpoRender();
-    });
-  });
 }
 
 document.getElementById("bpo-f-semana").addEventListener("change", bpoRender);
@@ -5113,7 +5253,8 @@ const BPO_COLUMNAS = [
   { header: "Cantidad actual", get: r => r.cantidad === null ? "" : r.cantidad },
   { header: "Nro de lote", get: r => r.nroLote },
   { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
-  { header: "Estado", get: r => r.estado === "recuperado" ? "Recuperado" : "Pendiente" },
+  { header: "Unidades recuperadas", get: r => bpoFmtUds(r.unidadesRecuperadas) },
+  { header: "Estado", get: r => r.estado === "recuperado" ? "Recuperado" : (r.estado === "parcial" ? "Parcial" : "Pendiente") },
 ];
 document.getElementById("bpo-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -5123,6 +5264,226 @@ document.getElementById("bpo-export-btn").addEventListener("click", ()=>{
     columnas: BPO_COLUMNAS,
     nombreArchivo: "bultos_pendientes_operacion.csv",
   });
+});
+
+/* ============ Checklist de recuperación (Auditoría de Inventario · Bultos Perdidos
+   / Sin Ubicación) ============
+   Reusa bpoRegistros (ya cargado por bpoLoadRegistros) filtrado por clasificacion —
+   es la MISMA data que Bultos Pendientes de Operación, solo que acá se puede marcar
+   cada bulto como recuperado (total o parcial, en unidades). */
+function bpoChkPrefijo(clasificacion){ return clasificacion === "perdidos" ? "bp" : "su"; }
+
+function bpoChkRenderFiltroSemana(clasificacion){
+  const prefijo = bpoChkPrefijo(clasificacion);
+  const sel = document.getElementById(`aic-${prefijo}-semana`);
+  const actual = sel.value;
+  const semanas = [...new Set(bpoRegistros.filter(r => r.clasificacion === clasificacion).map(r => r.semana).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todas</option>' + semanas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  sel.value = semanas.includes(actual) ? actual : "";
+}
+
+function bpoChkFiltered(clasificacion){
+  const prefijo = bpoChkPrefijo(clasificacion);
+  const buscar = (document.getElementById(`aic-${prefijo}-buscar`).value || "").trim().toLowerCase();
+  const semana = document.getElementById(`aic-${prefijo}-semana`).value;
+  return bpoRegistros.filter(r => r.clasificacion === clasificacion
+    && (!semana || r.semana === semana)
+    && (!buscar
+      || r.nroLpn.toLowerCase().includes(buscar)
+      || r.descripcion.toLowerCase().includes(buscar)
+      || r.codAlternat.toLowerCase().includes(buscar))
+  );
+}
+
+function bpoChkCardHtml(r){
+  const pendUds = bpoPendienteUnidades(r);
+  const done = r.estado === "recuperado";
+  const parcial = r.estado === "parcial";
+  let extraHtml = "";
+  if(parcial){
+    const pct = r.cantidad ? Math.min(100, Math.round((r.unidadesRecuperadas / r.cantidad) * 100)) : 0;
+    extraHtml = `
+      <div class="opk-mini-bar"><div class="opk-mini-bar-fill" style="width:${pct}%;"></div></div>
+      <div class="opk-partial-note">🔶 ${bpoFmtUds(r.unidadesRecuperadas)} de ${bpoFmtUds(r.cantidad)} uds recuperadas (${bpoMoneda(bpoValorRecuperadoRow(r))})</div>`;
+  }
+  if(done){
+    extraHtml = `<div class="opk-done-note">✅ Recuperado completo — ${bpoFmtUds(r.unidadesRecuperadas)} de ${bpoFmtUds(r.cantidad)} uds (${bpoMoneda(bpoValorRecuperadoRow(r))})</div>`;
+  }
+  const qtyRow = done ? "" : `
+      <div class="opk-qty-row">
+        <div class="opk-qty">${bpoMoneda(bpoValorPendiente(r))}<span class="u">${bpoFmtUds(pendUds)} uds pendientes</span></div>
+      </div>`;
+  const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
+  return `
+    <div class="opk-card ${done ? "done" : ""}">
+      <div class="opk-card-top">
+        <div class="opk-check-big ${parcial ? "parcial" : ""}">${done ? "✓" : (parcial ? "–" : "")}</div>
+        <div class="opk-card-body">
+          <span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>
+          <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
+          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}</div>
+          ${extraHtml}
+          ${qtyRow}
+        </div>
+      </div>
+      ${btnHtml}
+    </div>`;
+}
+
+function bpoChkRender(clasificacion){
+  bpoChkRenderFiltroSemana(clasificacion);
+  const prefijo = bpoChkPrefijo(clasificacion);
+  const rows = bpoChkFiltered(clasificacion);
+  const pendRows = rows.filter(r => r.estado !== "recuperado");
+  const totalPend = rows.reduce((a, r) => a + bpoValorPendiente(r), 0);
+  const totalRec = rows.reduce((a, r) => a + bpoValorRecuperadoRow(r), 0);
+  const pct = (totalPend + totalRec) > 0 ? Math.round((totalRec / (totalPend + totalRec)) * 100) : 0;
+
+  document.getElementById(`aic-${prefijo}-count`).innerHTML = `${pendRows.length} <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span>`;
+  document.getElementById(`aic-${prefijo}-pct`).textContent = pct + "% recuperado";
+  document.getElementById(`aic-${prefijo}-fill`).style.width = pct + "%";
+  document.getElementById(`aic-${prefijo}-pend`).textContent = bpoMoneda(totalPend) + " pendiente";
+  document.getElementById(`aic-${prefijo}-rec`).textContent = bpoMoneda(totalRec) + " recuperado";
+
+  const sinFiltro = !document.getElementById(`aic-${prefijo}-buscar`).value && !document.getElementById(`aic-${prefijo}-semana`).value;
+  const ordenadas = [...rows].sort((a, b) => (a.estado === "recuperado" ? 1 : 0) - (b.estado === "recuperado" ? 1 : 0));
+  const grid = document.getElementById(`aic-${prefijo}-grid`);
+  grid.innerHTML = ordenadas.length
+    ? ordenadas.map(bpoChkCardHtml).join("")
+    : `<div class="empty opk-empty">Sin registros${sinFiltro ? "" : " con ese filtro"}.</div>`;
+
+  grid.querySelectorAll(".opk-btn-mark").forEach(btn=>{
+    btn.addEventListener("click", ()=> bpoChkAbrirModal(Number(btn.dataset.id)));
+  });
+}
+
+document.getElementById("aic-bp-buscar").addEventListener("input", ()=> bpoChkRender("perdidos"));
+document.getElementById("aic-bp-semana").addEventListener("change", ()=> bpoChkRender("perdidos"));
+document.getElementById("aic-su-buscar").addEventListener("input", ()=> bpoChkRender("sin_ubicacion"));
+document.getElementById("aic-su-semana").addEventListener("change", ()=> bpoChkRender("sin_ubicacion"));
+
+/* ---- Modal "Marcar como recuperado" ---- */
+let bpoRecRegistroId = null;
+let bpoRecStepVal = 1;
+let bpoRecFotoDataUrl = null;
+let bpoRecFotoMeta = null;
+
+function bpoRecRenderFotoWidget(){
+  const wrap = document.getElementById("bpo-rec-foto-wrap");
+  if(bpoRecFotoDataUrl){
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="${bpoRecFotoDataUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+        <button type="button" id="bpo-rec-foto-quitar" style="background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline;font-size:12px;">Quitar foto</button>
+      </div>`;
+    document.getElementById("bpo-rec-foto-quitar").addEventListener("click", ()=>{
+      bpoRecFotoDataUrl = null; bpoRecFotoMeta = null;
+      bpoRecRenderFotoWidget();
+    });
+    return;
+  }
+  wrap.innerHTML = `
+    <label class="opk-photo-btn"><span class="opk-photo-ic">📷</span>Tomar foto<input type="file" accept="image/*" capture="environment" id="bpo-rec-foto-cam" hidden></label>
+    <label class="opk-photo-btn"><span class="opk-photo-ic">🖼️</span>Galería<input type="file" accept="image/*" id="bpo-rec-foto-gal" hidden></label>`;
+  const onPick = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    compressImage(file, dataUrl=>{
+      bpoRecFotoDataUrl = dataUrl;
+      bpoRecFotoMeta = { nombre: file.name, tipo: file.type };
+      bpoRecRenderFotoWidget();
+    });
+  };
+  document.getElementById("bpo-rec-foto-cam").addEventListener("change", onPick);
+  document.getElementById("bpo-rec-foto-gal").addEventListener("change", onPick);
+}
+
+function bpoRecActualizarStepper(){
+  const r = bpoRegistros.find(x => x.id === bpoRecRegistroId);
+  if(!r) return;
+  document.getElementById("bpo-rec-val").textContent = bpoFmtUds(bpoRecStepVal);
+  const valor = bpoRecStepVal * bpoValorUnitario(r);
+  document.getElementById("bpo-rec-eq").textContent = `≈ ${bpoMoneda(valor)} de ${bpoFmtUds(bpoPendienteUnidades(r))} uds pendientes (${bpoMoneda(bpoValorUnitario(r))}/ud)`;
+  document.getElementById("bpo-rec-confirm").textContent = `Confirmar ${bpoFmtUds(bpoRecStepVal)} unidad${bpoRecStepVal === 1 ? "" : "es"}`;
+}
+
+function bpoChkAbrirModal(id){
+  const r = bpoRegistros.find(x => x.id === id);
+  if(!r) return;
+  bpoRecRegistroId = id;
+  bpoRecStepVal = 1;
+  bpoRecFotoDataUrl = null; bpoRecFotoMeta = null;
+  const pend = bpoPendienteUnidades(r);
+  document.getElementById("bpo-rec-lpn").textContent = r.nroLpn;
+  document.getElementById("bpo-rec-sub").textContent = `${r.descripcion || r.producto} · ${bpoFmtUds(pend)} uds pendientes`;
+  document.getElementById("bpo-rec-full").textContent = `✅ Encontré las ${bpoFmtUds(pend)} unidades — ${bpoMoneda(pend * bpoValorUnitario(r))}`;
+  document.getElementById("bpo-rec-area").value = "";
+  document.getElementById("bpo-rec-error").textContent = "";
+  bpoRecRenderFotoWidget();
+  bpoRecActualizarStepper();
+  document.getElementById("bpo-recuperar-modal").classList.add("show");
+}
+function bpoChkCerrarModal(){
+  document.getElementById("bpo-recuperar-modal").classList.remove("show");
+}
+document.getElementById("bpo-rec-close").addEventListener("click", bpoChkCerrarModal);
+document.getElementById("bpo-recuperar-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "bpo-recuperar-modal") bpoChkCerrarModal();
+});
+document.getElementById("bpo-rec-minus").addEventListener("click", ()=>{
+  bpoRecStepVal = Math.max(1, bpoRecStepVal - 1);
+  bpoRecActualizarStepper();
+});
+document.getElementById("bpo-rec-plus").addEventListener("click", ()=>{
+  bpoRecStepVal = bpoRecStepVal + 1;
+  bpoRecActualizarStepper();
+});
+
+async function bpoRecConfirmar(unidades, btn){
+  const r = bpoRegistros.find(x => x.id === bpoRecRegistroId);
+  if(!r) return;
+  const errEl = document.getElementById("bpo-rec-error");
+  errEl.textContent = "";
+  if(!unidades || unidades <= 0){ errEl.textContent = "Ingresa al menos 1 unidad."; return; }
+  const valor = unidades * bpoValorUnitario(r);
+  const area = document.getElementById("bpo-rec-area").value.trim();
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  try{
+    const { error: errIns } = await sb.from("ssoma_bpo_recuperaciones").insert({
+      registro_id: r.id, unidades, valor,
+      area_encontrado: area || null,
+      foto: bpoRecFotoDataUrl ? { nombre: bpoRecFotoMeta.nombre, tipo: bpoRecFotoMeta.tipo, contenido: bpoRecFotoDataUrl } : null,
+      reportado_por_id: miUsuario ? miUsuario.id : null,
+    });
+    if(errIns) throw new Error(errIns.message);
+
+    const nuevasUnidades = (r.unidadesRecuperadas || 0) + unidades;
+    const nuevoEstado = r.cantidad && nuevasUnidades >= r.cantidad ? "recuperado" : (nuevasUnidades > 0 ? "parcial" : "pendiente");
+    const { error: errUpd } = await sb.from("ssoma_bpo_registros")
+      .update({ unidades_recuperadas: nuevasUnidades, estado: nuevoEstado, actualizado_en: new Date().toISOString() })
+      .eq("id", r.id);
+    if(errUpd) throw new Error(errUpd.message);
+
+    r.unidadesRecuperadas = nuevasUnidades;
+    r.estado = nuevoEstado;
+    bpoChkCerrarModal();
+    bpoChkRender("perdidos");
+    bpoChkRender("sin_ubicacion");
+    bpoRender();
+  }catch(err){
+    errEl.textContent = "No se pudo guardar: " + err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
+}
+document.getElementById("bpo-rec-full").addEventListener("click", (e)=>{
+  const r = bpoRegistros.find(x => x.id === bpoRecRegistroId);
+  if(!r) return;
+  bpoRecConfirmar(bpoPendienteUnidades(r), e.currentTarget);
+});
+document.getElementById("bpo-rec-confirm").addEventListener("click", (e)=>{
+  bpoRecConfirmar(bpoRecStepVal, e.currentTarget);
 });
 
 function bpoUpdateImportState(){
