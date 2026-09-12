@@ -734,6 +734,8 @@
   .estado-badge.finalizado::before{background:var(--green);}
   .estado-badge.parcial{background:var(--blue-tint);color:var(--blue);}
   .estado-badge.parcial::before{background:var(--blue);}
+  .estado-badge.recuperado{background:var(--green-tint);color:var(--green);}
+  .estado-badge.recuperado::before{background:var(--green);}
 
   .lev-tab{background:var(--panel);}
   .lev-tab.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
@@ -1154,7 +1156,7 @@
       <div class="navgroup-body" id="navgroup-inventario-body">
         <button class="navitem" data-view="auditoria-inventario"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría de Inventario</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="inventario-bolsa"><span class="dot" style="background:#CA8A04;"></span><span class="label">Control de Bolsa</span><span class="tag">Activo</span></button>
-        <button class="navitem" data-view="bultos-pendientes-operacion"><span class="dot" style="background:#EA580C;"></span><span class="label">Bultos Pendientes de Operación</span><span class="tag pending">Próximo</span></button>
+        <button class="navitem" data-view="bultos-pendientes-operacion"><span class="dot" style="background:#EA580C;"></span><span class="label">Bultos Pendientes de Operación</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -2071,15 +2073,74 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
     </section>
 
-    <!-- INVENTARIO · BULTOS PENDIENTES DE OPERACIÓN: apartado nuevo, flujo aún sin definir con
-         Eduardo (12/09) — no construir el import/lógica hasta que traiga el detalle del flujo. -->
+    <!-- INVENTARIO · BULTOS PENDIENTES DE OPERACIÓN -->
     <section class="panel" id="panel-bultos-pendientes-operacion">
       <div class="section-head">
         <h2 class="section-title">Bultos Pendientes de Operación</h2>
+        <span class="count-pill" id="bpo-count">0 líneas</span>
       </div>
-      <div class="help-tip">
-        <span class="ic">🛠</span>
-        <div>Este apartado está en construcción — próximamente el flujo.</div>
+      <p class="section-desc">Sube el reporte "Pendientes de Operación" — se filtra automáticamente por Proceso (Por Ubicar, Perdido ERU, Sin Ubicación) desde la hoja "Bultos Pendientes", y se clasifica en dos listas.</p>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Subir Pendientes de Operación</div>
+            <div class="import-card-sub">Sube el archivo tal cual te lo pasan — se detecta sola la hoja "Bultos Pendientes" y se filtra por Proceso.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bpo-import-btn" disabled>Importar y clasificar</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bpo-file" id="bpo-drop">
+            <input type="file" id="bpo-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Pendientes de Operación</span>
+            <span class="import-drop-hint" id="bpo-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="bpo-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="tab-bar" id="bpo-tabs">
+        <button type="button" class="tab-btn active" data-tab="perdidos">Perdidos <span class="tab-count" id="bpo-tab-count-perdidos">0</span></button>
+        <button type="button" class="tab-btn" data-tab="sin-ubicacion">Sin Ubicación <span class="tab-count" id="bpo-tab-count-sin-ubicacion">0</span></button>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-top:14px;margin-bottom:6px;">
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="bpo-f-semana"><option value="">Todas</option></select>
+        </div>
+        <button type="button" class="btn btn-ghost" id="bpo-export-btn">📤 Exportar</button>
+      </div>
+
+      <div class="stats-row" style="margin-top:12px;">
+        <div class="stat-card">
+          <div class="stat-label" id="bpo-stat-label">Perdidos</div>
+          <div class="stat-value" id="bpo-stat-count">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valorizado en juego</div>
+          <div class="stat-value" id="bpo-stat-en-juego" style="color:var(--red);">S/ 0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valorizado recuperado</div>
+          <div class="stat-value" id="bpo-stat-recuperado" style="color:var(--green);">S/ 0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Última carga</div>
+          <div class="stat-value" id="bpo-stat-ultima-carga" style="font-size:15px;">—</div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:18px;">
+        <table class="data-table" id="bpo-table">
+          <thead><tr>
+            <th>Proceso</th><th>Responsable</th><th>Supervisor</th><th>Sem</th><th>Familia</th>
+            <th>Nro LPN</th><th>Producto</th><th>Cod Alternat</th><th>Descripcion</th>
+            <th>Cant.</th><th>Nro Lote</th><th>Val tot (S/)</th><th>Estado</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
 
@@ -2494,6 +2555,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <h4>📦 Inventario</h4>
         <p><b>Auditoría de Inventario</b> agrupa 3 pestañas: <b>🔍 Shortpick</b> (importa los reportes del WMS, concilia faltantes y consulta el historial), <b>📦 Bultos Perdidos</b> y <b>📍 Sin Ubicación</b> — estas dos últimas están en rediseño, próximamente el nuevo flujo.</p>
         <p><b>Control de Bolsa</b>: sube el reporte del auditor (Dif CD) y tu export interno del WMS a la vez, con el botón <b>Importar y calcular</b>. La app aplica la regla Considerar/No considerar, cruza ambos archivos y marca en disputa las líneas con evidencia — sea porque tu WMS encontró más de lo que se perdió, o porque el ajuste ya se neteó solo (un movimiento negativo que se compensa con uno positivo), lo que suele ser un falso positivo del auditor. Tanto el detalle de la auditoría (con lo que marques por fila en Disputar/Descartar/Aceptar) como el respaldo del WMS quedan guardados de forma permanente en Supabase — no se pierden al recargar la página ni al reimportar el mismo reporte más adelante.</p>
+        <p><b>Bultos Pendientes de Operación</b>: sube el reporte "Pendientes de Operación" tal cual — la app detecta sola la hoja "Bultos Pendientes", filtra por Proceso (Por Ubicar, Perdido ERU, Sin Ubicación) y arma dos listas: <b>Perdidos</b> (Por Ubicar + Perdido ERU) y <b>Sin Ubicación</b>. Cada línea queda guardada por su Nro LPN — reimportar el mismo reporte actualiza lo que ya tenías en vez de duplicarlo. Marca <b>Marcar recuperado</b> en cada fila cuando el bulto ya se resolvió; las tarjetas de Valorizado en juego/recuperado se actualizan solas.</p>
       </div>
       </div>
 
@@ -4803,6 +4865,234 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
   }
 });
 
+/* ============ Bultos Pendientes de Operación ============
+   Fuente: reporte "Pendientes de Operación" (hoja "Bultos Pendientes", encabezado
+   enterrado — bolsaPickSheet ya sabe buscarlo). Se filtra por Proceso y se clasifica
+   en dos listas: perdidos (Por Ubicar + Perdido ERU) y sin_ubicacion (Sin Ubicación).
+   Cada fila se guarda por su Nro LPN (único) — reimportar el mismo reporte actualiza
+   el registro existente (upsert) en vez de duplicarlo, y si un LPN ya marcado
+   "recuperado" reaparece pendiente en el archivo nuevo, se resetea a pendiente. */
+let bpoRegistros = [];
+let bpoTabActivo = "perdidos";
+
+async function bpoLoadRegistros(){
+  const { data, error } = await sbSelectAll("ssoma_bpo_registros", "*", q => q.order("created_at", { ascending: false }));
+  if(error){ console.error(error); return; }
+  bpoRegistros = (data || []).map(r => ({
+    id: r.id, proceso: r.proceso || "", clasificacion: r.clasificacion,
+    responsable: r.responsable || "", supervisor: r.supervisor || "", semana: r.semana || "",
+    familia: r.familia || "", nroLpn: r.nro_lpn || "", producto: r.producto || "",
+    codAlternat: r.cod_alternat || "", descripcion: r.descripcion || "",
+    cantidad: r.cantidad_actual === null ? null : Number(r.cantidad_actual),
+    nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
+    estado: r.estado, recuperadoEn: r.recuperado_en, archivoOrigen: r.archivo_origen || "",
+    createdAt: r.created_at,
+  }));
+  bpoRenderFiltroSemana();
+  bpoRender();
+}
+
+function bpoRenderFiltroSemana(){
+  const sel = document.getElementById("bpo-f-semana");
+  const actual = sel.value;
+  const semanas = [...new Set(bpoRegistros.map(r => r.semana).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todas</option>' + semanas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  sel.value = semanas.includes(actual) ? actual : "";
+}
+
+function bpoFiltered(){
+  const semana = document.getElementById("bpo-f-semana").value;
+  return bpoRegistros.filter(r => r.clasificacion === bpoTabActivo && (!semana || r.semana === semana));
+}
+
+function bpoMoneda(n){ return "S/ " + (n || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+function bpoRender(){
+  document.querySelectorAll("#bpo-tabs .tab-btn").forEach(b=>{
+    b.classList.toggle("active", (b.dataset.tab === "sin-ubicacion" ? "sin_ubicacion" : "perdidos") === bpoTabActivo);
+  });
+  const rows = bpoFiltered();
+  document.getElementById("bpo-count").textContent = bpoRegistros.length + " líneas";
+  document.getElementById("bpo-tab-count-perdidos").textContent = bpoRegistros.filter(r => r.clasificacion === "perdidos").length;
+  document.getElementById("bpo-tab-count-sin-ubicacion").textContent = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion").length;
+
+  const pendientes = rows.filter(r => r.estado === "pendiente");
+  const recuperados = rows.filter(r => r.estado === "recuperado");
+  document.getElementById("bpo-stat-label").textContent = bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación";
+  document.getElementById("bpo-stat-count").textContent = pendientes.length;
+  document.getElementById("bpo-stat-en-juego").textContent = bpoMoneda(pendientes.reduce((a, r) => a + (r.valTot || 0), 0));
+  document.getElementById("bpo-stat-recuperado").textContent = bpoMoneda(recuperados.reduce((a, r) => a + (r.valTot || 0), 0));
+  const ultima = bpoRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
+  document.getElementById("bpo-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleDateString("es-PE") : "—";
+
+  const semanaActiva = document.getElementById("bpo-f-semana").value;
+  const tbody = document.querySelector("#bpo-table tbody");
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${escapeHtml(r.proceso)}</td>
+      <td>${escapeHtml(r.responsable)}</td>
+      <td>${escapeHtml(r.supervisor)}</td>
+      <td>${escapeHtml(r.semana)}</td>
+      <td>${escapeHtml(r.familia)}</td>
+      <td>${escapeHtml(r.nroLpn)}</td>
+      <td>${escapeHtml(r.producto)}</td>
+      <td>${escapeHtml(r.codAlternat)}</td>
+      <td>${escapeHtml(r.descripcion)}</td>
+      <td>${r.cantidad === null ? "" : r.cantidad}</td>
+      <td>${escapeHtml(r.nroLote)}</td>
+      <td>${(r.valTot || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td><span class="estado-badge ${r.estado}">${r.estado === "recuperado" ? "Recuperado" : "Pendiente"}</span></td>
+      <td><button type="button" class="btn btn-ghost bpo-toggle-btn" data-id="${r.id}" data-estado="${r.estado}" style="padding:4px 8px;font-size:11px;white-space:nowrap;">${r.estado === "recuperado" ? "Deshacer" : "Marcar recuperado"}</button></td>
+    </tr>
+  `).join("") || `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px;">Sin registros de ${bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación"}${semanaActiva ? " en esa semana" : ""}.</td></tr>`;
+
+  tbody.querySelectorAll(".bpo-toggle-btn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.id);
+      const nuevoEstado = btn.dataset.estado === "recuperado" ? "pendiente" : "recuperado";
+      btn.disabled = true;
+      const { error } = await sb.from("ssoma_bpo_registros")
+        .update({ estado: nuevoEstado, recuperado_en: nuevoEstado === "recuperado" ? new Date().toISOString() : null })
+        .eq("id", id);
+      btn.disabled = false;
+      if(error){ alert("No se pudo guardar el cambio: " + error.message); return; }
+      const row = bpoRegistros.find(r => r.id === id);
+      if(row){ row.estado = nuevoEstado; row.recuperadoEn = nuevoEstado === "recuperado" ? new Date().toISOString() : null; }
+      bpoRender();
+    });
+  });
+}
+
+document.getElementById("bpo-f-semana").addEventListener("change", bpoRender);
+
+const BPO_COLUMNAS = [
+  { header: "Proceso", get: r => r.proceso },
+  { header: "Responsable", get: r => r.responsable },
+  { header: "Supervisor", get: r => r.supervisor },
+  { header: "Sem", get: r => r.semana },
+  { header: "Familia", get: r => r.familia },
+  { header: "Nro LPN", get: r => r.nroLpn },
+  { header: "Producto", get: r => r.producto },
+  { header: "Cod Alternat", get: r => r.codAlternat },
+  { header: "Descripcion", get: r => r.descripcion },
+  { header: "Cantidad actual", get: r => r.cantidad === null ? "" : r.cantidad },
+  { header: "Nro de lote", get: r => r.nroLote },
+  { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
+  { header: "Estado", get: r => r.estado === "recuperado" ? "Recuperado" : "Pendiente" },
+];
+document.getElementById("bpo-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bultos Pendientes de Operación — " + (bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación"),
+    obtenerFilas: () => bpoFiltered(),
+    campoFecha: r => (r.createdAt || "").slice(0, 10),
+    columnas: BPO_COLUMNAS,
+    nombreArchivo: "bultos_pendientes_operacion.csv",
+  });
+});
+
+function bpoUpdateImportState(){
+  const f = document.getElementById("bpo-file").files[0];
+  document.getElementById("bpo-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bpo-drop").classList.toggle("filled", !!f);
+  document.getElementById("bpo-import-btn").disabled = !f;
+}
+document.getElementById("bpo-file").addEventListener("change", bpoUpdateImportState);
+
+const BPO_PROCESO_CLASIFICACION = {
+  "perdido eru": "perdidos",
+  "por ubicar": "perdidos",
+  "sin ubicación": "sin_ubicacion",
+  "sin ubicacion": "sin_ubicacion",
+};
+
+document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  const file = document.getElementById("bpo-file").files[0];
+  if(!file) return;
+
+  const chequeo = await importVerificarDuplicado("bultos_pendientes_operacion", file);
+  if(!chequeo.ok) return;
+
+  btn.disabled = true;
+  btn.textContent = "Importando y clasificando…";
+  const statusEl = document.getElementById("bpo-import-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      proceso: ["Proceso"], responsable: ["Responsable"], supervisor: ["Supervisor"],
+      familia: ["Familia"], nroLpn: ["Nro LPN"], producto: ["Producto"],
+      codAlternat: ["Cod Alternat"], descripcion: ["Descripcion", "Descripción"],
+      cantidad: ["Cantidad actual"], nroLote: ["Nro de lote"], valTot: ["Val tot"], sem: ["Sem"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Proceso, Responsable, Supervisor, Familia, Nro LPN, Producto, Cod Alternat, Descripcion, Cantidad actual, Nro de lote, Val tot y Sem. Revisa que sea el reporte "Pendientes de Operación" tal cual, con la hoja "Bultos Pendientes".`);
+
+    let ignoradasSinLpn = 0;
+    const filas = [];
+    hoja.rows.forEach(row => {
+      const procesoRaw = String(row[hoja.cols.proceso] || "").trim();
+      const clasificacion = BPO_PROCESO_CLASIFICACION[procesoRaw.toLowerCase()];
+      if(!clasificacion) return; // no es Perdido ERU / Por Ubicar / Sin Ubicación — no es de este módulo
+      const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
+      if(!nroLpn){ ignoradasSinLpn++; return; }
+      const cantidad = parseFloat(row[hoja.cols.cantidad]);
+      const valTot = parseFloat(row[hoja.cols.valTot]);
+      filas.push({
+        proceso: procesoRaw, clasificacion,
+        responsable: String(row[hoja.cols.responsable] || "").trim(),
+        supervisor: String(row[hoja.cols.supervisor] || "").trim(),
+        semana: String(row[hoja.cols.sem] || "").trim(),
+        familia: String(row[hoja.cols.familia] || "").trim(),
+        nro_lpn: nroLpn,
+        producto: String(row[hoja.cols.producto] || "").trim(),
+        cod_alternat: String(row[hoja.cols.codAlternat] || "").trim(),
+        descripcion: String(row[hoja.cols.descripcion] || "").trim(),
+        cantidad_actual: isNaN(cantidad) ? null : cantidad,
+        nro_lote: String(row[hoja.cols.nroLote] || "").trim(),
+        val_tot: isNaN(valTot) ? 0 : valTot,
+        estado: "pendiente", recuperado_en: null,
+        archivo_origen: file.name, actualizado_en: new Date().toISOString(),
+      });
+    });
+    if(!filas.length) throw new Error(`El archivo no trajo ninguna fila con Proceso = Perdido ERU, Por Ubicar o Sin Ubicación en la hoja "${hoja.sheetName}".`);
+
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn" });
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += lote.length;
+      statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
+      statusEl.style.display = "block";
+    }
+    await importRegistrarLog("bultos_pendientes_operacion", file, chequeo.hash, guardadas);
+    await bpoLoadRegistros();
+
+    const perdidos = filas.filter(f => f.clasificacion === "perdidos").length;
+    const sinUbic = filas.filter(f => f.clasificacion === "sin_ubicacion").length;
+    let msg = `✅ Importado: ${filas.length} líneas de la hoja "${hoja.sheetName}" (${perdidos} Perdidos + ${sinUbic} Sin Ubicación). `;
+    msg += `Se guardaron/actualizaron por Nro LPN — reimportar el mismo reporte no duplica. `;
+    if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas.`;
+    statusEl.textContent = msg;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("bpo-file").files[0];
+  }
+});
+
+bpoLoadRegistros();
+
 /* ============ Clasificación y valorización dinámica del WMS (Plantilla_CD) ============
    Si el archivo que se sube en "Ajustes de inventario (bruto WMS)" trae las hojas Motivos
    y Proveedor/VALORIZADO (formato "Plantilla_CD"), se usan ESAS para clasificar motivo y
@@ -5197,6 +5487,10 @@ document.addEventListener("click", (e)=>{
     document.getElementById("audinv-tab-shortpick").style.display = btn.dataset.tab === "shortpick" ? "" : "none";
     document.getElementById("audinv-tab-bultos-perdidos").style.display = btn.dataset.tab === "bultos-perdidos" ? "" : "none";
     document.getElementById("audinv-tab-sin-ubicacion").style.display = btn.dataset.tab === "sin-ubicacion" ? "" : "none";
+  }
+  else if(barra.id === "bpo-tabs"){
+    bpoTabActivo = btn.dataset.tab === "sin-ubicacion" ? "sin_ubicacion" : "perdidos";
+    bpoRender();
   }
   else if(barra.id === "help-tabs"){
     document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
