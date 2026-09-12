@@ -1194,6 +1194,9 @@
   .sm-stepper button{width:34px;height:34px;border:none;background:var(--panel);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;}
   .sm-stepper button:hover{background:var(--panel-alt);}
   .sm-stepper span{min-width:26px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;}
+  .sm-stepper input{width:46px;height:34px;text-align:center;border:none;background:transparent;padding:0;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;color:var(--text);-moz-appearance:textfield;}
+  .sm-stepper input:focus{box-shadow:none;outline:none;background:var(--panel-alt);}
+  .sm-stepper input::-webkit-outer-spin-button,.sm-stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
   .sm-fab-bar{position:sticky;bottom:14px;z-index:30;display:flex;justify-content:center;margin:16px 0;pointer-events:none;}
   .sm-fab{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--red);color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:13.5px;border:none;border-radius:30px;padding:13px 22px;box-shadow:0 10px 26px rgba(227,30,36,.38);cursor:pointer;}
@@ -8501,15 +8504,34 @@ function smTarjeta(a){
         <span class="sm-item-codigo">${escSm(a.codigo)}</span>
       </div>
       <div class="sm-item-action">
-        ${enCarrito
-          ? `<div class="sm-stepper">
-               <button type="button" onclick="smCambiarCant('${escSm(a.codigo)}', -1)" aria-label="Restar">−</button>
-               <span>${enCarrito.cantidad}</span>
-               <button type="button" onclick="smCambiarCant('${escSm(a.codigo)}', 1)" aria-label="Sumar">+</button>
-             </div>`
+        ${enCarrito ? smStepperHTML(a.codigo, enCarrito.cantidad)
           : `<button type="button" class="sm-add-btn" onclick="smAgregarCarrito('${escSm(a.codigo)}')" aria-label="Agregar">+</button>`}
       </div>
     </div>`;
+}
+
+// Stepper +/- para ajustes rápidos, más un input al centro que se puede tocar y
+// escribir directo — para cantidades grandes nadie quiere darle a "+" cien veces.
+function smStepperHTML(codigo, cantidad){
+  const cod = escSm(codigo);
+  return `
+    <div class="sm-stepper">
+      <button type="button" onclick="smCambiarCant('${cod}', -1)" aria-label="Restar">−</button>
+      <input type="number" inputmode="numeric" class="sm-stepper-input" value="${cantidad}" min="1"
+             onclick="event.stopPropagation()"
+             onchange="smSetCantidad('${cod}', this.value)">
+      <button type="button" onclick="smCambiarCant('${cod}', 1)" aria-label="Sumar">+</button>
+    </div>`;
+}
+
+function smSetCantidad(codigo, valor){
+  const n = parseInt(valor, 10);
+  const item = smState.carrito.find(l => l.codigo === codigo);
+  if(!item) return;
+  if(isNaN(n) || n <= 0) smState.carrito = smState.carrito.filter(l => l.codigo !== codigo);
+  else item.cantidad = n;
+  smRenderGrid();
+  smRenderCarrito();
 }
 
 function smAgregarCarrito(codigo){
@@ -8562,11 +8584,7 @@ function smRenderCarrito(){
       ${c.map(l => `
         <div class="sm-cart-item">
           <div class="sm-cart-item-info"><b>${escSm(l.nombre)}</b><small>${escSm(l.codigo)}</small></div>
-          <div class="sm-stepper">
-            <button type="button" onclick="smCambiarCant('${escSm(l.codigo)}', -1)" aria-label="Restar">−</button>
-            <span>${l.cantidad}</span>
-            <button type="button" onclick="smCambiarCant('${escSm(l.codigo)}', 1)" aria-label="Sumar">+</button>
-          </div>
+          ${smStepperHTML(l.codigo, l.cantidad)}
         </div>`).join("")}
     </div>
     <div class="sm-cart-form">
@@ -8667,6 +8685,36 @@ document.getElementById("sm-buscar")?.addEventListener("input", (e)=>{
 document.getElementById("sm-fab-btn")?.addEventListener("click", ()=>{
   document.getElementById("sm-cart-box")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
+
+// ============================================================================
+// BLOQUEO ANTI-DOBLE-ENVÍO — para toda la app
+// ----------------------------------------------------------------------------
+// El personal en el almacén toca dos y tres veces seguidas el botón de Guardar
+// (a veces por la red lenta, a veces por apuro) y eso duplicaba los registros.
+// Cada formulario ya pone su propio botón en disabled, pero eso ocurre DENTRO
+// de su handler — en mobile un segundo toque muy rápido puede llegar antes de
+// que el navegador termine de pintar ese disabled. Esto se engancha en fase de
+// captura (antes que cualquier onclick u onsubmit) y frena el segundo toque
+// sobre EL MISMO botón si llega a menos de 900ms del primero, sin tener que
+// tocar cada formulario uno por uno.
+(function(){
+  const ultimoClick = new WeakMap();
+  document.addEventListener("click", function(e){
+    const btn = e.target.closest("button");
+    if(!btn || btn.disabled) return;
+    // Solo interesa frenar botones de acción (guardar/enviar/confirmar), no
+    // cualquier botón de la UI (tabs, abrir/cerrar menú o modal, etc.)
+    if(btn.type !== "submit" && !btn.classList.contains("btn-primary")) return;
+    const ahora = Date.now();
+    const antes = ultimoClick.get(btn) || 0;
+    if(ahora - antes < 900){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    ultimoClick.set(btn, ahora);
+  }, true);
+})();
 
 checkSession();
 </script>
