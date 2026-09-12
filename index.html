@@ -1152,9 +1152,7 @@
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-inventario-body">
-        <button class="navitem" data-view="inventario-shortpick"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría Shortpick</span><span class="tag">Activo</span></button>
-        <button class="navitem" data-view="inventario-bultos-perdidos"><span class="dot" style="background:#DB2777;"></span><span class="label">Auditoría Bultos Perdidos</span><span class="tag">Activo</span></button>
-        <button class="navitem" data-view="inventario-sin-ubicacion"><span class="dot" style="background:#0891B2;"></span><span class="label">Auditoría Sin Ubicación</span><span class="tag pending">Próximo</span></button>
+        <button class="navitem" data-view="auditoria-inventario"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría de Inventario</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="inventario-bolsa"><span class="dot" style="background:#CA8A04;"></span><span class="label">Control de Bolsa</span><span class="tag">Activo</span></button>
       </div>
 
@@ -1642,8 +1640,21 @@
       <div id="charla-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </section>
 
-    <!-- INVENTARIO · AUDITORÍA SHORTPICK (conectado a Supabase: ssoma_sp_registros / ssoma_sp_verificaciones) -->
-    <section class="panel" id="panel-inventario-shortpick">
+    <!-- INVENTARIO · AUDITORÍA DE INVENTARIO (Shortpick + Bultos Perdidos + Sin Ubicación fusionados
+         en un solo apartado con pestañas, a pedido de Eduardo — cada uno conserva sus propios IDs
+         y JS internos sin cambios, solo cambia el envoltorio HTML). -->
+    <section class="panel" id="panel-auditoria-inventario">
+      <div class="section-head">
+        <h2 class="section-title">Auditoría de Inventario</h2>
+      </div>
+
+      <div class="tab-bar" id="audinv-tabs">
+        <button type="button" class="tab-btn active" data-tab="shortpick">Shortpick</button>
+        <button type="button" class="tab-btn" data-tab="bultos-perdidos">Bultos Perdidos</button>
+        <button type="button" class="tab-btn" data-tab="sin-ubicacion">Sin Ubicación</button>
+      </div>
+
+      <div id="audinv-tab-shortpick">
       <div class="section-head">
         <h2 class="section-title">Inventario — Auditoría Shortpick</h2>
         <span class="count-pill" id="sp-count">0 registros</span>
@@ -1851,10 +1862,9 @@
 
       <div class="conc-card-list" id="hist-list" style="margin-top:18px;"></div>
       </div>
-    </section>
+      </div>
 
-    <!-- INVENTARIO · AUDITORÍA BULTOS PERDIDOS (conectado a Supabase: ssoma_bp_registros / ssoma_bp_verificaciones) -->
-    <section class="panel" id="panel-inventario-bultos-perdidos">
+      <div id="audinv-tab-bultos-perdidos" style="display:none;">
       <div class="section-head">
         <h2 class="section-title">Inventario — Auditoría Bultos Perdidos</h2>
         <span class="count-pill" id="bp-count">0 casos</span>
@@ -2010,6 +2020,17 @@
 
         <div class="conc-card-list" id="bp-hist-list" style="margin-top:18px;"><div class="empty">No hay verificaciones que coincidan con el filtro.</div></div>
       </div>
+      </div>
+
+      <div id="audinv-tab-sin-ubicacion" style="display:none;">
+        <div class="section-head">
+          <h2 class="section-title">Inventario — Auditoría Sin Ubicación</h2>
+        </div>
+        <div class="help-tip">
+          <span class="ic">🛠</span>
+          <div>Este apartado está en rediseño — próximamente el nuevo flujo.</div>
+        </div>
+      </div>
     </section>
 
     <!-- Cruce con historial de productos encontrados (Short Pick) — apartado privado,
@@ -2051,18 +2072,6 @@
             <tbody></tbody>
           </table>
         </div>
-      </div>
-    </section>
-
-    <!-- INVENTARIO · AUDITORÍA SIN UBICACIÓN: en blanco a propósito, Eduardo está rediseñando
-         el flujo desde cero (10/09) — no reescribir hasta que traiga el formato nuevo. -->
-    <section class="panel" id="panel-inventario-sin-ubicacion">
-      <div class="section-head">
-        <h2 class="section-title">Inventario — Auditoría Sin Ubicación</h2>
-      </div>
-      <div class="help-tip">
-        <span class="ic">🛠</span>
-        <div>Este apartado está en rediseño — próximamente el nuevo flujo.</div>
       </div>
     </section>
 
@@ -5784,7 +5793,7 @@ function aplicarVisibilidadNav(){
     vistaInicial = "tareas-supervisor";
   } else if(seccion === "inventario"){
     mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
-    vistaInicial = "inventario-shortpick";
+    vistaInicial = "auditoria-inventario";
   }
 
   document.querySelectorAll(".navgroup-header").forEach(h=> h.setAttribute("aria-expanded", "false"));
@@ -6006,6 +6015,11 @@ document.addEventListener("click", (e)=>{
     document.getElementById("bp-tab-conciliacion").style.display = btn.dataset.tab === "conciliacion" ? "" : "none";
     document.getElementById("bp-tab-historial").style.display = btn.dataset.tab === "historial" ? "" : "none";
     if(btn.dataset.tab === "historial") bpRenderHistorial();
+  }
+  else if(barra.id === "audinv-tabs"){
+    document.getElementById("audinv-tab-shortpick").style.display = btn.dataset.tab === "shortpick" ? "" : "none";
+    document.getElementById("audinv-tab-bultos-perdidos").style.display = btn.dataset.tab === "bultos-perdidos" ? "" : "none";
+    document.getElementById("audinv-tab-sin-ubicacion").style.display = btn.dataset.tab === "sin-ubicacion" ? "" : "none";
   }
   else if(barra.id === "help-tabs"){
     document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
