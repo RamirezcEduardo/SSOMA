@@ -1083,6 +1083,80 @@
       padding:10px 4px 0;
     }
   }
+
+  /* SOLICITAR SUMINISTROS — pensado mobile-first: los supervisores lo usan desde
+     el celular en el propio almacén, así que la lista de artículos es una sola
+     columna táctil (no una grilla apretada) y el resumen del pedido queda
+     siempre a mano con una barra flotante. */
+  .sm-catalogo-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .sm-search-row{display:flex;align-items:center;gap:8px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:12px;}
+  .sm-search-row .sm-search-icon{font-size:14px;flex-shrink:0;opacity:.7;}
+  .sm-search-row input{border:none;background:transparent;padding:0;font-size:14px;}
+  .sm-search-row input:focus{box-shadow:none;}
+
+  .sm-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .sm-chips::-webkit-scrollbar{display:none;}
+  .sm-chip{flex-shrink:0;display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;color:var(--text-soft);background:var(--panel-alt);border:1px solid var(--border);border-radius:20px;padding:7px 13px;cursor:pointer;white-space:nowrap;}
+  .sm-chip.active{background:var(--red);border-color:var(--red);color:#fff;}
+  .sm-chip-count{opacity:.7;font-weight:500;}
+  .sm-chip.active .sm-chip-count{opacity:.85;}
+
+  .sm-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+  @media (min-width:680px){
+    .sm-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:560px;overflow-y:auto;padding-right:6px;}
+  }
+
+  .sm-item{display:flex;align-items:center;gap:12px;background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:10px 12px;transition:border-color .15s,background .15s;}
+  .sm-item.en-carrito{border-color:var(--green);background:var(--green-tint);}
+  .sm-item-icon{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--panel);border-radius:10px;}
+  .sm-item-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .sm-item-nombre{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;}
+  .sm-item-codigo{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);}
+  .sm-item-action{flex-shrink:0;}
+  .sm-add-btn{width:38px;height:38px;border-radius:10px;border:none;background:var(--red);color:#fff;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .sm-add-btn:active{transform:scale(.93);}
+
+  .sm-stepper{display:flex;align-items:center;background:var(--panel);border:1px solid var(--border-strong);border-radius:10px;overflow:hidden;}
+  .sm-stepper button{width:34px;height:34px;border:none;background:var(--panel);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;}
+  .sm-stepper button:hover{background:var(--panel-alt);}
+  .sm-stepper span{min-width:26px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;}
+
+  .sm-fab-bar{position:sticky;bottom:14px;z-index:30;display:flex;justify-content:center;margin:16px 0;pointer-events:none;}
+  .sm-fab{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--red);color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:13.5px;border:none;border-radius:30px;padding:13px 22px;box-shadow:0 10px 26px rgba(227,30,36,.38);cursor:pointer;}
+  .sm-fab-arrow{opacity:.8;}
+
+  .sm-cart-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:20px;box-shadow:var(--shadow);scroll-margin-top:16px;}
+  .sm-cart-empty{color:var(--muted);font-size:13px;text-align:center;padding:22px 0;line-height:1.6;}
+  .sm-cart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:700;font-size:15px;}
+  .sm-cart-vaciar{background:none;border:none;color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;}
+  .sm-cart-lista{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+  .sm-cart-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .sm-cart-item:last-child{border-bottom:none;padding-bottom:0;}
+  .sm-cart-item-info b{display:block;font-size:13px;}
+  .sm-cart-item-info small{color:var(--muted);font-size:11px;}
+  .sm-cart-form{border-top:1px dashed var(--border);padding-top:14px;}
+  .sm-enviar-btn{width:100%;font-size:14px;padding:14px;}
+
+  .sm-empty{color:var(--muted);font-size:13px;padding:16px 0;text-align:center;}
+
+  .sm-pedidos{display:flex;flex-direction:column;gap:8px;}
+  @media (min-width:680px){ .sm-pedidos{display:grid;grid-template-columns:1fr 1fr;gap:8px;} }
+  .sm-pedido-card{display:block;width:100%;text-align:left;font-family:inherit;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:10px;padding:12px 14px;cursor:pointer;}
+  .sm-pedido-card.pendiente{border-left-color:var(--orange);}
+  .sm-pedido-card.atendida{border-left-color:var(--green);}
+  .sm-pedido-card.rechazada{border-left-color:var(--red);}
+  .sm-pedido-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;}
+  .sm-pedido-meta{font-size:12px;color:var(--muted);}
+  .sm-pedido-motivo{font-size:12.5px;color:var(--text-soft);margin-top:3px;}
+
+  .estado-badge.atendida{background:var(--green-tint);color:var(--green);}
+  .estado-badge.atendida::before{background:var(--green);}
+  .estado-badge.rechazada{background:var(--red-tint);color:var(--red-dark);}
+  .estado-badge.rechazada::before{background:var(--red);}
+
+  @media (max-width:480px){
+    .sm-fab{padding:12px 18px;font-size:13px;}
+  }
 </style>
 </head>
 <body>
@@ -1157,6 +1231,16 @@
         <button class="navitem" data-view="auditoria-inventario"><span class="dot" style="background:#7C3AED;"></span><span class="label">Auditoría de Inventario</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="inventario-bolsa"><span class="dot" style="background:#CA8A04;"></span><span class="label">Control de Bolsa</span><span class="tag">Activo</span></button>
         <button class="navitem" data-view="bultos-pendientes-operacion"><span class="dot" style="background:#EA580C;"></span><span class="label">Bultos Pendientes de Operación</span><span class="tag">Activo</span></button>
+      </div>
+
+      <button type="button" class="navgroup-header" id="navgroup-suministros-toggle" aria-expanded="false" style="margin-top:10px;">
+        <span class="navgroup-icon">🧾</span>
+        <span class="navgroup-title">Suministros</span>
+        <span class="navgroup-count" id="navgroup-suministros-count">1</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-suministros-body">
+        <button class="navitem" data-view="inventario-suministros"><span class="dot" style="background:#059669;"></span><span class="label">Solicitar Suministros</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -2071,6 +2155,55 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <div style="margin-top:8px;">Usa <b>Disputar</b> / <b>Descartar</b> / <b>Aceptar</b> por fila para ver cómo cambia la cascada — es lo que reduce el "Neto final a pagar".</div>
         </div>
       </div>
+    </section>
+
+    <!-- SUMINISTROS · SOLICITAR (mismas tablas de Supabase que atiende PLATAFORMA ADECCO B2C) -->
+    <section class="panel" id="panel-inventario-suministros">
+      <div class="section-head">
+        <h2 class="section-title">🧾 Solicitar Suministros</h2>
+        <span class="count-pill" id="sm-count">0 pedidos</span>
+      </div>
+      <p class="section-desc">Pide cajas, cinta, etiquetas y demás suministros de almacén. Arma tu pedido y envíalo — queda un ticket que Compras/Logística atiende contra el stock.</p>
+
+      <div class="stats-row stats-row-3">
+        <div class="stat-card">
+          <div class="stat-label">Mis pedidos</div>
+          <div class="stat-value" id="sm-stat-total" style="color:#059669;">0</div>
+          <div class="stat-sub">registrados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pendientes</div>
+          <div class="stat-value" id="sm-stat-pendientes" style="color:#B45309;">0</div>
+          <div class="stat-sub">por atender</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Atendidos</div>
+          <div class="stat-value" id="sm-stat-atendidos" style="color:#16A34A;">0</div>
+          <div class="stat-sub">ya despachados</div>
+        </div>
+      </div>
+
+      <div class="sm-catalogo-card">
+        <div class="sm-search-row">
+          <span class="sm-search-icon">🔍</span>
+          <input type="text" id="sm-buscar" placeholder="Busca por nombre o código…" autocomplete="off">
+        </div>
+        <div class="sm-chips" id="sm-chips"></div>
+        <div class="sm-list" id="sm-grid"></div>
+      </div>
+
+      <div class="sm-cart-box" id="sm-cart-box"></div>
+
+      <div class="sm-fab-bar" id="sm-fab-bar" style="display:none;">
+        <button type="button" class="sm-fab" id="sm-fab-btn">
+          <span id="sm-fab-count">0</span> artículo(s) · Ver pedido <span class="sm-fab-arrow">↓</span>
+        </button>
+      </div>
+
+      <div class="section-head" style="margin-top:8px;">
+        <h2 class="section-title" style="font-size:16px;">📋 Mis pedidos</h2>
+      </div>
+      <div class="sm-pedidos" id="sm-pedidos-lista"></div>
     </section>
 
     <!-- INVENTARIO · BULTOS PENDIENTES DE OPERACIÓN -->
@@ -3338,6 +3471,8 @@ function irAVista(view){
   // recargar todo. Se refresca cada vez que se entra a estas vistas.
   if(view === "tareas-jefatura" || view === "tareas-coordinador" || view === "tareas-supervisor"){
     trLoadTareas();
+  } else if(view === "inventario-suministros"){
+    cargarSuministrosSSOMA();
   }
 }
 document.querySelectorAll(".navitem").forEach(btn=>{
@@ -5228,6 +5363,8 @@ function aplicarVisibilidadNav(){
   const cuerpoSsoma = document.getElementById("navgroup-ssoma-body");
   const grupoInventario = document.getElementById("navgroup-inventario-toggle");
   const cuerpoInventario = document.getElementById("navgroup-inventario-body");
+  const grupoSuministros = document.getElementById("navgroup-suministros-toggle");
+  const cuerpoSuministros = document.getElementById("navgroup-suministros-body");
   const grupoTareas = document.getElementById("navgroup-tareas-toggle");
   const cuerpoTareas = document.getElementById("navgroup-tareas-body");
   const itemJefatura = document.querySelector('.navitem[data-view="tareas-jefatura"]');
@@ -5235,13 +5372,13 @@ function aplicarVisibilidadNav(){
   const itemTareas = document.querySelector('.navitem[data-view="tareas-supervisor"]');
 
   if(seccion === "admin"){
-    [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoTareas, cuerpoTareas,
-     itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, true));
+    [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
+     grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, true));
     return;
   }
 
-  [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoTareas, cuerpoTareas,
-   itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, false));
+  [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
+   grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, false));
 
   let vistaInicial = null;
   if(seccion === "ssoma"){
@@ -5255,9 +5392,11 @@ function aplicarVisibilidadNav(){
     mostrar(grupoSsoma, true); mostrar(cuerpoSsoma, true);
     vistaInicial = "tareas-coordinador";
   } else if(seccion === "supervisor"){
-    // El supervisor también hace reportes de campo, no solo Designación de Tareas.
+    // El supervisor también hace reportes de campo y pide sus suministros, no solo
+    // Designación de Tareas.
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemTareas, true);
     mostrar(grupoSsoma, true); mostrar(cuerpoSsoma, true);
+    mostrar(grupoSuministros, true); mostrar(cuerpoSuministros, true);
     vistaInicial = "tareas-supervisor";
   } else if(seccion === "backoffice"){
     // Backoffice no recibe tareas del resto de módulos, pero sí necesita ver y finalizar
@@ -5266,6 +5405,7 @@ function aplicarVisibilidadNav(){
     vistaInicial = "tareas-supervisor";
   } else if(seccion === "inventario"){
     mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
+    mostrar(grupoSuministros, true); mostrar(cuerpoSuministros, true);
     vistaInicial = "auditoria-inventario";
   }
 
@@ -7860,6 +8000,303 @@ document.getElementById("btn-actualizar").addEventListener("click", (e)=>{
   btn.disabled = true;
   btn.textContent = "Actualizando…";
   location.reload();
+});
+
+// ============================================================================
+// SOLICITAR SUMINISTROS — mismas tablas de Supabase que usa PLATAFORMA ADECCO B2C
+// (b2c_suministros_catalogo/solicitudes/detalle): lo que se pide acá lo atiende
+// Compras/Logística desde esa otra app, contra el mismo stock. Acá el supervisor
+// nunca ve el stock, solo arma y envía su pedido.
+// ============================================================================
+let smState = { catalogo: [], misPedidos: [], carrito: [], filtro: '', categoria: 'all', cargado: false };
+
+// Categorías inferidas por palabra clave en el nombre — el catálogo no trae una
+// columna de categoría propia, así que se deduce para poder mostrar chips e
+// iconos sin tener que mantener una tabla aparte.
+const SM_CATEGORIAS = [
+  { id:'cajas',       icono:'📦', nombre:'Cajas',               match:n=>n.includes('CAJA') },
+  { id:'bolsas',      icono:'🛍️', nombre:'Bolsas',              match:n=>n.includes('BOLSA') },
+  { id:'etiquetas',   icono:'🏷️', nombre:'Etiquetas',           match:n=>n.includes('ETIQ') },
+  { id:'cinta',       icono:'🎞️', nombre:'Cinta y embalaje',    match:n=>n.includes('CINTA')||n.includes('DISPENSADOR')||n.includes('PRECINTO') },
+  { id:'stretch',     icono:'🌀', nombre:'Stretch film',        match:n=>n.includes('STRETCH') },
+  { id:'separadores', icono:'🗂️', nombre:'Separadores y tapas', match:n=>n.includes('SEPARADOR')||n.includes('TAPA') },
+  { id:'guias',       icono:'📄', nombre:'Guías y formatos',    match:n=>n.includes('GUIA')||n.includes('FORMATO') },
+  { id:'otros',       icono:'🧰', nombre:'Otros',               match:()=>true }
+];
+function smCategoriaDe(nombre){
+  const n = smNorm(nombre);
+  return SM_CATEGORIAS.find(c => c.match(n)) || SM_CATEGORIAS[SM_CATEGORIAS.length-1];
+}
+
+function smNorm(s){ return String(s||"").trim().toUpperCase().normalize("NFD").replace(/\p{Diacritic}/gu,""); }
+function escSm(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function smFecha(f){
+  if(!f) return "—";
+  const [y,m,d] = String(f).slice(0,10).split("-");
+  return `${d}/${m}/${y}`;
+}
+
+async function cargarSuministrosSSOMA(){
+  if(smState.cargado){ smRender(); return; }
+  const grid = document.getElementById("sm-grid");
+  if(grid) grid.innerHTML = '<div class="sm-empty">Cargando catálogo…</div>';
+
+  try{
+    const [{ data: catalogo, error: e1 }, { data: pedidos, error: e2 }] = await Promise.all([
+      sb.from("b2c_suministros_catalogo").select("*").eq("activo", true).order("nombre"),
+      sb.from("b2c_suministros_solicitudes").select("*").eq("creado_por", currentSession.usuario.nombre).order("id", { ascending: false })
+    ]);
+    if(e1) throw e1;
+    if(e2) throw e2;
+    smState.catalogo = catalogo || [];
+    smState.misPedidos = pedidos || [];
+    smState.cargado = true;
+    smRender();
+  }catch(err){
+    console.error("Error cargando suministros:", err);
+    if(grid) grid.innerHTML = `<div class="sm-empty" style="color:var(--red);">No se pudo cargar el catálogo: ${escSm(err.message)}<br><small>Si las tablas aún no existen, ejecuta setup_suministros.sql en Supabase.</small></div>`;
+  }
+}
+
+function smArticuloPorCodigo(codigo){ return smState.catalogo.find(a => a.codigo === codigo) || null; }
+
+function smCoincidencias(){
+  const q = smNorm(smState.filtro).trim();
+  const partes = q ? q.split(/\s+/) : [];
+  let base = smState.catalogo;
+  if(smState.categoria && smState.categoria !== 'all'){
+    base = base.filter(a => smCategoriaDe(a.nombre).id === smState.categoria);
+  }
+  if(partes.length === 0) return base;
+  return base.filter(a => partes.every(p => smNorm(`${a.codigo} ${a.nombre}`).includes(p)));
+}
+
+function smRender(){
+  const total = smState.misPedidos.length;
+  const pendientes = smState.misPedidos.filter(s => s.estado === "PENDIENTE").length;
+  const atendidos = smState.misPedidos.filter(s => s.estado === "ATENDIDA").length;
+
+  const setTxt = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  setTxt("sm-count", `${total} pedido(s)`);
+  setTxt("sm-stat-total", total);
+  setTxt("sm-stat-pendientes", pendientes);
+  setTxt("sm-stat-atendidos", atendidos);
+
+  smRenderChips();
+  smRenderGrid();
+  smRenderCarrito();
+  smRenderTabla();
+}
+
+function smRenderChips(){
+  const box = document.getElementById("sm-chips");
+  if(!box) return;
+  const counts = {};
+  smState.catalogo.forEach(a => { const c = smCategoriaDe(a.nombre); counts[c.id] = (counts[c.id]||0)+1; });
+  const presentes = SM_CATEGORIAS.filter(c => counts[c.id]);
+
+  box.innerHTML = [
+    `<button type="button" class="sm-chip${smState.categoria==='all'?' active':''}" onclick="smFiltrarCategoria('all')">🔎 Todos</button>`,
+    ...presentes.map(c => `
+      <button type="button" class="sm-chip${smState.categoria===c.id?' active':''}" onclick="smFiltrarCategoria('${c.id}')">
+        ${c.icono} ${c.nombre} <span class="sm-chip-count">${counts[c.id]}</span>
+      </button>`)
+  ].join("");
+}
+
+function smFiltrarCategoria(id){
+  smState.categoria = id;
+  smRenderChips();
+  smRenderGrid();
+}
+
+function smRenderGrid(){
+  const grid = document.getElementById("sm-grid");
+  if(!grid) return;
+  const hits = smCoincidencias();
+  grid.innerHTML = hits.length === 0
+    ? '<div class="sm-empty">Sin resultados para esa búsqueda.</div>'
+    : hits.map(a => smTarjeta(a)).join("");
+}
+
+function smTarjeta(a){
+  const enCarrito = smState.carrito.find(l => l.codigo === a.codigo);
+  const cat = smCategoriaDe(a.nombre);
+  return `
+    <div class="sm-item${enCarrito ? ' en-carrito' : ''}">
+      <span class="sm-item-icon">${cat.icono}</span>
+      <div class="sm-item-info">
+        <span class="sm-item-nombre">${escSm(a.nombre)}</span>
+        <span class="sm-item-codigo">${escSm(a.codigo)}</span>
+      </div>
+      <div class="sm-item-action">
+        ${enCarrito
+          ? `<div class="sm-stepper">
+               <button type="button" onclick="smCambiarCant('${escSm(a.codigo)}', -1)" aria-label="Restar">−</button>
+               <span>${enCarrito.cantidad}</span>
+               <button type="button" onclick="smCambiarCant('${escSm(a.codigo)}', 1)" aria-label="Sumar">+</button>
+             </div>`
+          : `<button type="button" class="sm-add-btn" onclick="smAgregarCarrito('${escSm(a.codigo)}')" aria-label="Agregar">+</button>`}
+      </div>
+    </div>`;
+}
+
+function smAgregarCarrito(codigo){
+  const a = smArticuloPorCodigo(codigo);
+  if(!a) return;
+  const item = smState.carrito.find(l => l.codigo === codigo);
+  if(item) item.cantidad += 1;
+  else smState.carrito.push({ codigo: a.codigo, articulo_id: a.id, nombre: a.nombre, cantidad: 1 });
+  smRenderGrid();
+  smRenderCarrito();
+}
+
+function smCambiarCant(codigo, delta){
+  const item = smState.carrito.find(l => l.codigo === codigo);
+  if(!item) return;
+  item.cantidad += delta;
+  if(item.cantidad <= 0) smState.carrito = smState.carrito.filter(l => l.codigo !== codigo);
+  smRenderGrid();
+  smRenderCarrito();
+}
+
+function smVaciarCarrito(){
+  smState.carrito = [];
+  smRenderGrid();
+  smRenderCarrito();
+}
+
+function smRenderCarrito(){
+  const box = document.getElementById("sm-cart-box");
+  const fabBar = document.getElementById("sm-fab-bar");
+  const fabCount = document.getElementById("sm-fab-count");
+  if(!box) return;
+  const c = smState.carrito;
+  const unidades = c.reduce((a,l)=>a+l.cantidad, 0);
+
+  if(fabBar) fabBar.style.display = c.length > 0 ? "" : "none";
+  if(fabCount) fabCount.textContent = unidades;
+
+  if(c.length === 0){
+    box.innerHTML = `<div class="sm-cart-head"><span>🧾 Mi pedido</span></div><div class="sm-cart-empty">Todavía no agregaste nada.<br>Busca un artículo arriba y pulsa <b>+</b>.</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="sm-cart-head">
+      <span>🧾 Mi pedido</span>
+      <button type="button" class="sm-cart-vaciar" onclick="smVaciarCarrito()">Vaciar</button>
+    </div>
+    <div class="sm-cart-lista">
+      ${c.map(l => `
+        <div class="sm-cart-item">
+          <div class="sm-cart-item-info"><b>${escSm(l.nombre)}</b><small>${escSm(l.codigo)}</small></div>
+          <div class="sm-stepper">
+            <button type="button" onclick="smCambiarCant('${escSm(l.codigo)}', -1)" aria-label="Restar">−</button>
+            <span>${l.cantidad}</span>
+            <button type="button" onclick="smCambiarCant('${escSm(l.codigo)}', 1)" aria-label="Sumar">+</button>
+          </div>
+        </div>`).join("")}
+    </div>
+    <div class="sm-cart-form">
+      <div class="field"><label>Área</label><input type="text" id="sm-f-area" placeholder="Ej. Despacho, Recepción…"></div>
+      <div class="field"><label>Motivo</label><input type="text" id="sm-f-motivo" placeholder="Para qué se necesita"></div>
+      <div class="field" style="margin-bottom:14px;"><label>Observación</label><textarea id="sm-f-obs" placeholder="Opcional"></textarea></div>
+      <button type="button" class="btn btn-primary sm-enviar-btn" id="sm-btn-enviar" onclick="smEnviarPedido()">📄 Enviar pedido — ${unidades} unidad(es)</button>
+    </div>
+  `;
+}
+
+async function smEnviarPedido(){
+  if(smState.carrito.length === 0) return;
+  const btn = document.getElementById("sm-btn-enviar");
+  const area = document.getElementById("sm-f-area")?.value.trim() || null;
+  const motivo = document.getElementById("sm-f-motivo")?.value.trim() || null;
+  const obs = document.getElementById("sm-f-obs")?.value.trim() || null;
+
+  btn.disabled = true; btn.textContent = "Enviando…";
+  try{
+    const { data: cabecera, error: e1 } = await sb.from("b2c_suministros_solicitudes").insert({
+      solicitante: currentSession.usuario.nombre,
+      area, motivo, observacion: obs,
+      creado_por: currentSession.usuario.nombre
+    }).select().single();
+    if(e1) throw e1;
+
+    const lineas = smState.carrito.map(l => ({
+      solicitud_id: cabecera.id, articulo_id: l.articulo_id,
+      codigo: l.codigo, nombre: l.nombre, cantidad: l.cantidad
+    }));
+    const { error: e2 } = await sb.from("b2c_suministros_detalle").insert(lineas);
+    if(e2) throw e2;
+
+    smState.misPedidos.unshift(cabecera);
+    smState.carrito = [];
+    smRender();
+    alert(`Pedido ${cabecera.codigo} enviado. Queda pendiente hasta que lo atiendan.`);
+  }catch(err){
+    alert("No se pudo enviar el pedido: " + err.message);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function smRenderTabla(){
+  const cont = document.getElementById("sm-pedidos-lista");
+  if(!cont) return;
+  const lista = smState.misPedidos;
+  cont.innerHTML = lista.length === 0
+    ? '<div class="sm-empty">Todavía no enviaste ningún pedido.</div>'
+    : lista.map(s => {
+        const cls = s.estado === "ATENDIDA" ? "atendida" : s.estado === "RECHAZADA" ? "rechazada" : "pendiente";
+        return `
+        <button type="button" class="sm-pedido-card ${cls}" onclick="smVerPedido(${s.id})">
+          <div class="sm-pedido-top">
+            <strong>${escSm(s.codigo)}</strong>
+            <span class="estado-badge ${cls}">${escSm(s.estado)}</span>
+          </div>
+          <div class="sm-pedido-meta">${smFecha(s.fecha)}${s.area ? ' · ' + escSm(s.area) : ''}</div>
+          ${s.motivo ? `<div class="sm-pedido-motivo">${escSm(s.motivo)}</div>` : ''}
+        </button>`;
+      }).join("");
+}
+
+async function smVerPedido(id){
+  const s = smState.misPedidos.find(x => x.id === id);
+  if(!s) return;
+  document.getElementById("modal-title").textContent = s.codigo;
+  document.getElementById("modal-body").innerHTML = '<div class="sm-empty">Cargando…</div>';
+  document.getElementById("report-modal").classList.add("show");
+
+  const { data: lineas, error } = await sb.from("b2c_suministros_detalle").select("*").eq("solicitud_id", id).order("id");
+  if(error){ document.getElementById("modal-body").innerHTML = `<div class="sm-empty" style="color:var(--red);">${escSm(error.message)}</div>`; return; }
+
+  const cls = s.estado === "ATENDIDA" ? "atendida" : s.estado === "RECHAZADA" ? "rechazada" : "pendiente";
+  document.getElementById("modal-body").innerHTML = `
+    <div class="field"><label>Fecha</label><div>${smFecha(s.fecha)}</div></div>
+    <div class="field"><label>Área</label><div>${escSm(s.area || "—")}</div></div>
+    <div class="field"><label>Motivo</label><div>${escSm(s.motivo || "—")}</div></div>
+    <div class="field"><label>Estado</label><div><span class="estado-badge ${cls}">${escSm(s.estado)}</span></div></div>
+    ${s.obs_atencion ? `<div class="field"><label>Nota de quien atendió</label><div>${escSm(s.obs_atencion)}</div></div>` : ""}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Código</th><th>Artículo</th><th>Cant.</th></tr></thead>
+        <tbody>
+          ${(lineas||[]).map(l => `<tr><td>${escSm(l.codigo)}</td><td>${escSm(l.nombre)}</td><td>${l.cantidad}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+document.getElementById("sm-buscar")?.addEventListener("input", (e)=>{
+  smState.filtro = e.target.value;
+  smRenderGrid();
+});
+document.getElementById("sm-fab-btn")?.addEventListener("click", ()=>{
+  document.getElementById("sm-cart-box")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 checkSession();
