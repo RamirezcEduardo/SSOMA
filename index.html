@@ -2929,6 +2929,10 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <label>¿En qué área lo encontraste? <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
         <input type="text" id="bpo-rec-area" placeholder="Ej. Rack C-14, Zona Drop, Picking…">
       </div>
+      <div class="field" style="margin:0 0 14px;">
+        <label>Comentario <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
+        <textarea id="bpo-rec-comentario" style="min-height:60px;" placeholder="Ej. Estaba mal etiquetado, se encontró junto a otro pedido…"></textarea>
+      </div>
       <div class="field" style="margin:0 0 4px;">
         <label>Evidencia <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
         <div id="bpo-rec-foto-wrap" style="display:flex;gap:10px;"></div>
@@ -5438,6 +5442,7 @@ function bpoChkAbrirModal(id){
   document.getElementById("bpo-rec-sub").textContent = `${r.descripcion || r.producto} · ${bpoFmtUds(pend)} uds pendientes`;
   document.getElementById("bpo-rec-full").textContent = `✅ Encontré las ${bpoFmtUds(pend)} unidades — ${bpoMoneda(pend * bpoValorUnitario(r))}`;
   document.getElementById("bpo-rec-area").value = "";
+  document.getElementById("bpo-rec-comentario").value = "";
   document.getElementById("bpo-rec-error").textContent = "";
   bpoRecRenderFotoWidget();
   bpoRecActualizarStepper();
@@ -5467,12 +5472,14 @@ async function bpoRecConfirmar(unidades, btn){
   if(!unidades || unidades <= 0){ errEl.textContent = "Ingresa al menos 1 unidad."; return; }
   const valor = unidades * bpoValorUnitario(r);
   const area = document.getElementById("bpo-rec-area").value.trim();
+  const comentario = document.getElementById("bpo-rec-comentario").value.trim();
   const originalLabel = btn.textContent;
   btn.disabled = true; btn.textContent = "Guardando…";
   try{
     const { error: errIns } = await sb.from("ssoma_bpo_recuperaciones").insert({
       registro_id: r.id, unidades, valor,
       area_encontrado: area || null,
+      comentario: comentario || null,
       foto: bpoRecFotoDataUrl ? { nombre: bpoRecFotoMeta.nombre, tipo: bpoRecFotoMeta.tipo, contenido: bpoRecFotoDataUrl } : null,
       reportado_por_id: miUsuario ? miUsuario.id : null,
     });
