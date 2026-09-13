@@ -193,6 +193,19 @@
     display:flex;
     flex-direction:column;
   }
+  /* En escritorio el menú (con Cerrar sesión y todo lo demás al fondo) queda fijo en
+     su propio scroll — si no, cuando el contenido de la derecha crece mucho (ej. el
+     checklist de Bultos Perdidos con muchas filas), el sidebar se estira para igualar
+     esa altura y el pie de cuenta termina lejísimos, fuera de la pantalla. */
+  @media (min-width:821px){
+    nav.side{
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      overflow-y: auto;
+    }
+  }
   .side-nav{overflow:hidden;}
   @media (max-width:820px){
     nav.side{
