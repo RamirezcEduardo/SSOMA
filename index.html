@@ -2096,7 +2096,7 @@
         <div class="section-head">
           <h2 class="section-title">Sin Ubicación</h2>
         </div>
-        <p class="section-desc">Checklist de los "Sin Ubicación" cargados en Bultos Pendientes de Operación. Reporta cuántas unidades encontraste — el valor se calcula solo con el valor unitario del producto.</p>
+        <p class="section-desc">Checklist de los "Sin Ubicación" cargados en Bultos Pendientes de Operación. Reporta cuántas unidades encontraste — el valor se calcula solo con el valor unitario del producto. También puedes subir directo el export del WMS (columna Ubicación con zonas "SIN-UBICACION-…") sin esperar el reporte del auditor — se cruza por Nro LPN, así que no duplica lo que ya esté cargado.</p>
         <div class="opk-toprow">
           <div class="opk-progress-card">
             <div class="opk-progress-top">
@@ -2111,9 +2111,16 @@
           </div>
           <div class="opk-search-box">
             <div class="opk-search"><span>🔍</span><input type="text" id="aic-su-buscar" placeholder="Buscar por LPN o producto…"></div>
-            <select id="aic-su-semana"><option value="">Todas</option></select>
+            <div style="display:flex;gap:8px;">
+              <select id="aic-su-semana" style="flex:1;"><option value="">Todas</option></select>
+              <label class="btn btn-ghost" for="aic-su-wms-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12.5px;padding:0 12px;cursor:pointer;">
+                📤 Subir desde WMS
+                <input type="file" id="aic-su-wms-file" accept=".xlsx,.xls,.csv" hidden>
+              </label>
+            </div>
           </div>
         </div>
+        <div class="import-status" id="aic-su-wms-status" style="display:none;margin-bottom:14px;"></div>
         <div class="opk-lpn-copy-box">
           <div class="opk-lpn-copy-head">
             <span>📋 LPN pendientes — para pegar en el WMS</span>
@@ -5604,6 +5611,102 @@ document.getElementById("bpo-rec-full").addEventListener("click", (e)=>{
 });
 document.getElementById("bpo-rec-confirm").addEventListener("click", (e)=>{
   bpoRecConfirmar(bpoRecStepVal, e.currentTarget);
+});
+
+/* ============ Sin Ubicación: import alterno directo desde el WMS ============
+   El equipo muchas veces no espera al reporte del auditor ("Pendientes de
+   Operación") — acá se sube tal cual el export del WMS (LPN por Ubicación),
+   filtrado a las zonas cuyo código empieza con "SIN-UBICACION" (ej.
+   SIN-UBICACION-PICKING-01-01), y se guarda en la MISMA tabla que alimenta este
+   checklist (ssoma_bpo_registros, clasificacion "sin_ubicacion"). El valor no
+   viene en este export — se calcula con el catálogo de costos compartido
+   (spCargarCostos/spCosto), igual que en Shortpick/Control de Bolsa. Nro LPN
+   sigue siendo único, así que cruza solo sin duplicar lo que ya esté cargado
+   por el reporte del auditor. */
+function bpoLimpiaFormula(v){
+  // El WMS exporta algunas columnas como ="123435" (truco de Excel para no perder
+  // ceros a la izquierda) — un CSV no tiene fórmulas, así que llega tal cual como texto.
+  const s = String(v == null ? "" : v).trim();
+  const m = s.match(/^="?(.*?)"?$/);
+  return m ? m[1] : s;
+}
+document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  const chequeo = await importVerificarDuplicado("sin_ubicacion_wms", file);
+  if(!chequeo.ok) return;
+
+  const statusEl = document.getElementById("aic-su-wms-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    await spCargarCostos();
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      ubicacion: ["Ubicacion", "Ubicación"], nroLpn: ["Nro LPN"], codAlternat: ["Cod Alternat"],
+      producto: ["Producto"], descripcion: ["Descripcion", "Descripción"],
+      nroLote: ["Nro de lote"], cantidad: ["Cantidad actual"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Ubicacion, Nro LPN, Cod Alternat, Producto, Descripcion, Nro de lote y Cantidad actual. Revisa que sea el export de LPN por Ubicación del WMS, tal cual.`);
+
+    const lpnExistentes = new Set(bpoRegistros.map(r => r.nroLpn));
+    let ignoradasSinLpn = 0, duplicadas = 0, fueraDeZona = 0;
+    const semana = bolsaSemanaLabel(new Date());
+    const filas = [];
+    hoja.rows.forEach(row => {
+      const ubicacion = String(row[hoja.cols.ubicacion] || "").trim();
+      if(!ubicacion.toUpperCase().startsWith("SIN-UBICACION")){ fueraDeZona++; return; }
+      const nroLpn = bpoLimpiaFormula(row[hoja.cols.nroLpn]);
+      if(!nroLpn){ ignoradasSinLpn++; return; }
+      if(lpnExistentes.has(nroLpn)){ duplicadas++; return; }
+      lpnExistentes.add(nroLpn);
+      const codAlternat = bpoLimpiaFormula(row[hoja.cols.codAlternat]);
+      const cantidad = parseFloat(row[hoja.cols.cantidad]);
+      const cantidadNum = isNaN(cantidad) ? 0 : cantidad;
+      filas.push({
+        proceso: ubicacion, clasificacion: "sin_ubicacion",
+        responsable: "", supervisor: "", semana, familia: "",
+        nro_lpn: nroLpn,
+        producto: bpoLimpiaFormula(row[hoja.cols.producto]),
+        cod_alternat: codAlternat,
+        descripcion: String(row[hoja.cols.descripcion] || "").trim(),
+        cantidad_actual: cantidadNum,
+        nro_lote: bpoLimpiaFormula(row[hoja.cols.nroLote]),
+        val_tot: cantidadNum * spCosto(codAlternat),
+        estado: "pendiente", recuperado_en: null,
+        archivo_origen: file.name, actualizado_en: new Date().toISOString(),
+      });
+    });
+    if(!filas.length && !duplicadas) throw new Error(`El archivo no trajo ninguna fila en zonas "SIN-UBICACION-…" en la hoja "${hoja.sheetName}".`);
+
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_bpo_registros").insert(lote);
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += lote.length;
+    }
+    if(guardadas) await importRegistrarLog("sin_ubicacion_wms", file, chequeo.hash, guardadas);
+    await bpoLoadRegistros();
+
+    let msg = guardadas
+      ? `✅ Importado desde WMS: ${guardadas} líneas nuevas en zonas "SIN-UBICACION-…" (hoja "${hoja.sheetName}"). `
+      : `⚠ No se cargó ninguna línea nueva — todo lo que trae este archivo ya estaba cargado. `;
+    if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado fueron detectadas como duplicado. `;
+    if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas. `;
+    statusEl.textContent = msg;
+    statusEl.className = guardadas ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }
 });
 
 function bpoUpdateImportState(){
