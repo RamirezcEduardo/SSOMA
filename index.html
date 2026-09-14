@@ -5330,6 +5330,28 @@ function bpoValorPendiente(r){ return bpoPendienteUnidades(r) * bpoValorUnitario
 function bpoValorRecuperadoRow(r){ return (r.unidadesRecuperadas || 0) * bpoValorUnitario(r); }
 function bpoFmtUds(n){ n = Number(n) || 0; const r = Math.round(n * 100) / 100; return r.toLocaleString("es-PE"); }
 
+/* Eliminar un registro (Bultos Perdidos/Sin Ubicación o Seguimiento Diario) — solo
+   Administrador, por si se cargó un LPN por error y no corresponde marcarlo
+   recuperado/finalizado sino sacarlo del todo. El botón ya viene oculto para
+   cualquier otro rol (esAdmin() en *CardHtml), pero se valida de nuevo acá por si
+   alguien manipula el DOM a mano. */
+async function opkEliminarRegistro(tabla, id, btn){
+  if(!esAdmin()){ alert("Solo un administrador puede eliminar este registro."); return; }
+  if(!confirm("¿Eliminar este registro? Esta acción no se puede deshacer.")) return;
+  btn.disabled = true;
+  const { error } = await sb.from(tabla).delete().eq("id", id);
+  if(error){ alert("No se pudo eliminar: " + error.message); btn.disabled = false; return; }
+  if(tabla === "ssoma_bpo_registros"){
+    bpoRegistros = bpoRegistros.filter(r => r.id !== id);
+    bpoChkRender("perdidos");
+    bpoChkRender("sin_ubicacion");
+    bpoRender();
+  }else{
+    sdRegistros = sdRegistros.filter(r => r.id !== id);
+    sdRender();
+  }
+}
+
 function bpoRenderFiltroSemana(){
   const sel = document.getElementById("bpo-f-semana");
   const actual = sel.value;
@@ -5460,6 +5482,7 @@ function bpoChkCardHtml(r){
         <div class="opk-qty">${bpoMoneda(bpoValorPendiente(r))}<span class="u">${bpoFmtUds(pendUds)} uds pendientes</span></div>
       </div>`;
   const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
+  const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="bpo" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""}">
       <div class="opk-card-top">
@@ -5473,6 +5496,7 @@ function bpoChkCardHtml(r){
         </div>
       </div>
       ${btnHtml}
+      ${delBtn}
     </div>`;
 }
 
@@ -5505,6 +5529,9 @@ function bpoChkRender(clasificacion){
 
   grid.querySelectorAll(".opk-btn-mark").forEach(btn=>{
     btn.addEventListener("click", ()=> bpoChkAbrirModal(Number(btn.dataset.id)));
+  });
+  grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
+    btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_bpo_registros", Number(btn.dataset.id), btn));
   });
 }
 
@@ -5833,6 +5860,7 @@ function sdFiltered(){
 function sdCardHtml(r){
   const done = r.estado === "finalizado";
   const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark finalizar" data-id="${r.id}">✓ Marcar como finalizado</button>`;
+  const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sd" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""}">
       <div class="opk-card-top">
@@ -5847,6 +5875,7 @@ function sdCardHtml(r){
         </div>
       </div>
       ${btnHtml}
+      ${delBtn}
     </div>`;
 }
 
@@ -5885,6 +5914,9 @@ function sdRender(){
       if(row){ row.estado = "finalizado"; row.finalizadoEn = new Date().toISOString(); }
       sdRender();
     });
+  });
+  grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
+    btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_seguimiento_diario_registros", Number(btn.dataset.id), btn));
   });
 }
 
