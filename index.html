@@ -5757,7 +5757,7 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").insert(lote);
+      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn", ignoreDuplicates: true });
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
     }
@@ -5962,7 +5962,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_seguimiento_diario_registros").insert(lote);
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros").upsert(lote, { onConflict: "nro_lpn", ignoreDuplicates: true });
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
@@ -6072,7 +6072,7 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").insert(lote);
+      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn", ignoreDuplicates: true });
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
