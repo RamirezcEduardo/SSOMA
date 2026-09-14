@@ -823,6 +823,16 @@
   }
   .opk-lpn-copiar.copiado{border-color:var(--green);color:var(--green);background:var(--green-tint);}
 
+  /* Seguimiento Diario agrupado por Proceso + Ubicación (en vez de LPN por LPN, que con
+     miles de pendientes hacía muy lento el render). */
+  .sd-grupo-productos{margin:8px 0;font-size:12px;color:var(--text-soft);}
+  .sd-grupo-productos summary{cursor:pointer;font-weight:600;color:var(--blue);}
+  .sd-grupo-productos-lista{margin-top:6px;max-height:140px;overflow-y:auto;color:var(--muted);line-height:1.5;}
+  .sd-grupo-comentario{
+    width:100%;resize:vertical;font-family:'Inter',sans-serif;font-size:12.5px;color:var(--text);
+    background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:8px;
+  }
+
   /* Modal de "Marcar como recuperado" — mismo modal-overlay/modal-box del resto de
      la app; estos botones/stepper son propios de este flujo. */
   .opk-sheet-btn{
@@ -5990,6 +6000,7 @@ async function sdLoadRegistros(){
     codAlternat: r.cod_alternat || "", descripcion: r.descripcion || "",
     cantidad: r.cantidad_actual === null ? null : Number(r.cantidad_actual),
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
+    ubicacion: r.ubicacion || "", comentario: r.comentario || "",
     estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id, archivoOrigen: r.archivo_origen || "",
     createdAt: r.created_at,
   }));
@@ -6060,6 +6071,69 @@ function sdGrupoHtml(grupo){
     </div>`;
 }
 
+/* Agrupa por Proceso + Ubicación — con miles de LPN pendientes, una tarjeta por LPN
+   hacía muy lento el render. Agrupado así, miles de filas quedan en un puñado de
+   tarjetas (el supervisor trabaja por proceso/ubicación, no LPN por LPN), cada una
+   con el total valorizado y los productos involucrados, y se finaliza de una vez con
+   un comentario en vez de una por una. Solo se usa cuando no hay texto de búsqueda —
+   si el usuario busca un LPN puntual, se sigue mostrando la tarjeta individual. */
+function sdClaveGrupo(proceso, ubicacion){ return proceso + "|||" + (ubicacion || ""); }
+
+function sdAgruparPorProcesoUbicacion(rows){
+  const mapa = new Map();
+  rows.forEach(r => {
+    const clave = sdClaveGrupo(r.proceso, r.ubicacion);
+    if(!mapa.has(clave)) mapa.set(clave, { proceso: r.proceso, ubicacion: r.ubicacion || "", filas: [] });
+    mapa.get(clave).filas.push(r);
+  });
+  return [...mapa.values()];
+}
+
+function sdCardGrupoHtml(grupo){
+  const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
+  const finalizados = grupo.filas.filter(r => r.estado === "finalizado");
+  const clave = sdClaveGrupo(grupo.proceso, grupo.ubicacion);
+  if(!pendientes.length){
+    return `
+      <div class="opk-card done">
+        <div class="opk-card-top">
+          <div class="opk-check-big">✓</div>
+          <div class="opk-card-body">
+            <span class="opk-proceso-badge">${escapeHtml(grupo.proceso)}</span>
+            <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}</div>
+            <div class="opk-sub">${finalizados.length} LPN · todos finalizados</div>
+            <div class="opk-done-note">✅ Todo finalizado</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  const totalValor = pendientes.reduce((a, r) => a + (r.valTot || 0), 0);
+  const productos = [...new Set(pendientes.map(r => r.descripcion || r.producto).filter(Boolean))];
+  const supervisores = [...new Set(pendientes.map(r => r.supervisor).filter(Boolean))];
+  const quienLinea = !supervisores.length ? "" : supervisores.length <= 2
+    ? "🧑‍💼 " + supervisores.map(s => escapeHtml(s)).join(", ")
+    : `🧑‍💼 ${supervisores.length} supervisores`;
+  return `
+    <div class="opk-card">
+      <div class="opk-card-top">
+        <div class="opk-check-big"></div>
+        <div class="opk-card-body">
+          <span class="opk-proceso-badge">${escapeHtml(grupo.proceso)}</span>
+          <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}</div>
+          <div class="opk-sub">${pendientes.length} LPN pendientes${finalizados.length ? " · " + finalizados.length + " ya finalizados" : ""}</div>
+          ${quienLinea ? `<div class="opk-sub">${quienLinea}</div>` : ""}
+          <details class="sd-grupo-productos">
+            <summary>${productos.length} producto${productos.length === 1 ? "" : "s"} distinto${productos.length === 1 ? "" : "s"} — ver detalle</summary>
+            <div class="sd-grupo-productos-lista">${productos.map(p => escapeHtml(p)).join(" · ")}</div>
+          </details>
+          <div class="opk-qty-row"><div class="opk-qty">${bpoMoneda(totalValor)}<span class="u">valorizado pendiente</span></div></div>
+          <textarea class="sd-grupo-comentario" data-clave="${escapeHtml(clave)}" placeholder="Comentario antes de finalizar (opcional)…" rows="2"></textarea>
+        </div>
+      </div>
+      <button type="button" class="opk-btn-mark finalizar sd-grupo-finalizar" data-clave="${escapeHtml(clave)}">✓ Finalizar ${pendientes.length} LPN de este grupo</button>
+    </div>`;
+}
+
 function sdRender(){
   const rows = sdFiltered();
   const pendRows = rows.filter(r => r.estado !== "finalizado");
@@ -6077,34 +6151,72 @@ function sdRender(){
   document.getElementById("aic-sd-lpn-copiar").textContent = `Copiar (${lpnPendUnicos.length})`;
   document.getElementById("aic-sd-lpn-copiar").classList.remove("copiado");
 
-  const sinFiltro = !document.getElementById("aic-sd-buscar").value && !document.getElementById("aic-sd-semana").value && !document.getElementById("aic-sd-supervisor").value;
-  const grupos = opkAgruparPorLpn(rows);
-  grupos.forEach(g => g.sort((a, b) => (a.estado === "finalizado" ? 1 : 0) - (b.estado === "finalizado" ? 1 : 0)));
-  grupos.sort((a, b) => {
-    const aDone = a.every(r => r.estado === "finalizado") ? 1 : 0;
-    const bDone = b.every(r => r.estado === "finalizado") ? 1 : 0;
-    return aDone - bDone;
-  });
+  const buscar = (document.getElementById("aic-sd-buscar").value || "").trim();
   const grid = document.getElementById("aic-sd-grid");
-  grid.innerHTML = grupos.length
-    ? grupos.map(g => g.length > 1 ? sdGrupoHtml(g) : sdCardHtml(g[0])).join("")
-    : `<div class="empty opk-empty">Sin registros${sinFiltro ? "" : " con ese filtro"}.</div>`;
 
-  grid.querySelectorAll(".opk-btn-mark.finalizar").forEach(btn=>{
+  if(buscar){
+    const grupos = opkAgruparPorLpn(rows);
+    grupos.forEach(g => g.sort((a, b) => (a.estado === "finalizado" ? 1 : 0) - (b.estado === "finalizado" ? 1 : 0)));
+    grupos.sort((a, b) => {
+      const aDone = a.every(r => r.estado === "finalizado") ? 1 : 0;
+      const bDone = b.every(r => r.estado === "finalizado") ? 1 : 0;
+      return aDone - bDone;
+    });
+    grid.innerHTML = grupos.length
+      ? grupos.map(g => g.length > 1 ? sdGrupoHtml(g) : sdCardHtml(g[0])).join("")
+      : `<div class="empty opk-empty">Sin registros con ese filtro.</div>`;
+
+    grid.querySelectorAll(".opk-btn-mark.finalizar").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const id = Number(btn.dataset.id);
+        btn.disabled = true; btn.textContent = "Guardando…";
+        const { error } = await sb.from("ssoma_seguimiento_diario_registros")
+          .update({ estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null })
+          .eq("id", id);
+        if(error){ alert("No se pudo guardar: " + error.message); btn.disabled = false; btn.textContent = "✓ Marcar como finalizado"; return; }
+        const row = sdRegistros.find(r => r.id === id);
+        if(row){ row.estado = "finalizado"; row.finalizadoEn = new Date().toISOString(); row.finalizadoPorId = miUsuario ? miUsuario.id : null; }
+        sdRender();
+      });
+    });
+    grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
+      btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_seguimiento_diario_registros", Number(btn.dataset.id), btn));
+    });
+    return;
+  }
+
+  const grupos = sdAgruparPorProcesoUbicacion(rows);
+  grupos.sort((a, b) => {
+    const aPend = a.filas.some(r => r.estado !== "finalizado") ? 0 : 1;
+    const bPend = b.filas.some(r => r.estado !== "finalizado") ? 0 : 1;
+    if(aPend !== bPend) return aPend - bPend;
+    const aValor = a.filas.reduce((s, r) => s + (r.estado !== "finalizado" ? (r.valTot || 0) : 0), 0);
+    const bValor = b.filas.reduce((s, r) => s + (r.estado !== "finalizado" ? (r.valTot || 0) : 0), 0);
+    return bValor - aValor;
+  });
+  grid.innerHTML = grupos.length
+    ? grupos.map(sdCardGrupoHtml).join("")
+    : `<div class="empty opk-empty">Sin registros con ese filtro.</div>`;
+
+  grid.querySelectorAll(".sd-grupo-finalizar").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
-      const id = Number(btn.dataset.id);
+      const clave = btn.dataset.clave;
+      const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion) === clave);
+      if(!grupo) return;
+      const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
+      if(!pendientes.length) return;
+      if(!confirm(`¿Finalizar ${pendientes.length} LPN pendientes de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}"? Esta acción no se puede deshacer.`)) return;
+      const textarea = [...grid.querySelectorAll(".sd-grupo-comentario")].find(t => t.dataset.clave === clave);
+      const comentario = textarea ? textarea.value.trim() : "";
       btn.disabled = true; btn.textContent = "Guardando…";
       const { error } = await sb.from("ssoma_seguimiento_diario_registros")
-        .update({ estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null })
-        .eq("id", id);
-      if(error){ alert("No se pudo guardar: " + error.message); btn.disabled = false; btn.textContent = "✓ Marcar como finalizado"; return; }
-      const row = sdRegistros.find(r => r.id === id);
-      if(row){ row.estado = "finalizado"; row.finalizadoEn = new Date().toISOString(); row.finalizadoPorId = miUsuario ? miUsuario.id : null; }
+        .update({ estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null, comentario: comentario || null })
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).neq("estado", "finalizado");
+      if(error){ alert("No se pudo finalizar: " + error.message); btn.disabled = false; btn.textContent = `✓ Finalizar ${pendientes.length} LPN de este grupo`; return; }
+      const ahora = new Date().toISOString();
+      pendientes.forEach(r => { r.estado = "finalizado"; r.finalizadoEn = ahora; r.finalizadoPorId = miUsuario ? miUsuario.id : null; r.comentario = comentario; });
       sdRender();
     });
-  });
-  grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
-    btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_seguimiento_diario_registros", Number(btn.dataset.id), btn));
   });
 }
 
@@ -6144,6 +6256,10 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       cantidad: ["Cantidad actual"], nroLote: ["Nro de lote"], valTot: ["Val tot"], sem: ["Sem"],
     });
     if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Proceso, Responsable, Supervisor, Familia, Nro LPN, Producto, Cod Alternat, Descripcion, Cantidad actual, Nro de lote, Val tot y Sem. Revisa que sea el reporte "Pendientes de Operación" tal cual, con la hoja "Bultos Pendientes".`);
+    // Ubicación no es obligatoria para detectar la hoja (algunos procesos no la traen),
+    // pero cuando está presente es la que permite agrupar por Proceso + Ubicación en
+    // vez de LPN por LPN — así se puede finalizar de a miles a la vez.
+    const idxUbicacion = bolsaFindCol(hoja.header, ["Ubicacion", "Ubicación"]);
 
     // Clave Nro LPN + Cod Alternat (no solo el LPN): un bulto multi-SKU trae varias
     // filas con el mismo LPN y distinto producto — todas se guardan, no solo la primera.
@@ -6177,6 +6293,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         cantidad_actual: isNaN(cantidad) ? null : cantidad,
         nro_lote: String(row[hoja.cols.nroLote] || "").trim(),
         val_tot: isNaN(valTot) ? 0 : valTot,
+        ubicacion: idxUbicacion !== -1 ? String(row[idxUbicacion] || "").trim() : "",
         estado: "pendiente", archivo_origen: file.name,
       });
     });
