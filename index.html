@@ -6409,6 +6409,9 @@ function bitBuildInformeHtml(){
   }
   const totalValor = rows.reduce((a, x) => a + (x.valor || 0), 0);
   const totalUds = rows.reduce((a, x) => a + (x.unidades || 0), 0);
+  // LPNs distintos — mismo número que "Levantado hoy" en pantalla para ese filtro.
+  // Total reportes cuenta cada acción (un LPN con 2 reportes parciales suma 2 acá).
+  const lpnsUnicos = new Set(rows.map(x => x.registro.id)).size;
   const filas = rows.map(x => `
     <tr>
       <td>${escapeHtml(new Date(x.creadoEn).toLocaleString("es-PE"))}</td>
@@ -6422,7 +6425,8 @@ function bitBuildInformeHtml(){
   return `
     <div class="modal-section-title">Resumen — ${escapeHtml(filtroDesc)}</div>
     <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-label">Total reportes</div><div class="kpi-value">${rows.length}</div></div>
+      <div class="kpi-card"><div class="kpi-label">LPNs levantados</div><div class="kpi-value">${lpnsUnicos}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total reportes (con parciales)</div><div class="kpi-value">${rows.length}</div></div>
       <div class="kpi-card"><div class="kpi-label">Unidades recuperadas</div><div class="kpi-value">${bpoFmtUds(totalUds)}</div></div>
       <div class="kpi-card accent"><div class="kpi-label">Valor recuperado</div><div class="kpi-value">${bpoMoneda(totalValor)}</div></div>
     </div>
