@@ -837,6 +837,13 @@
   }
   .opk-photo-ic{font-size:20px;line-height:1;}
 
+  /* Seguimiento Diario: mismo estilo de tarjeta que el checklist de recuperación,
+     pero acá se muestra el Proceso real de cada fila (abarca muchos procesos
+     distintos, a diferencia de Bultos Perdidos/Sin Ubicación) y la acción es un
+     simple pendiente/finalizado — sin unidades ni valor parcial. */
+  .opk-proceso-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:var(--purple-tint);color:var(--purple);margin-bottom:4px;margin-left:6px;}
+  .opk-btn-mark.finalizar{background:var(--blue-tint);color:var(--blue);}
+
   .lev-tab{background:var(--panel);}
   .lev-tab.active{border-color:var(--red);color:var(--red);background:var(--red-tint);}
 
@@ -1846,6 +1853,7 @@
         <button type="button" class="tab-btn active" data-tab="shortpick">🔍 Shortpick</button>
         <button type="button" class="tab-btn" data-tab="bultos-perdidos">📦 Bultos Perdidos</button>
         <button type="button" class="tab-btn" data-tab="sin-ubicacion">📍 Sin Ubicación</button>
+        <button type="button" class="tab-btn" data-tab="seguimiento-diario">📅 Seguimiento Diario</button>
       </div>
 
       <div id="audinv-tab-shortpick">
@@ -2129,6 +2137,63 @@
           <textarea id="aic-su-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
         </div>
         <div class="opk-grid" id="aic-su-grid"></div>
+      </div>
+
+      <div id="audinv-tab-seguimiento-diario" style="display:none;">
+        <div class="section-head">
+          <h2 class="section-title">Seguimiento Diario</h2>
+        </div>
+        <p class="section-desc">Sube el mismo reporte "Pendientes de Operación" — acá se guardan todos los <b>demás procesos</b> (todo lo que NO es Perdido ERU, Por Ubicar ni Sin Ubicación). Cada supervisor debe finalizar sus casos: un LPN que se quede sin finalizar puede terminar pasando a Control de Bolsa como ajuste perdido.</p>
+
+        <div class="import-card">
+          <div class="import-card-head">
+            <div>
+              <div class="import-card-title">📤 Subir Pendientes de Operación</div>
+              <div class="import-card-sub">Sube el archivo tal cual te lo pasan — se detecta sola la hoja "Bultos Pendientes" y se toman los procesos que no van a Bultos Perdidos ni Sin Ubicación.</div>
+            </div>
+            <button type="button" class="btn btn-primary" id="aic-sd-import-btn" disabled>Importar</button>
+          </div>
+          <div class="import-drop-row">
+            <label class="import-drop" for="aic-sd-file" id="aic-sd-drop">
+              <input type="file" id="aic-sd-file" accept=".xlsx,.xls,.csv" hidden>
+              <span class="import-drop-icon">📅</span>
+              <span class="import-drop-title">Pendientes de Operación</span>
+              <span class="import-drop-hint" id="aic-sd-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+            </label>
+          </div>
+          <div class="import-status" id="aic-sd-status" style="display:none;"></div>
+        </div>
+
+        <div class="opk-toprow">
+          <div class="opk-progress-card">
+            <div class="opk-progress-top">
+              <span class="n" id="aic-sd-count">0 <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span></span>
+              <span class="lbl" id="aic-sd-pct">0% finalizado</span>
+            </div>
+            <div class="opk-progress-bar"><div class="opk-progress-fill" id="aic-sd-fill" style="width:0%;"></div></div>
+            <div class="opk-progress-foot">
+              <span class="pend" id="aic-sd-pend">S/ 0.00 en riesgo de pasar a bolsa</span>
+              <span class="rec" id="aic-sd-rec">0 finalizados</span>
+            </div>
+          </div>
+          <div class="opk-search-box">
+            <div class="opk-search"><span>🔍</span><input type="text" id="aic-sd-buscar" placeholder="Buscar por LPN, producto o supervisor…"></div>
+            <div style="display:flex;gap:8px;">
+              <select id="aic-sd-semana" style="flex:1;"><option value="">Todas las semanas</option></select>
+              <select id="aic-sd-supervisor" style="flex:1;"><option value="">Todos los supervisores</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="opk-lpn-copy-box">
+          <div class="opk-lpn-copy-head">
+            <span>📋 LPN pendientes — para pegar en el WMS</span>
+            <button type="button" class="btn btn-ghost opk-lpn-copiar" id="aic-sd-lpn-copiar" data-prefijo="sd" style="padding:6px 12px;font-size:12px;">Copiar</button>
+          </div>
+          <textarea id="aic-sd-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+        </div>
+
+        <div class="opk-grid" id="aic-sd-grid"></div>
       </div>
     </section>
 
@@ -2849,7 +2914,8 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="help-tab-panel" id="help-tab-inventario" style="display:none;">
       <div class="help-block">
         <h4>📦 Inventario</h4>
-        <p><b>Auditoría de Inventario</b> agrupa 3 pestañas: <b>🔍 Shortpick</b> (importa los reportes del WMS, concilia faltantes y consulta el historial), <b>📦 Bultos Perdidos</b> y <b>📍 Sin Ubicación</b> — estas dos últimas son un checklist que se alimenta de lo cargado en <b>Bultos Pendientes de Operación</b>: cada bulto pendiente aparece como tarjeta, y se marca como recuperado reportando cuántas <b>unidades</b> se encontraron (el sistema calcula el valor solo) — puede ser el total o una parte, indicando de forma opcional en qué área se encontró y una foto de evidencia.</p>
+        <p><b>Auditoría de Inventario</b> agrupa 4 pestañas: <b>🔍 Shortpick</b> (importa los reportes del WMS, concilia faltantes y consulta el historial), <b>📦 Bultos Perdidos</b> y <b>📍 Sin Ubicación</b> — un checklist que se alimenta de lo cargado en <b>Bultos Pendientes de Operación</b>: cada bulto pendiente aparece como tarjeta, y se marca como recuperado reportando cuántas <b>unidades</b> se encontraron (el sistema calcula el valor solo) — puede ser el total o una parte, indicando de forma opcional en qué área se encontró y una foto de evidencia. Sin Ubicación también acepta subir directo el export del WMS, sin esperar el reporte del auditor.</p>
+        <p><b>📅 Seguimiento Diario</b>: sube el mismo reporte "Pendientes de Operación" — acá quedan todos los demás procesos (todo lo que no es Perdido ERU, Por Ubicar ni Sin Ubicación). No es un flujo de recuperación por unidades: cada supervisor debe <b>finalizar</b> sus casos: un LPN sin finalizar puede terminar como ajuste perdido en Control de Bolsa.</p>
         <p><b>Control de Bolsa</b>: sube el reporte del auditor (Dif CD) y tu export interno del WMS a la vez, con el botón <b>Importar y calcular</b>. La app aplica la regla Considerar/No considerar, cruza ambos archivos y marca en disputa las líneas con evidencia — sea porque tu WMS encontró más de lo que se perdió, o porque el ajuste ya se neteó solo (un movimiento negativo que se compensa con uno positivo), lo que suele ser un falso positivo del auditor. Tanto el detalle de la auditoría (con lo que marques por fila en Disputar/Descartar/Aceptar) como el respaldo del WMS quedan guardados de forma permanente en Supabase — no se pierden al recargar la página ni al reimportar el mismo reporte más adelante.</p>
         <p><b>Bultos Pendientes de Operación</b>: sube el reporte "Pendientes de Operación" tal cual — la app detecta sola la hoja "Bultos Pendientes", filtra por Proceso (Por Ubicar, Perdido ERU, Sin Ubicación) y arma dos listas: <b>Perdidos</b> (Por Ubicar + Perdido ERU) y <b>Sin Ubicación</b>. Cada línea queda guardada por su Nro LPN — si el mismo LPN ya estaba cargado, se detecta como duplicado y no se vuelve a insertar. Este apartado muestra el listado completo con su estado (Pendiente/Parcial/Recuperado); para marcar un bulto como recuperado, hazlo desde su checklist en <b>Auditoría de Inventario</b> (pestañas Bultos Perdidos / Sin Ubicación).</p>
       </div>
@@ -5709,6 +5775,219 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
   }
 });
 
+/* ============ Seguimiento Diario (Auditoría de Inventario) ============
+   Mismo reporte "Pendientes de Operación" que Bultos Pendientes de Operación,
+   pero acá se guardan TODOS los demás procesos (todo lo que NO es Perdido ERU,
+   Por Ubicar ni Sin Ubicación — esos van a ssoma_bpo_registros). No es un flujo
+   de recuperación por unidades: cada supervisor debe FINALIZAR sus casos; sin
+   finalizar, un LPN puede terminar como ajuste perdido en Control de Bolsa. */
+let sdRegistros = [];
+
+async function sdLoadRegistros(){
+  const { data, error } = await sbSelectAll("ssoma_seguimiento_diario_registros", "*", q => q.order("created_at", { ascending: false }));
+  if(error){ console.error(error); return; }
+  sdRegistros = (data || []).map(r => ({
+    id: r.id, proceso: r.proceso || "", responsable: r.responsable || "", supervisor: r.supervisor || "",
+    semana: r.semana || "", familia: r.familia || "", nroLpn: r.nro_lpn || "", producto: r.producto || "",
+    codAlternat: r.cod_alternat || "", descripcion: r.descripcion || "",
+    cantidad: r.cantidad_actual === null ? null : Number(r.cantidad_actual),
+    nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
+    estado: r.estado, finalizadoEn: r.finalizado_en, archivoOrigen: r.archivo_origen || "",
+    createdAt: r.created_at,
+  }));
+  sdRenderFiltros();
+  sdRender();
+}
+
+function sdRenderFiltros(){
+  const selSem = document.getElementById("aic-sd-semana");
+  const selSup = document.getElementById("aic-sd-supervisor");
+  const actualSem = selSem.value, actualSup = selSup.value;
+  const semanas = [...new Set(sdRegistros.map(r => r.semana).filter(Boolean))].sort();
+  const supervisores = [...new Set(sdRegistros.map(r => r.supervisor).filter(Boolean))].sort();
+  selSem.innerHTML = '<option value="">Todas las semanas</option>' + semanas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  selSem.value = semanas.includes(actualSem) ? actualSem : "";
+  selSup.innerHTML = '<option value="">Todos los supervisores</option>' + supervisores.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  selSup.value = supervisores.includes(actualSup) ? actualSup : "";
+}
+
+function sdFiltered(){
+  const buscar = (document.getElementById("aic-sd-buscar").value || "").trim().toLowerCase();
+  const semana = document.getElementById("aic-sd-semana").value;
+  const supervisor = document.getElementById("aic-sd-supervisor").value;
+  return sdRegistros.filter(r => (!semana || r.semana === semana)
+    && (!supervisor || r.supervisor === supervisor)
+    && (!buscar
+      || r.nroLpn.toLowerCase().includes(buscar)
+      || r.descripcion.toLowerCase().includes(buscar)
+      || (r.supervisor || "").toLowerCase().includes(buscar)
+      || r.codAlternat.toLowerCase().includes(buscar))
+  );
+}
+
+function sdCardHtml(r){
+  const done = r.estado === "finalizado";
+  const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark finalizar" data-id="${r.id}">✓ Marcar como finalizado</button>`;
+  return `
+    <div class="opk-card ${done ? "done" : ""}">
+      <div class="opk-card-top">
+        <div class="opk-check-big">${done ? "✓" : ""}</div>
+        <div class="opk-card-body">
+          <span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span><span class="opk-proceso-badge">${escapeHtml(r.proceso)}</span>
+          <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
+          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.cantidad === null ? "" : " · Cant. " + bpoFmtUds(r.cantidad)}</div>
+          <div class="opk-sub">${r.supervisor ? "🧑‍💼 " + escapeHtml(r.supervisor) : ""}${r.responsable ? " · 👤 " + escapeHtml(r.responsable) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
+          ${done ? `<div class="opk-done-note">✅ Finalizado</div>` : ""}
+          <div class="opk-qty-row"><div class="opk-qty" style="color:${done ? "var(--muted)" : "var(--text)"};">${bpoMoneda(r.valTot)}</div></div>
+        </div>
+      </div>
+      ${btnHtml}
+    </div>`;
+}
+
+function sdRender(){
+  const rows = sdFiltered();
+  const pendRows = rows.filter(r => r.estado !== "finalizado");
+  const finRows = rows.filter(r => r.estado === "finalizado");
+  const pct = rows.length > 0 ? Math.round((finRows.length / rows.length) * 100) : 0;
+
+  document.getElementById("aic-sd-count").innerHTML = `${pendRows.length} <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span>`;
+  document.getElementById("aic-sd-pct").textContent = pct + "% finalizado";
+  document.getElementById("aic-sd-fill").style.width = pct + "%";
+  document.getElementById("aic-sd-pend").textContent = bpoMoneda(pendRows.reduce((a, r) => a + (r.valTot || 0), 0)) + " en riesgo de pasar a bolsa";
+  document.getElementById("aic-sd-rec").textContent = finRows.length + " finalizados";
+
+  document.getElementById("aic-sd-lpn-text").value = pendRows.map(r => r.nroLpn).join(",");
+  document.getElementById("aic-sd-lpn-copiar").textContent = `Copiar (${pendRows.length})`;
+  document.getElementById("aic-sd-lpn-copiar").classList.remove("copiado");
+
+  const sinFiltro = !document.getElementById("aic-sd-buscar").value && !document.getElementById("aic-sd-semana").value && !document.getElementById("aic-sd-supervisor").value;
+  const ordenadas = [...rows].sort((a, b) => (a.estado === "finalizado" ? 1 : 0) - (b.estado === "finalizado" ? 1 : 0));
+  const grid = document.getElementById("aic-sd-grid");
+  grid.innerHTML = ordenadas.length
+    ? ordenadas.map(sdCardHtml).join("")
+    : `<div class="empty opk-empty">Sin registros${sinFiltro ? "" : " con ese filtro"}.</div>`;
+
+  grid.querySelectorAll(".opk-btn-mark.finalizar").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.id);
+      btn.disabled = true; btn.textContent = "Guardando…";
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros")
+        .update({ estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null })
+        .eq("id", id);
+      if(error){ alert("No se pudo guardar: " + error.message); btn.disabled = false; btn.textContent = "✓ Marcar como finalizado"; return; }
+      const row = sdRegistros.find(r => r.id === id);
+      if(row){ row.estado = "finalizado"; row.finalizadoEn = new Date().toISOString(); }
+      sdRender();
+    });
+  });
+}
+
+document.getElementById("aic-sd-buscar").addEventListener("input", sdRender);
+document.getElementById("aic-sd-semana").addEventListener("change", sdRender);
+document.getElementById("aic-sd-supervisor").addEventListener("change", sdRender);
+
+function sdUpdateImportState(){
+  const f = document.getElementById("aic-sd-file").files[0];
+  document.getElementById("aic-sd-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("aic-sd-drop").classList.toggle("filled", !!f);
+  document.getElementById("aic-sd-import-btn").disabled = !f;
+}
+document.getElementById("aic-sd-file").addEventListener("change", sdUpdateImportState);
+
+document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  const file = document.getElementById("aic-sd-file").files[0];
+  if(!file) return;
+
+  const chequeo = await importVerificarDuplicado("seguimiento_diario", file);
+  if(!chequeo.ok) return;
+
+  btn.disabled = true;
+  btn.textContent = "Importando…";
+  const statusEl = document.getElementById("aic-sd-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      proceso: ["Proceso"], responsable: ["Responsable"], supervisor: ["Supervisor"],
+      familia: ["Familia"], nroLpn: ["Nro LPN"], producto: ["Producto"],
+      codAlternat: ["Cod Alternat"], descripcion: ["Descripcion", "Descripción"],
+      cantidad: ["Cantidad actual"], nroLote: ["Nro de lote"], valTot: ["Val tot"], sem: ["Sem"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Proceso, Responsable, Supervisor, Familia, Nro LPN, Producto, Cod Alternat, Descripcion, Cantidad actual, Nro de lote, Val tot y Sem. Revisa que sea el reporte "Pendientes de Operación" tal cual, con la hoja "Bultos Pendientes".`);
+
+    const lpnExistentesSd = new Set(sdRegistros.map(r => r.nroLpn));
+    const lpnExistentesBpo = new Set(bpoRegistros.map(r => r.nroLpn));
+    let ignoradasSinLpn = 0, duplicadas = 0, yaEnOtroModulo = 0;
+    const filas = [];
+    hoja.rows.forEach(row => {
+      const procesoRaw = String(row[hoja.cols.proceso] || "").trim();
+      if(!procesoRaw) return;
+      if(BPO_PROCESO_CLASIFICACION[procesoRaw.toLowerCase()]) return; // esos van a Bultos Perdidos/Sin Ubicación
+      const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
+      if(!nroLpn){ ignoradasSinLpn++; return; }
+      if(lpnExistentesBpo.has(nroLpn)){ yaEnOtroModulo++; return; }
+      if(lpnExistentesSd.has(nroLpn)){ duplicadas++; return; }
+      lpnExistentesSd.add(nroLpn);
+      const cantidad = parseFloat(row[hoja.cols.cantidad]);
+      const valTot = parseFloat(row[hoja.cols.valTot]);
+      filas.push({
+        proceso: procesoRaw,
+        responsable: String(row[hoja.cols.responsable] || "").trim(),
+        supervisor: String(row[hoja.cols.supervisor] || "").trim(),
+        semana: String(row[hoja.cols.sem] || "").trim(),
+        familia: String(row[hoja.cols.familia] || "").trim(),
+        nro_lpn: nroLpn,
+        producto: String(row[hoja.cols.producto] || "").trim(),
+        cod_alternat: String(row[hoja.cols.codAlternat] || "").trim(),
+        descripcion: String(row[hoja.cols.descripcion] || "").trim(),
+        cantidad_actual: isNaN(cantidad) ? null : cantidad,
+        nro_lote: String(row[hoja.cols.nroLote] || "").trim(),
+        val_tot: isNaN(valTot) ? 0 : valTot,
+        estado: "pendiente", archivo_origen: file.name,
+      });
+    });
+    if(!filas.length && !duplicadas && !yaEnOtroModulo) throw new Error(`El archivo no trajo ninguna fila con un Proceso distinto de Perdido ERU/Por Ubicar/Sin Ubicación en la hoja "${hoja.sheetName}".`);
+
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros").insert(lote);
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += lote.length;
+      statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
+      statusEl.style.display = "block";
+    }
+    if(guardadas) await importRegistrarLog("seguimiento_diario", file, chequeo.hash, guardadas);
+    await sdLoadRegistros();
+
+    let msg = guardadas
+      ? `✅ Importado: ${guardadas} líneas nuevas en la hoja "${hoja.sheetName}". `
+      : `⚠ No se cargó ninguna línea nueva. `;
+    if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado en Seguimiento Diario. `;
+    if(yaEnOtroModulo) msg += `${yaEnOtroModulo} filas con Nro LPN que ya está en Bultos Perdidos/Sin Ubicación (no se duplicó). `;
+    if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas.`;
+    statusEl.textContent = msg;
+    statusEl.className = guardadas ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("aic-sd-file").files[0];
+  }
+});
+
+sdLoadRegistros();
+
 function bpoUpdateImportState(){
   const f = document.getElementById("bpo-file").files[0];
   document.getElementById("bpo-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
@@ -6219,6 +6498,7 @@ document.addEventListener("click", (e)=>{
     document.getElementById("audinv-tab-shortpick").style.display = btn.dataset.tab === "shortpick" ? "" : "none";
     document.getElementById("audinv-tab-bultos-perdidos").style.display = btn.dataset.tab === "bultos-perdidos" ? "" : "none";
     document.getElementById("audinv-tab-sin-ubicacion").style.display = btn.dataset.tab === "sin-ubicacion" ? "" : "none";
+    document.getElementById("audinv-tab-seguimiento-diario").style.display = btn.dataset.tab === "seguimiento-diario" ? "" : "none";
   }
   else if(barra.id === "bpo-tabs"){
     bpoTabActivo = btn.dataset.tab === "sin-ubicacion" ? "sin_ubicacion" : "perdidos";
