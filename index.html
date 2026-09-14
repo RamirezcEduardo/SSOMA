@@ -802,6 +802,17 @@
   .opk-btn-mark.parcial{background:var(--blue-tint);color:var(--blue);}
   .opk-empty{grid-column:1/-1;}
 
+  /* Recuadro para copiar los LPN pendientes tal cual los pide el WMS: todos juntos,
+     separados solo por coma, sin espacios. */
+  .opk-lpn-copy-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;}
+  .opk-lpn-copy-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px;font-weight:700;color:var(--text);flex-wrap:wrap;}
+  .opk-lpn-textarea{
+    width:100%;min-height:auto;height:44px;resize:vertical;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-soft);
+    background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+  }
+  .opk-lpn-copiar.copiado{border-color:var(--green);color:var(--green);background:var(--green-tint);}
+
   /* Modal de "Marcar como recuperado" — mismo modal-overlay/modal-box del resto de
      la app; estos botones/stepper son propios de este flujo. */
   .opk-sheet-btn{
@@ -2067,6 +2078,13 @@
             <select id="aic-bp-semana"><option value="">Todas</option></select>
           </div>
         </div>
+        <div class="opk-lpn-copy-box">
+          <div class="opk-lpn-copy-head">
+            <span>📋 LPN pendientes — para pegar en el WMS</span>
+            <button type="button" class="btn btn-ghost opk-lpn-copiar" id="aic-bp-lpn-copiar" data-prefijo="bp" style="padding:6px 12px;font-size:12px;">Copiar</button>
+          </div>
+          <textarea id="aic-bp-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+        </div>
         <div class="opk-grid" id="aic-bp-grid"></div>
       </div>
 
@@ -2091,6 +2109,13 @@
             <div class="opk-search"><span>🔍</span><input type="text" id="aic-su-buscar" placeholder="Buscar por LPN o producto…"></div>
             <select id="aic-su-semana"><option value="">Todas</option></select>
           </div>
+        </div>
+        <div class="opk-lpn-copy-box">
+          <div class="opk-lpn-copy-head">
+            <span>📋 LPN pendientes — para pegar en el WMS</span>
+            <button type="button" class="btn btn-ghost opk-lpn-copiar" id="aic-su-lpn-copiar" data-prefijo="su" style="padding:6px 12px;font-size:12px;">Copiar</button>
+          </div>
+          <textarea id="aic-su-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
         </div>
         <div class="opk-grid" id="aic-su-grid"></div>
       </div>
@@ -5367,6 +5392,11 @@ function bpoChkRender(clasificacion){
   document.getElementById(`aic-${prefijo}-pend`).textContent = bpoMoneda(totalPend) + " pendiente";
   document.getElementById(`aic-${prefijo}-rec`).textContent = bpoMoneda(totalRec) + " recuperado";
 
+  document.getElementById(`aic-${prefijo}-lpn-text`).value = pendRows.map(r => r.nroLpn).join(",");
+  const btnCopiar = document.getElementById(`aic-${prefijo}-lpn-copiar`);
+  btnCopiar.textContent = `Copiar (${pendRows.length})`;
+  btnCopiar.classList.remove("copiado");
+
   const sinFiltro = !document.getElementById(`aic-${prefijo}-buscar`).value && !document.getElementById(`aic-${prefijo}-semana`).value;
   const ordenadas = [...rows].sort((a, b) => (a.estado === "recuperado" ? 1 : 0) - (b.estado === "recuperado" ? 1 : 0));
   const grid = document.getElementById(`aic-${prefijo}-grid`);
@@ -5383,6 +5413,30 @@ document.getElementById("aic-bp-buscar").addEventListener("input", ()=> bpoChkRe
 document.getElementById("aic-bp-semana").addEventListener("change", ()=> bpoChkRender("perdidos"));
 document.getElementById("aic-su-buscar").addEventListener("input", ()=> bpoChkRender("sin_ubicacion"));
 document.getElementById("aic-su-semana").addEventListener("change", ()=> bpoChkRender("sin_ubicacion"));
+
+document.querySelectorAll(".opk-lpn-copiar").forEach(btn=>{
+  btn.addEventListener("click", async ()=>{
+    const textarea = document.getElementById(`aic-${btn.dataset.prefijo}-lpn-text`);
+    const texto = textarea.value;
+    const originalLabel = btn.textContent;
+    let copiado = false;
+    try{
+      await navigator.clipboard.writeText(texto);
+      copiado = true;
+    }catch(e){
+      // Sin permiso/API de portapapeles (http sin TLS, navegador viejo) — se cae al
+      // método clásico de seleccionar el texto y copiar con execCommand.
+      textarea.removeAttribute("readonly");
+      textarea.focus();
+      textarea.select();
+      try{ copiado = document.execCommand("copy"); }catch(e2){ copiado = false; }
+      textarea.setAttribute("readonly", "readonly");
+    }
+    btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
+    btn.classList.toggle("copiado", copiado);
+    setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
+  });
+});
 
 /* ---- Modal "Marcar como recuperado" ---- */
 let bpoRecRegistroId = null;
