@@ -6270,6 +6270,10 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     const clavesBpo = new Set(bpoRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
     let ignoradasSinLpn = 0, duplicadas = 0, yaEnOtroModulo = 0;
     const filas = [];
+    // Filas ya cargadas (de antes de que se capturara Ubicación, o donde vino vacía en
+    // su momento) que el archivo actual sí trae con Ubicación — se completan solas en
+    // vez de quedar en "Sin ubicación" para siempre, sin tocar su estado ni lo demás.
+    const porBackfillear = new Map();
     hoja.rows.forEach(row => {
       const procesoRaw = String(row[hoja.cols.proceso] || "").trim();
       if(!procesoRaw) return;
@@ -6278,8 +6282,16 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       if(!nroLpn){ ignoradasSinLpn++; return; }
       const codAlternat = String(row[hoja.cols.codAlternat] || "").trim();
       const clave = nroLpn + "|||" + codAlternat;
+      const ubicacionFila = idxUbicacion !== -1 ? String(row[idxUbicacion] || "").trim() : "";
       if(clavesBpo.has(clave)){ yaEnOtroModulo++; return; }
-      if(clavesSd.has(clave)){ duplicadas++; return; }
+      if(clavesSd.has(clave)){
+        duplicadas++;
+        if(ubicacionFila){
+          const existente = sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat);
+          if(existente && !existente.ubicacion) porBackfillear.set(clave, { nroLpn, codAlternat, ubicacion: ubicacionFila });
+        }
+        return;
+      }
       clavesSd.add(clave);
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const valTot = parseFloat(row[hoja.cols.valTot]);
@@ -6296,7 +6308,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         cantidad_actual: isNaN(cantidad) ? null : cantidad,
         nro_lote: String(row[hoja.cols.nroLote] || "").trim(),
         val_tot: isNaN(valTot) ? 0 : valTot,
-        ubicacion: idxUbicacion !== -1 ? String(row[idxUbicacion] || "").trim() : "",
+        ubicacion: ubicacionFila,
         estado: "pendiente", archivo_origen: file.name,
       });
     });
@@ -6313,12 +6325,33 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       statusEl.style.display = "block";
     }
     if(guardadas) await importRegistrarLog("seguimiento_diario", file, chequeo.hash, guardadas);
+
+    // Backfill de Ubicación en filas ya cargadas — un update real por LPN+Cod Alternat
+    // (no un upsert, para no arriesgar pisar estado/otros campos de filas ya finalizadas).
+    let backfillHechos = 0;
+    const pendientesBackfill = [...porBackfillear.values()];
+    if(pendientesBackfill.length){
+      const CONCURRENCIA = 15;
+      for(let i = 0; i < pendientesBackfill.length; i += CONCURRENCIA){
+        const bloque = pendientesBackfill.slice(i, i + CONCURRENCIA);
+        await Promise.all(bloque.map(item =>
+          sb.from("ssoma_seguimiento_diario_registros")
+            .update({ ubicacion: item.ubicacion })
+            .eq("nro_lpn", item.nroLpn).eq("cod_alternat", item.codAlternat)
+            .then(({ error }) => { if(error) console.error("No se pudo completar la ubicación de " + item.nroLpn + ":", error.message); })
+        ));
+        backfillHechos += bloque.length;
+        statusEl.textContent = `Completando Ubicación en filas ya cargadas… ${backfillHechos}/${pendientesBackfill.length}`;
+        statusEl.style.display = "block";
+      }
+    }
     await sdLoadRegistros();
 
     let msg = guardadas
       ? `✅ Importado: ${guardadas} líneas nuevas en la hoja "${hoja.sheetName}". `
       : `⚠ No se cargó ninguna línea nueva. `;
     if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado en Seguimiento Diario. `;
+    if(backfillHechos) msg += `${backfillHechos} de esas ya cargadas se completaron con su Ubicación (no la tenían). `;
     if(yaEnOtroModulo) msg += `${yaEnOtroModulo} filas con Nro LPN que ya está en Bultos Perdidos/Sin Ubicación (no se duplicó). `;
     if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas.`;
     statusEl.textContent = msg;
