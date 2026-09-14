@@ -2219,6 +2219,14 @@
           <textarea id="aic-sd-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
         </div>
 
+        <div class="import-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div class="import-card-title">📋 Informe Semanal</div>
+            <div class="import-card-sub">Lo en riesgo (Seguimiento Diario, con comentarios) + lo recuperado (Bultos Perdidos/Sin Ubicación) de la semana seleccionada arriba — mismo formato que revisas cada lunes/martes.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="aic-sd-informe-semanal-btn">📄 Generar informe PDF</button>
+        </div>
+
         <div class="opk-grid" id="aic-sd-grid"></div>
       </div>
 
@@ -3070,6 +3078,23 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 <!-- Exportar a CSV: modal genérico reutilizado por Auditoría/Conciliación/Historial de
      Shortpick, Bultos Perdidos y Sin Ubicación. Exporta lo que ya está filtrado en la
      pestaña, y deja elegir además un rango de fechas (opcional) para acotar más. -->
+<div class="modal-overlay" id="sd-informe-semanal-modal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-head">
+      <h3>Informe Semanal — elegir semana</h3>
+      <button class="modal-close" id="sd-informe-semanal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" style="margin-bottom:14px;">Junta lo en riesgo (Seguimiento Diario) y lo recuperado (Bultos Perdidos/Sin Ubicación) de la semana que elijas.</p>
+      <div class="field">
+        <label>Semana</label>
+        <select id="sd-informe-semanal-semana"></select>
+      </div>
+      <button type="button" class="btn btn-primary" id="sd-informe-semanal-generar" style="width:100%;margin-top:14px;">📄 Generar informe PDF</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="export-modal">
   <div class="modal-box" style="max-width:400px;">
     <div class="modal-head">
@@ -6279,6 +6304,165 @@ function sdRender(){
 document.getElementById("aic-sd-buscar").addEventListener("input", sdRender);
 document.getElementById("aic-sd-semana").addEventListener("change", sdRender);
 document.getElementById("aic-sd-supervisor").addEventListener("change", sdRender);
+
+/* ---- Informe Semanal (Seguimiento Diario) ----
+   El informe que se revisa cada lunes/martes: árbol Responsable → Supervisor →
+   Proceso → Ubicación de lo EN RIESGO (pendiente en Seguimiento Diario, con el
+   comentario de avance guardado) + lo ya RECUPERADO en Bultos Perdidos/Sin
+   Ubicación esa misma semana (desde ssoma_bpo_recuperaciones, cruzado con su
+   registro para sacar Responsable/Supervisor). Usa la Semana que esté elegida en
+   el filtro de arriba (o la semana actual si dice "Todas"). */
+function sdArbolPorResponsable(rows, campoValor){
+  const arbol = new Map();
+  rows.forEach(r => {
+    const resp = r.responsable || "Sin responsable";
+    const sup = r.supervisor || "Sin supervisor";
+    if(!arbol.has(resp)) arbol.set(resp, new Map());
+    const supMap = arbol.get(resp);
+    if(!supMap.has(sup)) supMap.set(sup, []);
+    supMap.get(sup).push(r);
+  });
+  return arbol;
+}
+function sdOrdenado(mapEntries){ return [...mapEntries].sort((a, b) => a[0].localeCompare(b[0])); }
+
+function sdBuildInformeSemanalHtml(semana){
+  // EN RIESGO — pendientes de Seguimiento Diario de esa semana
+  const pendientesSemana = sdRegistros.filter(r => r.estado !== "finalizado" && r.semana === semana);
+  const totalRiesgo = pendientesSemana.reduce((a, r) => a + (r.valTot || 0), 0);
+  const arbolRiesgo = sdArbolPorResponsable(pendientesSemana);
+
+  let filasRiesgo = "";
+  for(const [responsable, supMap] of sdOrdenado(arbolRiesgo)){
+    let totalResp = 0;
+    let bloqueResp = "";
+    for(const [supervisor, filas] of sdOrdenado(supMap)){
+      // agrupar por Proceso + Ubicación dentro del supervisor, igual que las tarjetas
+      const porProcUbic = new Map();
+      filas.forEach(r => {
+        const clave = r.proceso + "|||" + (r.ubicacion || "");
+        if(!porProcUbic.has(clave)) porProcUbic.set(clave, { proceso: r.proceso, ubicacion: r.ubicacion || "Sin ubicación", filas: [] });
+        porProcUbic.get(clave).filas.push(r);
+      });
+      let totalSup = 0;
+      let bloqueSup = "";
+      for(const g of [...porProcUbic.values()].sort((a, b) => a.proceso.localeCompare(b.proceso))){
+        const valor = g.filas.reduce((a, r) => a + (r.valTot || 0), 0);
+        const comentario = (g.filas.find(r => r.comentario) || {}).comentario || "";
+        totalSup += valor;
+        bloqueSup += `
+          <tr>
+            <td>${escapeHtml(g.proceso)}</td>
+            <td>${escapeHtml(g.ubicacion)}</td>
+            <td class="num">${g.filas.length}</td>
+            <td class="num">${bpoMoneda(valor).replace("S/ ", "")}</td>
+            <td>${escapeHtml(comentario)}</td>
+          </tr>`;
+      }
+      totalResp += totalSup;
+      bloqueResp += `
+        <tr style="background:#F7F8FA;"><td colspan="5" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        ${bloqueSup}
+        <tr style="font-weight:700;"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td><td></td></tr>`;
+    }
+    filasRiesgo += `
+      <tr style="background:#1A1D23;color:#fff;"><td colspan="5">👤 ${escapeHtml(responsable)}</td></tr>
+      ${bloqueResp}
+      <tr style="font-weight:800;background:#FDECEC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td><td></td></tr>`;
+  }
+
+  // RECUPERADO — Bultos Perdidos / Sin Ubicación, eventos de esa semana (por fecha real del reporte)
+  const eventosSemana = bpoRecuperaciones
+    .map(rec => ({ ...rec, registro: bpoRegistros.find(r => r.id === rec.registroId) }))
+    .filter(x => x.registro && bolsaSemanaLabel(new Date(x.creadoEn)) === semana);
+  const totalRecuperado = eventosSemana.reduce((a, x) => a + (x.valor || 0), 0);
+  const arbolRecuperado = sdArbolPorResponsable(eventosSemana.map(x => ({
+    responsable: x.registro.responsable, supervisor: x.registro.supervisor,
+    clasificacion: x.registro.clasificacion === "sin_ubicacion" ? "Sin Ubicación" : "Perdidos",
+    unidades: x.unidades, valor: x.valor,
+  })));
+
+  let filasRecuperado = "";
+  for(const [responsable, supMap] of sdOrdenado(arbolRecuperado)){
+    let totalResp = 0;
+    let bloqueResp = "";
+    for(const [supervisor, filas] of sdOrdenado(supMap)){
+      const porClasificacion = new Map();
+      filas.forEach(r => {
+        if(!porClasificacion.has(r.clasificacion)) porClasificacion.set(r.clasificacion, []);
+        porClasificacion.get(r.clasificacion).push(r);
+      });
+      let totalSup = 0;
+      let bloqueSup = "";
+      for(const [clasificacion, grupo] of sdOrdenado(porClasificacion)){
+        const valor = grupo.reduce((a, r) => a + (r.valor || 0), 0);
+        const unidades = grupo.reduce((a, r) => a + (r.unidades || 0), 0);
+        totalSup += valor;
+        bloqueSup += `
+          <tr>
+            <td>${escapeHtml(clasificacion)}</td>
+            <td class="num">${grupo.length}</td>
+            <td class="num">${bpoFmtUds(unidades)}</td>
+            <td class="num">${bpoMoneda(valor).replace("S/ ", "")}</td>
+          </tr>`;
+      }
+      totalResp += totalSup;
+      bloqueResp += `
+        <tr style="background:#F7F8FA;"><td colspan="4" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        ${bloqueSup}
+        <tr style="font-weight:700;"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td></tr>`;
+    }
+    filasRecuperado += `
+      <tr style="background:#1A1D23;color:#fff;"><td colspan="4">👤 ${escapeHtml(responsable)}</td></tr>
+      ${bloqueResp}
+      <tr style="font-weight:800;background:#E6F7EC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td></tr>`;
+  }
+
+  return `
+    <div class="kpi-row">
+      <div class="kpi-card accent"><div class="kpi-label">En riesgo (${escapeHtml(semana)})</div><div class="kpi-value">${bpoMoneda(totalRiesgo)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Recuperado (${escapeHtml(semana)})</div><div class="kpi-value" style="color:var(--green,#16A34A);">${bpoMoneda(totalRecuperado)}</div></div>
+    </div>
+
+    <div class="modal-section-title">🔶 En riesgo — Seguimiento Diario</div>
+    <table class="print-table">
+      <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
+      <tbody>${filasRiesgo || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
+    </table>
+
+    <div class="modal-section-title">✅ Recuperado — Bultos Perdidos / Sin Ubicación</div>
+    <table class="print-table">
+      <thead><tr><th>Clasificación</th><th>Reportes</th><th>Unidades</th><th>Valor (S/)</th></tr></thead>
+      <tbody>${filasRecuperado || `<tr><td colspan="4" style="padding:14px;color:#8B92A0;text-align:center;">Sin recuperaciones esa semana.</td></tr>`}</tbody>
+    </table>`;
+}
+
+function sdAbrirModalInformeSemanal(){
+  const sel = document.getElementById("sd-informe-semanal-semana");
+  const semanas = [...new Set(sdRegistros.map(r => r.semana).filter(Boolean))].sort();
+  const actual = bolsaSemanaLabel(new Date());
+  sel.innerHTML = semanas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  sel.value = semanas.includes(actual) ? actual : (semanas[semanas.length - 1] || "");
+  document.getElementById("sd-informe-semanal-modal").classList.add("show");
+}
+function sdCerrarModalInformeSemanal(){
+  document.getElementById("sd-informe-semanal-modal").classList.remove("show");
+}
+document.getElementById("aic-sd-informe-semanal-btn").addEventListener("click", sdAbrirModalInformeSemanal);
+document.getElementById("sd-informe-semanal-close").addEventListener("click", sdCerrarModalInformeSemanal);
+document.getElementById("sd-informe-semanal-modal").addEventListener("click", (e)=>{ if(e.target.id === "sd-informe-semanal-modal") sdCerrarModalInformeSemanal(); });
+
+document.getElementById("sd-informe-semanal-generar").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const semana = document.getElementById("sd-informe-semanal-semana").value;
+  if(!semana){ alert("No hay semanas disponibles todavía en Seguimiento Diario."); return; }
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Preparando…";
+  await bitLoadRecuperaciones();
+  btn.disabled = false; btn.textContent = originalLabel;
+  sdCerrarModalInformeSemanal();
+  abrirVentanaImpresion("Informe Semanal — " + semana, sdBuildInformeSemanalHtml(semana), "Equipo de Control de Inventario · Auditoría de Inventario");
+});
 
 function sdUpdateImportState(){
   const f = document.getElementById("aic-sd-file").files[0];
