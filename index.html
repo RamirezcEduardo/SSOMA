@@ -6121,6 +6121,9 @@ function sdCardGrupoHtml(grupo){
   const quienLinea = !supervisores.length ? "" : supervisores.length <= 2
     ? "🧑‍💼 " + supervisores.map(s => escapeHtml(s)).join(", ")
     : `🧑‍💼 ${supervisores.length} supervisores`;
+  // El comentario se guarda como avance del grupo (sin finalizar) o al finalizar —
+  // si ya hay uno guardado de antes, se muestra acá para poder seguir editándolo.
+  const comentarioGuardado = (pendientes.find(r => r.comentario) || {}).comentario || "";
   return `
     <div class="opk-card">
       <div class="opk-card-top">
@@ -6135,7 +6138,8 @@ function sdCardGrupoHtml(grupo){
             <div class="sd-grupo-productos-lista">${productos.map(p => escapeHtml(p)).join(" · ")}</div>
           </details>
           <div class="opk-qty-row"><div class="opk-qty">${bpoMoneda(totalValor)}<span class="u">valorizado pendiente</span></div></div>
-          <textarea class="sd-grupo-comentario" data-clave="${escapeHtml(clave)}" placeholder="Comentario antes de finalizar (opcional)…" rows="2"></textarea>
+          <textarea class="sd-grupo-comentario" data-clave="${escapeHtml(clave)}" placeholder="Comentario de avance (opcional)…" rows="2">${escapeHtml(comentarioGuardado)}</textarea>
+          <button type="button" class="btn btn-ghost sd-grupo-guardar-comentario" data-clave="${escapeHtml(clave)}" style="width:100%;margin-top:6px;padding:8px;font-size:11.5px;">💾 Guardar comentario</button>
         </div>
       </div>
       <button type="button" class="opk-btn-mark finalizar sd-grupo-finalizar" data-clave="${escapeHtml(clave)}">✓ Finalizar ${pendientes.length} LPN de este grupo</button>
@@ -6205,6 +6209,28 @@ function sdRender(){
   grid.innerHTML = grupos.length
     ? grupos.map(sdCardGrupoHtml).join("")
     : `<div class="empty opk-empty">Sin registros con ese filtro.</div>`;
+
+  grid.querySelectorAll(".sd-grupo-guardar-comentario").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const clave = btn.dataset.clave;
+      const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
+      if(!grupo) return;
+      const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
+      if(!pendientes.length) return;
+      const textarea = [...grid.querySelectorAll(".sd-grupo-comentario")].find(t => t.dataset.clave === clave);
+      const comentario = textarea ? textarea.value.trim() : "";
+      const originalLabel = btn.textContent;
+      btn.disabled = true; btn.textContent = "Guardando…";
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros")
+        .update({ comentario: comentario || null })
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).neq("estado", "finalizado");
+      btn.disabled = false;
+      if(error){ alert("No se pudo guardar el comentario: " + error.message); btn.textContent = originalLabel; return; }
+      pendientes.forEach(r => { r.comentario = comentario; });
+      btn.textContent = "✅ Guardado";
+      setTimeout(()=>{ btn.textContent = originalLabel; }, 1500);
+    });
+  });
 
   grid.querySelectorAll(".sd-grupo-finalizar").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
