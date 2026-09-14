@@ -5717,10 +5717,13 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
       nroLote: ["Nro de lote"], cantidad: ["Cantidad actual"],
     });
     if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Ubicacion, Nro LPN, Cod Alternat, Producto, Descripcion, Nro de lote y Cantidad actual. Revisa que sea el export de LPN por Ubicación del WMS, tal cual.`);
+    // "Sem" no viene en este export — se calcula con "Fe y Hr Modif" (el último
+    // movimiento del caso en el WMS), no con la fecha en que se sube el archivo, para
+    // que la semana refleje cuándo pasó de verdad y no cuándo alguien lo importó acá.
+    const idxFecha = bolsaFindCol(hoja.header, ["Fe y Hr Modif", "Fe y Hr Crea", "Fecha"]);
 
     const lpnExistentes = new Set(bpoRegistros.map(r => r.nroLpn));
     let ignoradasSinLpn = 0, duplicadas = 0, fueraDeZona = 0;
-    const semana = bolsaSemanaLabel(new Date());
     const filas = [];
     hoja.rows.forEach(row => {
       const ubicacion = String(row[hoja.cols.ubicacion] || "").trim();
@@ -5732,6 +5735,8 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
       const codAlternat = bpoLimpiaFormula(row[hoja.cols.codAlternat]);
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const cantidadNum = isNaN(cantidad) ? 0 : cantidad;
+      const fechaCreacion = idxFecha !== -1 ? wmsParseFecha(row[idxFecha]) : null;
+      const semana = bolsaSemanaLabel(fechaCreacion) || bolsaSemanaLabel(new Date());
       filas.push({
         proceso: ubicacion, clasificacion: "sin_ubicacion",
         responsable: "", supervisor: "", semana, familia: "",
