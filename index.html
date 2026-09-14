@@ -1277,6 +1277,10 @@
       <label>Contraseña</label>
       <input type="password" id="login-password" autocomplete="current-password" required>
     </div>
+    <div class="field" style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="login-recordar" autocomplete="off" style="width:auto;margin:0;">
+      <label for="login-recordar" style="margin:0;font-weight:600;">Recordar mis datos en este dispositivo</label>
+    </div>
     <span class="login-error" id="login-error"></span>
     <button type="submit" class="btn btn-primary" id="login-submit-btn">Iniciar Sesión</button>
     <button type="button" class="btn btn-ghost" id="login-encuesta-btn">Encuesta de clima laboral</button>
@@ -3162,9 +3166,24 @@ const ROLE_LABELS = {
   supervisor: "Supervisor",
 };
 
+/* "Recordar mis datos": pensado para dispositivos compartidos en almacén donde el
+   WebView del APK no ofrece el guardado nativo de contraseñas del navegador (a
+   diferencia de Chrome de escritorio) — autocompleta usuario/contraseña la próxima
+   vez que se abre la app, sin togar el flujo de sesión (token) que ya existe. */
+const REMEMBER_KEY = "ssoma-remember-login";
+function prellenarLoginRecordado(){
+  let guardado = null;
+  try{ guardado = JSON.parse(localStorage.getItem(REMEMBER_KEY) || "null"); }catch(e){}
+  if(guardado && guardado.username){
+    document.getElementById("login-username").value = guardado.username;
+    document.getElementById("login-password").value = guardado.password || "";
+    document.getElementById("login-recordar").checked = true;
+  }
+}
 function showLoginScreen(){
   document.getElementById("login-screen").style.display = "flex";
   document.getElementById("app-root").style.display = "none";
+  prellenarLoginRecordado();
 }
 function showApp(){
   document.getElementById("login-screen").style.display = "none";
@@ -3243,6 +3262,13 @@ document.getElementById("login-form").addEventListener("submit", async (e)=>{
   }
   currentSession = data;
   try{ localStorage.setItem(SESSION_KEY, data.token); }catch(e){}
+  try{
+    if(document.getElementById("login-recordar").checked){
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify({ username, password }));
+    }else{
+      localStorage.removeItem(REMEMBER_KEY);
+    }
+  }catch(e){}
   document.getElementById("login-form").reset();
   showApp();
   renderUserBadge();
