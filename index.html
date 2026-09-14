@@ -3641,17 +3641,28 @@ document.addEventListener("keydown", (e)=>{
 });
 
 /* Ventana imprimible/descargable reutilizada por RACS, Comportamental y Accidentes/Incidentes. */
-function abrirVentanaImpresion(titulo, bodyHtml){
+/* Logo Adecco para el encabezado de los informes impresos/PDF — data URI en base64
+   (así el logo se ve incluso en la ventana en blanco que abre window.open, sin
+   depender de un archivo aparte). Vacío hasta que se suba el archivo real del logo;
+   mientras tanto el encabezado se ve igual que antes, sin logo. */
+const ADECCO_LOGO_DATA_URI = "";
+
+function abrirVentanaImpresion(titulo, bodyHtml, eyebrow){
+  eyebrow = eyebrow || "Centro de Reportes SSOMA";
   const win = window.open("", "_blank");
   if(!win){ alert("Habilita las ventanas emergentes para descargar el informe."); return; }
+  const generadoEl = new Date().toLocaleString("es-PE", { dateStyle: "long", timeStyle: "short" });
   win.document.write(`
     <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <title>${titulo}</title>
     <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:720px;margin:0 auto;font-size:15px;line-height:1.5;}
-      .hd{border-left:5px solid #E31E24;padding-left:18px;margin-bottom:32px;}
+      *{ box-sizing:border-box; }
+      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:780px;margin:0 auto;font-size:15px;line-height:1.5;}
+      .hd{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:4px solid #E31E24;padding-bottom:18px;margin-bottom:32px;}
+      .hd-text{border-left:5px solid #E31E24;padding-left:18px;}
       .hd .eyebrow{color:#E31E24;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
-      .hd h1{margin:4px 0 0;font-size:28px;}
+      .hd h1{margin:4px 0 0;font-size:26px;}
+      .hd-logo{height:38px;flex-shrink:0;}
       .modal-section-title{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#E31E24;margin:28px 0 14px;padding-top:16px;border-top:1px solid #E5E7EB;}
       .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
       .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 32px;margin-bottom:6px;}
@@ -3661,19 +3672,38 @@ function abrirVentanaImpresion(titulo, bodyHtml){
       .estado-badge{font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:#FEF3E2;color:#B45309;}
       .img-row{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;}
       .img-row img{width:200px;height:200px;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB;}
-      @page{ size:A4; margin:18mm; }
+      .kpi-row{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0 28px;}
+      .kpi-card{flex:1;min-width:150px;background:#F7F8FA;border:1px solid #E5E7EB;border-radius:12px;padding:14px 16px;}
+      .kpi-card .kpi-label{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:6px;}
+      .kpi-card .kpi-value{font-size:22px;font-weight:800;color:#1A1D23;}
+      .kpi-card.accent{background:#FDECEC;border-color:#F7C9CA;}
+      .kpi-card.accent .kpi-value{color:#E31E24;}
+      .print-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;}
+      .print-table thead th{text-align:left;background:#1A1D23;color:#fff;padding:9px 8px;font-size:11px;letter-spacing:.03em;text-transform:uppercase;}
+      .print-table td{padding:8px;border-bottom:1px solid #E5E7EB;}
+      .print-table tbody tr:nth-child(even){background:#F7F8FA;}
+      .print-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+      .print-footer{margin-top:36px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#8B92A0;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+      @page{ size:A4; margin:16mm; }
       @media print{
         body{padding:0;max-width:none;}
-        .mrow, .info-grid, .modal-section-title, .img-row{ break-inside:avoid; }
+        .mrow, .info-grid, .modal-section-title, .img-row, .kpi-card, .print-table tr{ break-inside:avoid; }
       }
-      @media screen and (max-width:600px){ .info-grid{grid-template-columns:1fr;} }
+      @media screen and (max-width:600px){ .info-grid{grid-template-columns:1fr;} .hd{flex-direction:column;align-items:flex-start;} }
     </style>
     </head><body>
       <div class="hd">
-        <div class="eyebrow">Centro de Reportes SSOMA</div>
-        <h1>${titulo}</h1>
+        <div class="hd-text">
+          <div class="eyebrow">${escapeHtml(eyebrow)}</div>
+          <h1>${titulo}</h1>
+        </div>
+        ${ADECCO_LOGO_DATA_URI ? `<img class="hd-logo" src="${ADECCO_LOGO_DATA_URI}" alt="Adecco">` : ""}
       </div>
       ${bodyHtml}
+      <div class="print-footer">
+        <span>Generado el ${generadoEl}</span>
+        <span>SSOMA Adecco</span>
+      </div>
     </body></html>
   `);
   win.document.close();
@@ -6362,18 +6392,19 @@ function bitBuildInformeHtml(){
         <td>${escapeHtml(r.descripcion || r.producto)}</td>
         <td>${escapeHtml(r.proceso)}</td>
         <td>${escapeHtml(r.supervisor)}</td>
-        <td>${(r.valTot || 0).toFixed(2)}</td>
+        <td>${escapeHtml(r.semana)}</td>
+        <td class="num">${bpoMoneda(r.valTot).replace("S/ ", "")}</td>
       </tr>`).join("");
     return `
       <div class="modal-section-title">Resumen — ${escapeHtml(filtroDesc)}</div>
-      <div class="mrow"><b>Total finalizados</b>${rows.length}</div>
-      <div class="mrow"><b>Valor total</b>S/ ${totalValor.toFixed(2)}</div>
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-label">Total finalizados</div><div class="kpi-value">${rows.length}</div></div>
+        <div class="kpi-card accent"><div class="kpi-label">Valor total</div><div class="kpi-value">${bpoMoneda(totalValor)}</div></div>
+      </div>
       <div class="modal-section-title">Detalle</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-        <thead><tr style="text-align:left;border-bottom:2px solid #E5E7EB;">
-          <th style="padding:6px 4px;">Finalizado</th><th style="padding:6px 4px;">Nro LPN</th><th style="padding:6px 4px;">Producto</th><th style="padding:6px 4px;">Proceso</th><th style="padding:6px 4px;">Supervisor</th><th style="padding:6px 4px;">Val (S/)</th>
-        </tr></thead>
-        <tbody>${filas || `<tr><td colspan="6" style="padding:10px;color:#8B92A0;">Sin registros.</td></tr>`}</tbody>
+      <table class="print-table">
+        <thead><tr><th>Finalizado</th><th>Nro LPN</th><th>Producto</th><th>Proceso</th><th>Supervisor</th><th>Semana</th><th>Val (S/)</th></tr></thead>
+        <tbody>${filas || `<tr><td colspan="7" style="padding:14px;color:#8B92A0;text-align:center;">Sin registros.</td></tr>`}</tbody>
       </table>`;
   }
   const totalValor = rows.reduce((a, x) => a + (x.valor || 0), 0);
@@ -6383,26 +6414,27 @@ function bitBuildInformeHtml(){
       <td>${escapeHtml(new Date(x.creadoEn).toLocaleString("es-PE"))}</td>
       <td>${escapeHtml(x.registro.nroLpn)}</td>
       <td>${escapeHtml(x.registro.descripcion || x.registro.producto)}</td>
-      <td>${bpoFmtUds(x.unidades)}</td>
-      <td>${(x.valor || 0).toFixed(2)}</td>
+      <td>${escapeHtml(x.registro.semana)}</td>
+      <td class="num">${bpoFmtUds(x.unidades)}</td>
+      <td class="num">${bpoMoneda(x.valor).replace("S/ ", "")}</td>
       <td>${escapeHtml((usuariosPorId[x.reportadoPorId] || {}).nombre_completo || "")}</td>
     </tr>`).join("");
   return `
     <div class="modal-section-title">Resumen — ${escapeHtml(filtroDesc)}</div>
-    <div class="mrow"><b>Total reportes</b>${rows.length}</div>
-    <div class="mrow"><b>Unidades recuperadas</b>${bpoFmtUds(totalUds)}</div>
-    <div class="mrow"><b>Valor recuperado</b>S/ ${totalValor.toFixed(2)}</div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Total reportes</div><div class="kpi-value">${rows.length}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Unidades recuperadas</div><div class="kpi-value">${bpoFmtUds(totalUds)}</div></div>
+      <div class="kpi-card accent"><div class="kpi-label">Valor recuperado</div><div class="kpi-value">${bpoMoneda(totalValor)}</div></div>
+    </div>
     <div class="modal-section-title">Detalle</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-      <thead><tr style="text-align:left;border-bottom:2px solid #E5E7EB;">
-        <th style="padding:6px 4px;">Fecha</th><th style="padding:6px 4px;">Nro LPN</th><th style="padding:6px 4px;">Producto</th><th style="padding:6px 4px;">Uds</th><th style="padding:6px 4px;">Valor (S/)</th><th style="padding:6px 4px;">Reportado por</th>
-      </tr></thead>
-      <tbody>${filas || `<tr><td colspan="6" style="padding:10px;color:#8B92A0;">Sin registros.</td></tr>`}</tbody>
+    <table class="print-table">
+      <thead><tr><th>Fecha</th><th>Nro LPN</th><th>Producto</th><th>Semana</th><th>Uds</th><th>Valor (S/)</th><th>Reportado por</th></tr></thead>
+      <tbody>${filas || `<tr><td colspan="7" style="padding:14px;color:#8B92A0;text-align:center;">Sin registros.</td></tr>`}</tbody>
     </table>`;
 }
 
 document.getElementById("bit-pdf-btn").addEventListener("click", ()=>{
-  abrirVentanaImpresion("Bitácora — " + bitTituloModulo(), bitBuildInformeHtml());
+  abrirVentanaImpresion("Bitácora — " + bitTituloModulo(), bitBuildInformeHtml(), "Equipo de Control de Inventario · Auditoría de Inventario");
 });
 
 const BIT_COLUMNAS_RECUPERACION = [
@@ -6423,6 +6455,7 @@ const BIT_COLUMNAS_SD = [
   { header: "Nro LPN", get: r => r.nroLpn },
   { header: "Producto", get: r => r.descripcion || r.producto },
   { header: "Cod Alternat", get: r => r.codAlternat },
+  { header: "Semana", get: r => r.semana },
   { header: "Supervisor", get: r => r.supervisor },
   { header: "Responsable", get: r => r.responsable },
   { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
