@@ -1864,6 +1864,7 @@
         <button type="button" class="tab-btn" data-tab="bultos-perdidos">📦 Bultos Perdidos</button>
         <button type="button" class="tab-btn" data-tab="sin-ubicacion">📍 Sin Ubicación</button>
         <button type="button" class="tab-btn" data-tab="seguimiento-diario">📅 Seguimiento Diario</button>
+        <button type="button" class="tab-btn" data-tab="bitacora">📖 Bitácora</button>
       </div>
 
       <div id="audinv-tab-shortpick">
@@ -2204,6 +2205,48 @@
         </div>
 
         <div class="opk-grid" id="aic-sd-grid"></div>
+      </div>
+
+      <div id="audinv-tab-bitacora" style="display:none;">
+        <div class="section-head">
+          <h2 class="section-title">📖 Bitácora</h2>
+        </div>
+        <p class="section-desc">Historial de lo ya levantado/recuperado en Bultos Perdidos, Sin Ubicación y Seguimiento Diario — solo consulta, no afecta esos checklists. Úsalo para el informe diario de lo levantado o el informe semanal de lo recuperado.</p>
+
+        <div class="tab-bar" id="bit-subtabs">
+          <button type="button" class="tab-btn active" data-subtab="perdidos">📦 Bultos Perdidos</button>
+          <button type="button" class="tab-btn" data-subtab="sin_ubicacion">📍 Sin Ubicación</button>
+          <button type="button" class="tab-btn" data-subtab="seguimiento_diario">📅 Seguimiento Diario</button>
+        </div>
+
+        <div class="stats-row" style="margin-top:18px;">
+          <div class="stat-card">
+            <div class="stat-label">Levantado hoy</div>
+            <div class="stat-value" id="bit-stat-hoy-count">0</div>
+            <div class="stat-sublabel" id="bit-stat-hoy-valor">S/ 0.00</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Recuperado esta semana</div>
+            <div class="stat-value" id="bit-stat-semana-valor">S/ 0.00</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin:16px 0;">
+          <div class="field" style="min-width:170px;margin-bottom:0;">
+            <label>Día</label>
+            <input type="date" id="bit-f-fecha">
+          </div>
+          <div class="field" style="min-width:170px;margin-bottom:0;">
+            <label>Semana</label>
+            <select id="bit-f-semana"><option value="">Todas</option></select>
+          </div>
+          <button type="button" class="btn btn-ghost" id="bit-limpiar-filtros">Limpiar filtros</button>
+          <div style="flex:1;"></div>
+          <button type="button" class="btn btn-ghost" id="bit-pdf-btn">📄 Generar informe PDF</button>
+          <button type="button" class="btn btn-ghost" id="bit-export-btn">📤 Exportar</button>
+        </div>
+
+        <div id="bit-list"></div>
       </div>
     </section>
 
@@ -5909,7 +5952,7 @@ async function sdLoadRegistros(){
     codAlternat: r.cod_alternat || "", descripcion: r.descripcion || "",
     cantidad: r.cantidad_actual === null ? null : Number(r.cantidad_actual),
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
-    estado: r.estado, finalizadoEn: r.finalizado_en, archivoOrigen: r.archivo_origen || "",
+    estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id, archivoOrigen: r.archivo_origen || "",
     createdAt: r.created_at,
   }));
   sdRenderFiltros();
@@ -5942,10 +5985,10 @@ function sdFiltered(){
   );
 }
 
-function sdCardHtml(r, enGrupo){
+function sdCardHtml(r, enGrupo, soloLectura){
   const done = r.estado === "finalizado";
   const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark finalizar" data-id="${r.id}">✓ Marcar como finalizado</button>`;
-  const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sd" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
+  const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sd" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""}">
       <div class="opk-card-top">
@@ -6018,7 +6061,7 @@ function sdRender(){
         .eq("id", id);
       if(error){ alert("No se pudo guardar: " + error.message); btn.disabled = false; btn.textContent = "✓ Marcar como finalizado"; return; }
       const row = sdRegistros.find(r => r.id === id);
-      if(row){ row.estado = "finalizado"; row.finalizadoEn = new Date().toISOString(); }
+      if(row){ row.estado = "finalizado"; row.finalizadoEn = new Date().toISOString(); row.finalizadoPorId = miUsuario ? miUsuario.id : null; }
       sdRender();
     });
   });
@@ -6135,6 +6178,250 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
 });
 
 sdLoadRegistros();
+
+/* ============ Bitácora (Auditoría de Inventario) ============
+   Vista de solo lectura de lo ya levantado/recuperado — no mueve ni borra nada de
+   Bultos Perdidos, Sin Ubicación ni Seguimiento Diario, solo lo junta para poder
+   revisarlo y generar informes (diario de lo levantado, semanal de lo recuperado).
+   Bultos Perdidos/Sin Ubicación se arman desde ssoma_bpo_recuperaciones (un registro
+   por cada reporte de recuperación, así se ve la actividad real día a día — no solo
+   el estado final de cada LPN, que no distingue cuándo pasó cada cosa). Seguimiento
+   Diario no tiene ese log por evento (finalizar es de una sola vez), así que ahí se
+   usan directo los registros con estado "finalizado". */
+let bitTabActivo = "perdidos"; // "perdidos" | "sin_ubicacion" | "seguimiento_diario"
+let bpoRecuperaciones = [];
+
+function bitFechaLocal(isoString){
+  if(!isoString) return "";
+  const d = new Date(isoString);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+async function bitLoadRecuperaciones(){
+  const { data, error } = await sbSelectAll("ssoma_bpo_recuperaciones", "*", q => q.order("creado_en", { ascending: false }));
+  if(error){ console.error(error); return; }
+  bpoRecuperaciones = (data || []).map(r => ({
+    id: r.id, registroId: r.registro_id, unidades: Number(r.unidades) || 0,
+    valor: Number(r.valor) || 0, areaEncontrado: r.area_encontrado || "",
+    comentario: r.comentario || "", reportadoPorId: r.reportado_por_id, creadoEn: r.creado_en,
+  }));
+}
+
+async function bitAbrir(){
+  await bitLoadRecuperaciones();
+  bitRender();
+}
+
+// Filas de recuperación (Bultos Perdidos/Sin Ubicación) ya cruzadas con su registro (LPN, producto…)
+function bitRecuperacionesDelModulo(clasificacion){
+  return bpoRecuperaciones
+    .map(rec => ({ ...rec, registro: bpoRegistros.find(r => r.id === rec.registroId) }))
+    .filter(x => x.registro && x.registro.clasificacion === clasificacion);
+}
+
+function bitFiltered(){
+  const fecha = document.getElementById("bit-f-fecha").value;
+  const semana = document.getElementById("bit-f-semana").value;
+  if(bitTabActivo === "seguimiento_diario"){
+    return sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn
+      && (!semana || bolsaSemanaLabel(new Date(r.finalizadoEn)) === semana)
+      && (!fecha || bitFechaLocal(r.finalizadoEn) === fecha));
+  }
+  return bitRecuperacionesDelModulo(bitTabActivo)
+    .filter(x => !semana || bolsaSemanaLabel(new Date(x.creadoEn)) === semana)
+    .filter(x => !fecha || bitFechaLocal(x.creadoEn) === fecha);
+}
+
+function bitRenderFiltroSemana(){
+  const sel = document.getElementById("bit-f-semana");
+  const actual = sel.value;
+  const semanas = bitTabActivo === "seguimiento_diario"
+    ? [...new Set(sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn).map(r => bolsaSemanaLabel(new Date(r.finalizadoEn))))]
+    : [...new Set(bitRecuperacionesDelModulo(bitTabActivo).map(x => bolsaSemanaLabel(new Date(x.creadoEn))))];
+  semanas.sort();
+  sel.innerHTML = '<option value="">Todas</option>' + semanas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  sel.value = semanas.includes(actual) ? actual : "";
+}
+
+function bitStats(){
+  const hoy = bitFechaLocal(new Date().toISOString());
+  const semanaHoy = bolsaSemanaLabel(new Date());
+  if(bitTabActivo === "seguimiento_diario"){
+    const fin = sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn);
+    const hoyRows = fin.filter(r => bitFechaLocal(r.finalizadoEn) === hoy);
+    const semRows = fin.filter(r => bolsaSemanaLabel(new Date(r.finalizadoEn)) === semanaHoy);
+    return {
+      hoyCount: hoyRows.length, hoyValor: hoyRows.reduce((a, r) => a + (r.valTot || 0), 0),
+      semValor: semRows.reduce((a, r) => a + (r.valTot || 0), 0),
+    };
+  }
+  const rows = bitRecuperacionesDelModulo(bitTabActivo);
+  const hoyRows = rows.filter(x => bitFechaLocal(x.creadoEn) === hoy);
+  const semRows = rows.filter(x => bolsaSemanaLabel(new Date(x.creadoEn)) === semanaHoy);
+  return {
+    hoyCount: hoyRows.length, hoyValor: hoyRows.reduce((a, x) => a + x.valor, 0),
+    semValor: semRows.reduce((a, x) => a + x.valor, 0),
+  };
+}
+
+function bitCardHtmlRecuperacion(x){
+  const r = x.registro;
+  const fecha = new Date(x.creadoEn).toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const quien = (x.reportadoPorId && usuariosPorId[x.reportadoPorId]) ? usuariosPorId[x.reportadoPorId].nombre_completo : "—";
+  return `
+    <div class="opk-card done">
+      <div class="opk-card-top">
+        <div class="opk-check-big">✓</div>
+        <div class="opk-card-body">
+          <span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>
+          <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
+          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
+          <div class="opk-sub">🗓️ ${escapeHtml(fecha)} · 👤 ${escapeHtml(quien)}</div>
+          ${x.areaEncontrado ? `<div class="opk-sub">📍 Encontrado en: ${escapeHtml(x.areaEncontrado)}</div>` : ""}
+          ${x.comentario ? `<div class="opk-sub">💬 ${escapeHtml(x.comentario)}</div>` : ""}
+          <div class="opk-qty-row"><div class="opk-qty">${bpoMoneda(x.valor)}<span class="u">${bpoFmtUds(x.unidades)} uds reportadas</span></div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bitRender(){
+  bitRenderFiltroSemana();
+  const stats = bitStats();
+  document.getElementById("bit-stat-hoy-count").textContent = stats.hoyCount;
+  document.getElementById("bit-stat-hoy-valor").textContent = bpoMoneda(stats.hoyValor);
+  document.getElementById("bit-stat-semana-valor").textContent = bpoMoneda(stats.semValor);
+
+  const rows = bitFiltered();
+  const list = document.getElementById("bit-list");
+  if(bitTabActivo === "seguimiento_diario"){
+    const ordenadas = [...rows].sort((a, b) => (b.finalizadoEn || "").localeCompare(a.finalizadoEn || ""));
+    list.innerHTML = ordenadas.length
+      ? `<div class="opk-grid">${ordenadas.map(r => sdCardHtml(r, false, true)).join("")}</div>`
+      : `<div class="empty opk-empty">Sin registros finalizados con ese filtro.</div>`;
+  }else{
+    const ordenadas = [...rows].sort((a, b) => (b.creadoEn || "").localeCompare(a.creadoEn || ""));
+    list.innerHTML = ordenadas.length
+      ? `<div class="opk-grid">${ordenadas.map(bitCardHtmlRecuperacion).join("")}</div>`
+      : `<div class="empty opk-empty">Sin recuperaciones con ese filtro.</div>`;
+  }
+}
+
+document.getElementById("bit-f-fecha").addEventListener("change", bitRender);
+document.getElementById("bit-f-semana").addEventListener("change", bitRender);
+document.getElementById("bit-limpiar-filtros").addEventListener("click", ()=>{
+  document.getElementById("bit-f-fecha").value = "";
+  document.getElementById("bit-f-semana").value = "";
+  bitRender();
+});
+
+function bitTituloModulo(){
+  return bitTabActivo === "perdidos" ? "Bultos Perdidos" : bitTabActivo === "sin_ubicacion" ? "Sin Ubicación" : "Seguimiento Diario";
+}
+
+function bitBuildInformeHtml(){
+  const rows = bitFiltered();
+  const fecha = document.getElementById("bit-f-fecha").value;
+  const semana = document.getElementById("bit-f-semana").value;
+  let filtroDesc = "Todo el historial";
+  if(fecha && semana) filtroDesc = `Día ${fecha} · ${semana}`;
+  else if(fecha) filtroDesc = `Día ${fecha}`;
+  else if(semana) filtroDesc = semana;
+
+  if(bitTabActivo === "seguimiento_diario"){
+    const totalValor = rows.reduce((a, r) => a + (r.valTot || 0), 0);
+    const filas = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.finalizadoEn ? new Date(r.finalizadoEn).toLocaleString("es-PE") : "")}</td>
+        <td>${escapeHtml(r.nroLpn)}</td>
+        <td>${escapeHtml(r.descripcion || r.producto)}</td>
+        <td>${escapeHtml(r.proceso)}</td>
+        <td>${escapeHtml(r.supervisor)}</td>
+        <td>${(r.valTot || 0).toFixed(2)}</td>
+      </tr>`).join("");
+    return `
+      <div class="modal-section-title">Resumen — ${escapeHtml(filtroDesc)}</div>
+      <div class="mrow"><b>Total finalizados</b>${rows.length}</div>
+      <div class="mrow"><b>Valor total</b>S/ ${totalValor.toFixed(2)}</div>
+      <div class="modal-section-title">Detalle</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead><tr style="text-align:left;border-bottom:2px solid #E5E7EB;">
+          <th style="padding:6px 4px;">Finalizado</th><th style="padding:6px 4px;">Nro LPN</th><th style="padding:6px 4px;">Producto</th><th style="padding:6px 4px;">Proceso</th><th style="padding:6px 4px;">Supervisor</th><th style="padding:6px 4px;">Val (S/)</th>
+        </tr></thead>
+        <tbody>${filas || `<tr><td colspan="6" style="padding:10px;color:#8B92A0;">Sin registros.</td></tr>`}</tbody>
+      </table>`;
+  }
+  const totalValor = rows.reduce((a, x) => a + (x.valor || 0), 0);
+  const totalUds = rows.reduce((a, x) => a + (x.unidades || 0), 0);
+  const filas = rows.map(x => `
+    <tr>
+      <td>${escapeHtml(new Date(x.creadoEn).toLocaleString("es-PE"))}</td>
+      <td>${escapeHtml(x.registro.nroLpn)}</td>
+      <td>${escapeHtml(x.registro.descripcion || x.registro.producto)}</td>
+      <td>${bpoFmtUds(x.unidades)}</td>
+      <td>${(x.valor || 0).toFixed(2)}</td>
+      <td>${escapeHtml((usuariosPorId[x.reportadoPorId] || {}).nombre_completo || "")}</td>
+    </tr>`).join("");
+  return `
+    <div class="modal-section-title">Resumen — ${escapeHtml(filtroDesc)}</div>
+    <div class="mrow"><b>Total reportes</b>${rows.length}</div>
+    <div class="mrow"><b>Unidades recuperadas</b>${bpoFmtUds(totalUds)}</div>
+    <div class="mrow"><b>Valor recuperado</b>S/ ${totalValor.toFixed(2)}</div>
+    <div class="modal-section-title">Detalle</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="text-align:left;border-bottom:2px solid #E5E7EB;">
+        <th style="padding:6px 4px;">Fecha</th><th style="padding:6px 4px;">Nro LPN</th><th style="padding:6px 4px;">Producto</th><th style="padding:6px 4px;">Uds</th><th style="padding:6px 4px;">Valor (S/)</th><th style="padding:6px 4px;">Reportado por</th>
+      </tr></thead>
+      <tbody>${filas || `<tr><td colspan="6" style="padding:10px;color:#8B92A0;">Sin registros.</td></tr>`}</tbody>
+    </table>`;
+}
+
+document.getElementById("bit-pdf-btn").addEventListener("click", ()=>{
+  abrirVentanaImpresion("Bitácora — " + bitTituloModulo(), bitBuildInformeHtml());
+});
+
+const BIT_COLUMNAS_RECUPERACION = [
+  { header: "Fecha", get: x => new Date(x.creadoEn).toLocaleString("es-PE") },
+  { header: "Nro LPN", get: x => x.registro.nroLpn },
+  { header: "Producto", get: x => x.registro.descripcion || x.registro.producto },
+  { header: "Cod Alternat", get: x => x.registro.codAlternat },
+  { header: "Semana (bulto)", get: x => x.registro.semana },
+  { header: "Unidades reportadas", get: x => bpoFmtUds(x.unidades) },
+  { header: "Valor (S/)", get: x => (x.valor || 0).toFixed(2) },
+  { header: "Área encontrado", get: x => x.areaEncontrado },
+  { header: "Comentario", get: x => x.comentario },
+  { header: "Reportado por", get: x => (usuariosPorId[x.reportadoPorId] || {}).nombre_completo || "" },
+];
+const BIT_COLUMNAS_SD = [
+  { header: "Fecha finalizado", get: r => r.finalizadoEn ? new Date(r.finalizadoEn).toLocaleString("es-PE") : "" },
+  { header: "Proceso", get: r => r.proceso },
+  { header: "Nro LPN", get: r => r.nroLpn },
+  { header: "Producto", get: r => r.descripcion || r.producto },
+  { header: "Cod Alternat", get: r => r.codAlternat },
+  { header: "Supervisor", get: r => r.supervisor },
+  { header: "Responsable", get: r => r.responsable },
+  { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
+  { header: "Finalizado por", get: r => (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "" },
+];
+document.getElementById("bit-export-btn").addEventListener("click", ()=>{
+  if(bitTabActivo === "seguimiento_diario"){
+    abrirExportModal({
+      titulo: "Bitácora — Seguimiento Diario",
+      obtenerFilas: () => bitFiltered(),
+      campoFecha: r => bitFechaLocal(r.finalizadoEn),
+      columnas: BIT_COLUMNAS_SD,
+      nombreArchivo: "bitacora_seguimiento_diario.csv",
+    });
+  }else{
+    abrirExportModal({
+      titulo: "Bitácora — " + bitTituloModulo(),
+      obtenerFilas: () => bitFiltered(),
+      campoFecha: x => bitFechaLocal(x.creadoEn),
+      columnas: BIT_COLUMNAS_RECUPERACION,
+      nombreArchivo: "bitacora_" + bitTabActivo + ".csv",
+    });
+  }
+});
 
 function bpoUpdateImportState(){
   const f = document.getElementById("bpo-file").files[0];
@@ -6651,6 +6938,12 @@ document.addEventListener("click", (e)=>{
     document.getElementById("audinv-tab-bultos-perdidos").style.display = btn.dataset.tab === "bultos-perdidos" ? "" : "none";
     document.getElementById("audinv-tab-sin-ubicacion").style.display = btn.dataset.tab === "sin-ubicacion" ? "" : "none";
     document.getElementById("audinv-tab-seguimiento-diario").style.display = btn.dataset.tab === "seguimiento-diario" ? "" : "none";
+    document.getElementById("audinv-tab-bitacora").style.display = btn.dataset.tab === "bitacora" ? "" : "none";
+    if(btn.dataset.tab === "bitacora") bitAbrir();
+  }
+  else if(barra.id === "bit-subtabs"){
+    bitTabActivo = btn.dataset.subtab;
+    bitRender();
   }
   else if(barra.id === "bpo-tabs"){
     bpoTabActivo = btn.dataset.tab === "sin-ubicacion" ? "sin_ubicacion" : "perdidos";
