@@ -772,6 +772,16 @@
   .opk-grid{display:grid;grid-template-columns:1fr;gap:10px;}
   @media (min-width:760px){ .opk-grid{grid-template-columns:1fr 1fr;} }
 
+  /* LPN multi-SKU: un mismo bulto con varios productos (Cod Alternat distinto) se
+     agrupa bajo un solo encabezado, en vez de aparecer como tarjetas sueltas que
+     el usuario tendría que buscar una por una. */
+  .opk-lpn-group{grid-column:1/-1;background:var(--panel-alt);border:1px dashed var(--border-strong);border-radius:14px;padding:12px;}
+  .opk-lpn-group-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;}
+  .opk-lpn-chip.big{font-size:13px;padding:4px 10px;}
+  .opk-multi-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--purple);background:var(--purple-tint);border-radius:20px;padding:3px 10px;}
+  .opk-lpn-group-items{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media (min-width:760px){ .opk-lpn-group-items{grid-template-columns:1fr 1fr;} }
+
   .opk-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);}
   .opk-card.done{background:var(--panel-alt);opacity:.75;}
   .opk-card-top{display:flex;align-items:flex-start;gap:12px;}
@@ -5294,9 +5304,12 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
    Fuente: reporte "Pendientes de Operación" (hoja "Bultos Pendientes", encabezado
    enterrado — bolsaPickSheet ya sabe buscarlo). Se filtra por Proceso y se clasifica
    en dos listas: perdidos (Por Ubicar + Perdido ERU) y sin_ubicacion (Sin Ubicación).
-   Cada fila se guarda por su Nro LPN (único) — si un LPN ya está cargado (de cualquier
-   import anterior), no se vuelve a insertar: se detecta como duplicado y se cuenta
-   aparte en el mensaje final, sin pisar el registro existente (ni su estado). */
+   La clave única es Nro LPN + Cod Alternat (no solo el LPN): un bulto multi-SKU trae
+   varias filas con el mismo LPN y distinto producto, y cada una se guarda aparte. Si
+   esa combinación ya está cargada (de cualquier import anterior), no se vuelve a
+   insertar: se detecta como duplicado y se cuenta aparte en el mensaje final, sin
+   pisar el registro existente (ni su estado). En el checklist, los LPN con más de un
+   producto se agrupan bajo un mismo encabezado (ver opkAgruparPorLpn). */
 let bpoRegistros = [];
 let bpoTabActivo = "perdidos";
 
@@ -5350,6 +5363,19 @@ async function opkEliminarRegistro(tabla, id, btn){
     sdRegistros = sdRegistros.filter(r => r.id !== id);
     sdRender();
   }
+}
+
+/* Agrupa filas por Nro LPN — un bulto puede traer varios productos (Cod Alternat
+   distinto) en el mismo LPN ("multi-SKU"), y antes cada uno se veía como una
+   tarjeta suelta en el listado. Agrupándolos, el usuario ve de una todos los
+   productos vinculados a ese LPN sin tener que buscarlo varias veces. */
+function opkAgruparPorLpn(rows){
+  const mapa = new Map();
+  rows.forEach(r => {
+    if(!mapa.has(r.nroLpn)) mapa.set(r.nroLpn, []);
+    mapa.get(r.nroLpn).push(r);
+  });
+  return [...mapa.values()];
 }
 
 function bpoRenderFiltroSemana(){
@@ -5463,7 +5489,7 @@ function bpoChkFiltered(clasificacion){
   );
 }
 
-function bpoChkCardHtml(r){
+function bpoChkCardHtml(r, enGrupo){
   const pendUds = bpoPendienteUnidades(r);
   const done = r.estado === "recuperado";
   const parcial = r.estado === "parcial";
@@ -5488,7 +5514,7 @@ function bpoChkCardHtml(r){
       <div class="opk-card-top">
         <div class="opk-check-big ${parcial ? "parcial" : ""}">${done ? "✓" : (parcial ? "–" : "")}</div>
         <div class="opk-card-body">
-          <span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>
+          ${enGrupo ? "" : `<span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>`}
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
           <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}</div>
           ${extraHtml}
@@ -5497,6 +5523,22 @@ function bpoChkCardHtml(r){
       </div>
       ${btnHtml}
       ${delBtn}
+    </div>`;
+}
+
+/* LPN multi-SKU: varios productos (Cod Alternat) bajo el mismo Nro LPN — se
+   agrupan en un solo bloque con encabezado, en vez de tarjetas sueltas. */
+function bpoChkGrupoHtml(grupo){
+  const pend = grupo.filter(r => r.estado !== "recuperado").length;
+  return `
+    <div class="opk-lpn-group">
+      <div class="opk-lpn-group-head">
+        <span class="opk-lpn-chip big">${escapeHtml(grupo[0].nroLpn)}</span>
+        <span class="opk-multi-badge">📦 Multi-SKU · ${grupo.length} productos${pend ? " · " + pend + " pendientes" : " · todos recuperados"}</span>
+      </div>
+      <div class="opk-lpn-group-items">
+        ${grupo.map(r => bpoChkCardHtml(r, true)).join("")}
+      </div>
     </div>`;
 }
 
@@ -5515,16 +5557,23 @@ function bpoChkRender(clasificacion){
   document.getElementById(`aic-${prefijo}-pend`).textContent = bpoMoneda(totalPend) + " pendiente";
   document.getElementById(`aic-${prefijo}-rec`).textContent = bpoMoneda(totalRec) + " recuperado";
 
-  document.getElementById(`aic-${prefijo}-lpn-text`).value = pendRows.map(r => r.nroLpn).join(",");
+  const lpnPendUnicos = [...new Set(pendRows.map(r => r.nroLpn))];
+  document.getElementById(`aic-${prefijo}-lpn-text`).value = lpnPendUnicos.join(",");
   const btnCopiar = document.getElementById(`aic-${prefijo}-lpn-copiar`);
-  btnCopiar.textContent = `Copiar (${pendRows.length})`;
+  btnCopiar.textContent = `Copiar (${lpnPendUnicos.length})`;
   btnCopiar.classList.remove("copiado");
 
   const sinFiltro = !document.getElementById(`aic-${prefijo}-buscar`).value && !document.getElementById(`aic-${prefijo}-semana`).value;
-  const ordenadas = [...rows].sort((a, b) => (a.estado === "recuperado" ? 1 : 0) - (b.estado === "recuperado" ? 1 : 0));
+  const grupos = opkAgruparPorLpn(rows);
+  grupos.forEach(g => g.sort((a, b) => (a.estado === "recuperado" ? 1 : 0) - (b.estado === "recuperado" ? 1 : 0)));
+  grupos.sort((a, b) => {
+    const aDone = a.every(r => r.estado === "recuperado") ? 1 : 0;
+    const bDone = b.every(r => r.estado === "recuperado") ? 1 : 0;
+    return aDone - bDone;
+  });
   const grid = document.getElementById(`aic-${prefijo}-grid`);
-  grid.innerHTML = ordenadas.length
-    ? ordenadas.map(bpoChkCardHtml).join("")
+  grid.innerHTML = grupos.length
+    ? grupos.map(g => g.length > 1 ? bpoChkGrupoHtml(g) : bpoChkCardHtml(g[0])).join("")
     : `<div class="empty opk-empty">Sin registros${sinFiltro ? "" : " con ese filtro"}.</div>`;
 
   grid.querySelectorAll(".opk-btn-mark").forEach(btn=>{
@@ -5749,7 +5798,10 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     // que la semana refleje cuándo pasó de verdad y no cuándo alguien lo importó acá.
     const idxFecha = bolsaFindCol(hoja.header, ["Fe y Hr Modif", "Fe y Hr Crea", "Fecha"]);
 
-    const lpnExistentes = new Set(bpoRegistros.map(r => r.nroLpn));
+    // La clave es Nro LPN + Cod Alternat, no solo el LPN — un mismo bulto puede
+    // traer varios productos distintos (multi-SKU), y cada uno se guarda como
+    // fila aparte en vez de descartar todo lo que no sea el primero.
+    const clavesExistentes = new Set(bpoRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
     let ignoradasSinLpn = 0, duplicadas = 0, fueraDeZona = 0;
     const filas = [];
     hoja.rows.forEach(row => {
@@ -5757,9 +5809,10 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
       if(!ubicacion.toUpperCase().startsWith("SIN-UBICACION")){ fueraDeZona++; return; }
       const nroLpn = bpoLimpiaFormula(row[hoja.cols.nroLpn]);
       if(!nroLpn){ ignoradasSinLpn++; return; }
-      if(lpnExistentes.has(nroLpn)){ duplicadas++; return; }
-      lpnExistentes.add(nroLpn);
       const codAlternat = bpoLimpiaFormula(row[hoja.cols.codAlternat]);
+      const clave = nroLpn + "|||" + codAlternat;
+      if(clavesExistentes.has(clave)){ duplicadas++; return; }
+      clavesExistentes.add(clave);
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const cantidadNum = isNaN(cantidad) ? 0 : cantidad;
       const fechaCreacion = idxFecha !== -1 ? wmsParseFecha(row[idxFecha]) : null;
@@ -5784,7 +5837,7 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn", ignoreDuplicates: true });
+      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true });
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
     }
@@ -5812,7 +5865,9 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
    pero acá se guardan TODOS los demás procesos (todo lo que NO es Perdido ERU,
    Por Ubicar ni Sin Ubicación — esos van a ssoma_bpo_registros). No es un flujo
    de recuperación por unidades: cada supervisor debe FINALIZAR sus casos; sin
-   finalizar, un LPN puede terminar como ajuste perdido en Control de Bolsa. */
+   finalizar, un LPN puede terminar como ajuste perdido en Control de Bolsa.
+   Igual que en Bultos Pendientes de Operación, la clave única es Nro LPN + Cod
+   Alternat (no solo el LPN) para no perder productos de un bulto multi-SKU. */
 let sdRegistros = [];
 
 async function sdLoadRegistros(){
@@ -5857,7 +5912,7 @@ function sdFiltered(){
   );
 }
 
-function sdCardHtml(r){
+function sdCardHtml(r, enGrupo){
   const done = r.estado === "finalizado";
   const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark finalizar" data-id="${r.id}">✓ Marcar como finalizado</button>`;
   const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sd" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
@@ -5866,7 +5921,7 @@ function sdCardHtml(r){
       <div class="opk-card-top">
         <div class="opk-check-big">${done ? "✓" : ""}</div>
         <div class="opk-card-body">
-          <span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span><span class="opk-proceso-badge">${escapeHtml(r.proceso)}</span>
+          ${enGrupo ? "" : `<span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>`}<span class="opk-proceso-badge">${escapeHtml(r.proceso)}</span>
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
           <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.cantidad === null ? "" : " · Cant. " + bpoFmtUds(r.cantidad)}</div>
           <div class="opk-sub">${r.supervisor ? "🧑‍💼 " + escapeHtml(r.supervisor) : ""}${r.responsable ? " · 👤 " + escapeHtml(r.responsable) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
@@ -5876,6 +5931,21 @@ function sdCardHtml(r){
       </div>
       ${btnHtml}
       ${delBtn}
+    </div>`;
+}
+
+/* LPN multi-SKU: mismo bloque agrupado que en Bultos Perdidos/Sin Ubicación. */
+function sdGrupoHtml(grupo){
+  const pend = grupo.filter(r => r.estado !== "finalizado").length;
+  return `
+    <div class="opk-lpn-group">
+      <div class="opk-lpn-group-head">
+        <span class="opk-lpn-chip big">${escapeHtml(grupo[0].nroLpn)}</span>
+        <span class="opk-multi-badge">📦 Multi-SKU · ${grupo.length} productos${pend ? " · " + pend + " pendientes" : " · todos finalizados"}</span>
+      </div>
+      <div class="opk-lpn-group-items">
+        ${grupo.map(r => sdCardHtml(r, true)).join("")}
+      </div>
     </div>`;
 }
 
@@ -5891,15 +5961,22 @@ function sdRender(){
   document.getElementById("aic-sd-pend").textContent = bpoMoneda(pendRows.reduce((a, r) => a + (r.valTot || 0), 0)) + " en riesgo de pasar a bolsa";
   document.getElementById("aic-sd-rec").textContent = finRows.length + " finalizados";
 
-  document.getElementById("aic-sd-lpn-text").value = pendRows.map(r => r.nroLpn).join(",");
-  document.getElementById("aic-sd-lpn-copiar").textContent = `Copiar (${pendRows.length})`;
+  const lpnPendUnicos = [...new Set(pendRows.map(r => r.nroLpn))];
+  document.getElementById("aic-sd-lpn-text").value = lpnPendUnicos.join(",");
+  document.getElementById("aic-sd-lpn-copiar").textContent = `Copiar (${lpnPendUnicos.length})`;
   document.getElementById("aic-sd-lpn-copiar").classList.remove("copiado");
 
   const sinFiltro = !document.getElementById("aic-sd-buscar").value && !document.getElementById("aic-sd-semana").value && !document.getElementById("aic-sd-supervisor").value;
-  const ordenadas = [...rows].sort((a, b) => (a.estado === "finalizado" ? 1 : 0) - (b.estado === "finalizado" ? 1 : 0));
+  const grupos = opkAgruparPorLpn(rows);
+  grupos.forEach(g => g.sort((a, b) => (a.estado === "finalizado" ? 1 : 0) - (b.estado === "finalizado" ? 1 : 0)));
+  grupos.sort((a, b) => {
+    const aDone = a.every(r => r.estado === "finalizado") ? 1 : 0;
+    const bDone = b.every(r => r.estado === "finalizado") ? 1 : 0;
+    return aDone - bDone;
+  });
   const grid = document.getElementById("aic-sd-grid");
-  grid.innerHTML = ordenadas.length
-    ? ordenadas.map(sdCardHtml).join("")
+  grid.innerHTML = grupos.length
+    ? grupos.map(g => g.length > 1 ? sdGrupoHtml(g) : sdCardHtml(g[0])).join("")
     : `<div class="empty opk-empty">Sin registros${sinFiltro ? "" : " con ese filtro"}.</div>`;
 
   grid.querySelectorAll(".opk-btn-mark.finalizar").forEach(btn=>{
@@ -5957,8 +6034,10 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     });
     if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Proceso, Responsable, Supervisor, Familia, Nro LPN, Producto, Cod Alternat, Descripcion, Cantidad actual, Nro de lote, Val tot y Sem. Revisa que sea el reporte "Pendientes de Operación" tal cual, con la hoja "Bultos Pendientes".`);
 
-    const lpnExistentesSd = new Set(sdRegistros.map(r => r.nroLpn));
-    const lpnExistentesBpo = new Set(bpoRegistros.map(r => r.nroLpn));
+    // Clave Nro LPN + Cod Alternat (no solo el LPN): un bulto multi-SKU trae varias
+    // filas con el mismo LPN y distinto producto — todas se guardan, no solo la primera.
+    const clavesSd = new Set(sdRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
+    const clavesBpo = new Set(bpoRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
     let ignoradasSinLpn = 0, duplicadas = 0, yaEnOtroModulo = 0;
     const filas = [];
     hoja.rows.forEach(row => {
@@ -5967,9 +6046,11 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       if(BPO_PROCESO_CLASIFICACION[procesoRaw.toLowerCase()]) return; // esos van a Bultos Perdidos/Sin Ubicación
       const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
       if(!nroLpn){ ignoradasSinLpn++; return; }
-      if(lpnExistentesBpo.has(nroLpn)){ yaEnOtroModulo++; return; }
-      if(lpnExistentesSd.has(nroLpn)){ duplicadas++; return; }
-      lpnExistentesSd.add(nroLpn);
+      const codAlternat = String(row[hoja.cols.codAlternat] || "").trim();
+      const clave = nroLpn + "|||" + codAlternat;
+      if(clavesBpo.has(clave)){ yaEnOtroModulo++; return; }
+      if(clavesSd.has(clave)){ duplicadas++; return; }
+      clavesSd.add(clave);
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const valTot = parseFloat(row[hoja.cols.valTot]);
       filas.push({
@@ -5980,7 +6061,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         familia: String(row[hoja.cols.familia] || "").trim(),
         nro_lpn: nroLpn,
         producto: String(row[hoja.cols.producto] || "").trim(),
-        cod_alternat: String(row[hoja.cols.codAlternat] || "").trim(),
+        cod_alternat: codAlternat,
         descripcion: String(row[hoja.cols.descripcion] || "").trim(),
         cantidad_actual: isNaN(cantidad) ? null : cantidad,
         nro_lote: String(row[hoja.cols.nroLote] || "").trim(),
@@ -5994,7 +6075,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_seguimiento_diario_registros").upsert(lote, { onConflict: "nro_lpn", ignoreDuplicates: true });
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros").upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true });
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
@@ -6065,9 +6146,11 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
     });
     if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Proceso, Responsable, Supervisor, Familia, Nro LPN, Producto, Cod Alternat, Descripcion, Cantidad actual, Nro de lote, Val tot y Sem. Revisa que sea el reporte "Pendientes de Operación" tal cual, con la hoja "Bultos Pendientes".`);
 
-    // Un Nro LPN ya cargado (de cualquier import anterior) no se vuelve a guardar — se cuenta
-    // como duplicado y se avisa en el mensaje final, en vez de pisar o reinsertar el registro.
-    const lpnExistentes = new Set(bpoRegistros.map(r => r.nroLpn));
+    // La clave es Nro LPN + Cod Alternat, no solo el LPN: un bulto ya cargado con ese
+    // mismo producto no se vuelve a guardar (se cuenta como duplicado), pero si el LPN
+    // es multi-SKU (trae otro Cod Alternat) esa fila sí se guarda aparte, en vez de
+    // descartarse por compartir el mismo Nro LPN.
+    const clavesExistentes = new Set(bpoRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
     let ignoradasSinLpn = 0;
     let duplicadas = 0;
     const filas = [];
@@ -6077,8 +6160,10 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
       if(!clasificacion) return; // no es Perdido ERU / Por Ubicar / Sin Ubicación — no es de este módulo
       const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
       if(!nroLpn){ ignoradasSinLpn++; return; }
-      if(lpnExistentes.has(nroLpn)){ duplicadas++; return; } // ya está cargado — no se vuelve a insertar
-      lpnExistentes.add(nroLpn); // también evita duplicar dentro del mismo archivo
+      const codAlternat = String(row[hoja.cols.codAlternat] || "").trim();
+      const clave = nroLpn + "|||" + codAlternat;
+      if(clavesExistentes.has(clave)){ duplicadas++; return; } // mismo LPN + mismo producto ya cargado
+      clavesExistentes.add(clave); // también evita duplicar dentro del mismo archivo
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const valTot = parseFloat(row[hoja.cols.valTot]);
       filas.push({
@@ -6089,7 +6174,7 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
         familia: String(row[hoja.cols.familia] || "").trim(),
         nro_lpn: nroLpn,
         producto: String(row[hoja.cols.producto] || "").trim(),
-        cod_alternat: String(row[hoja.cols.codAlternat] || "").trim(),
+        cod_alternat: codAlternat,
         descripcion: String(row[hoja.cols.descripcion] || "").trim(),
         cantidad_actual: isNaN(cantidad) ? null : cantidad,
         nro_lote: String(row[hoja.cols.nroLote] || "").trim(),
@@ -6104,7 +6189,7 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn", ignoreDuplicates: true });
+      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true });
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += lote.length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
