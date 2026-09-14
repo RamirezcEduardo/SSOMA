@@ -6327,10 +6327,59 @@ function sdArbolPorResponsable(rows, campoValor){
 function sdOrdenado(mapEntries){ return [...mapEntries].sort((a, b) => a[0].localeCompare(b[0])); }
 
 function sdBuildInformeSemanalHtml(semana){
-  // EN RIESGO — pendientes de Seguimiento Diario de esa semana
-  const pendientesSemana = sdRegistros.filter(r => r.estado !== "finalizado" && r.semana === semana);
-  const totalRiesgo = pendientesSemana.reduce((a, r) => a + (r.valTot || 0), 0);
-  const arbolRiesgo = sdArbolPorResponsable(pendientesSemana);
+  // EN RIESGO — pendiente (no recuperado) en Bultos Perdidos/Sin Ubicación de esa semana.
+  // Es lo único que cuenta como "en riesgo" de verdad: Perdido ERU + Por Ubicar + Sin
+  // Ubicación (lo que ya vive en ssoma_bpo_registros) — no Seguimiento Diario.
+  const pendientesBpoSemana = bpoRegistros.filter(r => r.estado !== "recuperado" && r.semana === semana);
+  const totalRiesgo = pendientesBpoSemana.reduce((a, r) => a + bpoValorPendiente(r), 0);
+  const arbolBpoRiesgo = sdArbolPorResponsable(pendientesBpoSemana);
+
+  let filasBpoRiesgo = "";
+  for(const [responsable, supMap] of sdOrdenado(arbolBpoRiesgo)){
+    let totalResp = 0;
+    let bloqueResp = "";
+    for(const [supervisor, filas] of sdOrdenado(supMap)){
+      // agrupar por Proceso dentro del supervisor — acá no hay Ubicación (esa columna
+      // solo existe en Seguimiento Diario), así que el nivel de detalle es por Proceso.
+      const porProceso = new Map();
+      filas.forEach(r => {
+        if(!porProceso.has(r.proceso)) porProceso.set(r.proceso, []);
+        porProceso.get(r.proceso).push(r);
+      });
+      let totalSup = 0;
+      let bloqueSup = "";
+      for(const [proceso, grupo] of sdOrdenado(porProceso)){
+        const valor = grupo.reduce((a, r) => a + bpoValorPendiente(r), 0);
+        totalSup += valor;
+        bloqueSup += `
+          <tr>
+            <td>${escapeHtml(proceso)}</td>
+            <td class="num">${grupo.length}</td>
+            <td class="num">${bpoMoneda(valor).replace("S/ ", "")}</td>
+          </tr>`;
+      }
+      totalResp += totalSup;
+      bloqueResp += `
+        <tr style="background:#F7F8FA;"><td colspan="3" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        ${bloqueSup}
+        <tr style="font-weight:700;"><td colspan="2">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td></tr>`;
+    }
+    filasBpoRiesgo += `
+      <tr style="background:#1A1D23;color:#fff;"><td colspan="3">👤 ${escapeHtml(responsable)}</td></tr>
+      ${bloqueResp}
+      <tr style="font-weight:800;background:#FDECEC;"><td colspan="2">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td></tr>`;
+  }
+
+  // PENDIENTE DE REGULARIZAR — lo que en Seguimiento Diario todavía no se finaliza esa
+  // semana (con el comentario de avance que se haya guardado). No es "riesgo" en el
+  // sentido de pérdida total como Perdido ERU/Por Ubicar/Sin Ubicación, pero si un
+  // supervisor no lo cierra puede terminar pasando a Control de Bolsa.
+  const pendientesSdSemana = sdRegistros.filter(r => r.estado !== "finalizado" && r.semana === semana);
+  const arbolRiesgo = sdArbolPorResponsable(pendientesSdSemana);
+
+  // REGULARIZADO — lo de Seguimiento Diario que sí se finalizó, de esa semana.
+  const finalizadosSdSemana = sdRegistros.filter(r => r.estado === "finalizado" && r.semana === semana);
+  const totalRegularizado = finalizadosSdSemana.reduce((a, r) => a + (r.valTot || 0), 0);
 
   let filasRiesgo = "";
   for(const [responsable, supMap] of sdOrdenado(arbolRiesgo)){
@@ -6422,18 +6471,27 @@ function sdBuildInformeSemanalHtml(semana){
     <div class="kpi-row">
       <div class="kpi-card accent"><div class="kpi-label">En riesgo (${escapeHtml(semana)})</div><div class="kpi-value">${bpoMoneda(totalRiesgo)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Recuperado (${escapeHtml(semana)})</div><div class="kpi-value" style="color:var(--green,#16A34A);">${bpoMoneda(totalRecuperado)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Regularizado (${escapeHtml(semana)})</div><div class="kpi-value" style="color:var(--blue,#2563EB);">${bpoMoneda(totalRegularizado)}</div></div>
     </div>
 
-    <div class="modal-section-title">🔶 En riesgo — Seguimiento Diario</div>
+    <div class="modal-section-title">🔴 En riesgo — Bultos Perdidos / Sin Ubicación (pendiente)</div>
+    <p class="section-desc" style="margin:-6px 0 10px;">Perdido ERU + Por Ubicar + Sin Ubicación — lo que todavía no se recupera esa semana.</p>
     <table class="print-table">
-      <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
-      <tbody>${filasRiesgo || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
+      <thead><tr><th>Proceso</th><th>LPN</th><th>Valorizado (S/)</th></tr></thead>
+      <tbody>${filasBpoRiesgo || `<tr><td colspan="3" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
     </table>
 
     <div class="modal-section-title">✅ Recuperado — Bultos Perdidos / Sin Ubicación</div>
     <table class="print-table">
       <thead><tr><th>Clasificación</th><th>Reportes</th><th>Unidades</th><th>Valor (S/)</th></tr></thead>
       <tbody>${filasRecuperado || `<tr><td colspan="4" style="padding:14px;color:#8B92A0;text-align:center;">Sin recuperaciones esa semana.</td></tr>`}</tbody>
+    </table>
+
+    <div class="modal-section-title">📋 Pendiente de regularizar — Seguimiento Diario</div>
+    <p class="section-desc" style="margin:-6px 0 10px;">Todos los demás procesos — lo que el supervisor aún no finaliza esa semana, con el comentario de avance guardado.</p>
+    <table class="print-table">
+      <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
+      <tbody>${filasRiesgo || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
     </table>`;
 }
 
