@@ -5412,12 +5412,15 @@ function bpoRender(){
   const semanaActiva = document.getElementById("bpo-f-semana").value;
   const tbody = document.querySelector("#bpo-table tbody");
   const ESTADO_LABEL = { pendiente: "Pendiente", parcial: "Parcial", recuperado: "Recuperado" };
+  const puedeEditarSemana = esAdmin();
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td>${escapeHtml(r.proceso)}</td>
       <td>${escapeHtml(r.responsable)}</td>
       <td>${escapeHtml(r.supervisor)}</td>
-      <td>${escapeHtml(r.semana)}</td>
+      <td>${puedeEditarSemana
+        ? `<input type="text" class="bpo-sem-input" data-id="${r.id}" value="${escapeHtml(r.semana)}" style="width:72px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;background:var(--panel);color:var(--text);">`
+        : escapeHtml(r.semana)}</td>
       <td>${escapeHtml(r.familia)}</td>
       <td>${escapeHtml(r.nroLpn)}</td>
       <td>${escapeHtml(r.producto)}</td>
@@ -5430,6 +5433,34 @@ function bpoRender(){
       <td><span class="estado-badge ${r.estado}">${ESTADO_LABEL[r.estado] || r.estado}</span></td>
     </tr>
   `).join("") || `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px;">Sin registros de ${bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación"}${semanaActiva ? " en esa semana" : ""}.</td></tr>`;
+
+  if(puedeEditarSemana){
+    tbody.querySelectorAll(".bpo-sem-input").forEach(input=>{
+      input.addEventListener("keydown", e=>{ if(e.key === "Enter"){ e.preventDefault(); input.blur(); } });
+      input.addEventListener("focusout", async ()=>{
+        const id = Number(input.dataset.id);
+        const row = bpoRegistros.find(x => x.id === id);
+        if(!row) return;
+        const nuevo = input.value.trim().toUpperCase();
+        if(nuevo === (row.semana || "")){ input.value = row.semana || ""; return; }
+        input.disabled = true;
+        const { error } = await sb.from("ssoma_bpo_registros").update({ semana: nuevo }).eq("id", id);
+        input.disabled = false;
+        if(error){
+          alert("No se pudo guardar la semana: " + error.message);
+          input.value = row.semana || "";
+          return;
+        }
+        row.semana = nuevo;
+        input.value = nuevo;
+        input.style.borderColor = "var(--green)";
+        setTimeout(()=>{ input.style.borderColor = "var(--border)"; }, 800);
+        bpoRenderFiltroSemana();
+        bpoChkRenderFiltroSemana("perdidos");
+        bpoChkRenderFiltroSemana("sin_ubicacion");
+      });
+    });
+  }
 }
 
 document.getElementById("bpo-f-semana").addEventListener("change", bpoRender);
