@@ -2229,6 +2229,10 @@
             <div class="stat-label">Recuperado esta semana</div>
             <div class="stat-value" id="bit-stat-semana-valor">S/ 0.00</div>
           </div>
+          <div class="stat-card">
+            <div class="stat-label">Recuperado este mes</div>
+            <div class="stat-value" id="bit-stat-mes-valor">S/ 0.00</div>
+          </div>
         </div>
 
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin:16px 0;">
@@ -2239,6 +2243,10 @@
           <div class="field" style="min-width:170px;margin-bottom:0;">
             <label>Semana</label>
             <select id="bit-f-semana"><option value="">Todas</option></select>
+          </div>
+          <div class="field" style="min-width:150px;margin-bottom:0;">
+            <label>Mes</label>
+            <input type="month" id="bit-f-mes">
           </div>
           <button type="button" class="btn btn-ghost" id="bit-limpiar-filtros">Limpiar filtros</button>
           <div style="flex:1;"></div>
@@ -6196,6 +6204,16 @@ function bitFechaLocal(isoString){
   const d = new Date(isoString);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function bitMesLocal(isoString){
+  if(!isoString) return "";
+  const d = new Date(isoString);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function bitMesLegible(mesStr){
+  if(!mesStr) return "";
+  const [y, m] = mesStr.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+}
 
 async function bitLoadRecuperaciones(){
   const { data, error } = await sbSelectAll("ssoma_bpo_recuperaciones", "*", q => q.order("creado_en", { ascending: false }));
@@ -6222,13 +6240,16 @@ function bitRecuperacionesDelModulo(clasificacion){
 function bitFiltered(){
   const fecha = document.getElementById("bit-f-fecha").value;
   const semana = document.getElementById("bit-f-semana").value;
+  const mes = document.getElementById("bit-f-mes").value;
   if(bitTabActivo === "seguimiento_diario"){
     return sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn
       && (!semana || bolsaSemanaLabel(new Date(r.finalizadoEn)) === semana)
+      && (!mes || bitMesLocal(r.finalizadoEn) === mes)
       && (!fecha || bitFechaLocal(r.finalizadoEn) === fecha));
   }
   return bitRecuperacionesDelModulo(bitTabActivo)
     .filter(x => !semana || bolsaSemanaLabel(new Date(x.creadoEn)) === semana)
+    .filter(x => !mes || bitMesLocal(x.creadoEn) === mes)
     .filter(x => !fecha || bitFechaLocal(x.creadoEn) === fecha);
 }
 
@@ -6246,21 +6267,26 @@ function bitRenderFiltroSemana(){
 function bitStats(){
   const hoy = bitFechaLocal(new Date().toISOString());
   const semanaHoy = bolsaSemanaLabel(new Date());
+  const mesHoy = bitMesLocal(new Date().toISOString());
   if(bitTabActivo === "seguimiento_diario"){
     const fin = sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn);
     const hoyRows = fin.filter(r => bitFechaLocal(r.finalizadoEn) === hoy);
     const semRows = fin.filter(r => bolsaSemanaLabel(new Date(r.finalizadoEn)) === semanaHoy);
+    const mesRows = fin.filter(r => bitMesLocal(r.finalizadoEn) === mesHoy);
     return {
       hoyCount: hoyRows.length, hoyValor: hoyRows.reduce((a, r) => a + (r.valTot || 0), 0),
       semValor: semRows.reduce((a, r) => a + (r.valTot || 0), 0),
+      mesValor: mesRows.reduce((a, r) => a + (r.valTot || 0), 0),
     };
   }
   const rows = bitRecuperacionesDelModulo(bitTabActivo);
   const hoyRows = rows.filter(x => bitFechaLocal(x.creadoEn) === hoy);
   const semRows = rows.filter(x => bolsaSemanaLabel(new Date(x.creadoEn)) === semanaHoy);
+  const mesRows = rows.filter(x => bitMesLocal(x.creadoEn) === mesHoy);
   return {
     hoyCount: hoyRows.length, hoyValor: hoyRows.reduce((a, x) => a + x.valor, 0),
     semValor: semRows.reduce((a, x) => a + x.valor, 0),
+    mesValor: mesRows.reduce((a, x) => a + x.valor, 0),
   };
 }
 
@@ -6291,6 +6317,7 @@ function bitRender(){
   document.getElementById("bit-stat-hoy-count").textContent = stats.hoyCount;
   document.getElementById("bit-stat-hoy-valor").textContent = bpoMoneda(stats.hoyValor);
   document.getElementById("bit-stat-semana-valor").textContent = bpoMoneda(stats.semValor);
+  document.getElementById("bit-stat-mes-valor").textContent = bpoMoneda(stats.mesValor);
 
   const rows = bitFiltered();
   const list = document.getElementById("bit-list");
@@ -6309,9 +6336,11 @@ function bitRender(){
 
 document.getElementById("bit-f-fecha").addEventListener("change", bitRender);
 document.getElementById("bit-f-semana").addEventListener("change", bitRender);
+document.getElementById("bit-f-mes").addEventListener("change", bitRender);
 document.getElementById("bit-limpiar-filtros").addEventListener("click", ()=>{
   document.getElementById("bit-f-fecha").value = "";
   document.getElementById("bit-f-semana").value = "";
+  document.getElementById("bit-f-mes").value = "";
   bitRender();
 });
 
@@ -6323,10 +6352,12 @@ function bitBuildInformeHtml(){
   const rows = bitFiltered();
   const fecha = document.getElementById("bit-f-fecha").value;
   const semana = document.getElementById("bit-f-semana").value;
-  let filtroDesc = "Todo el historial";
-  if(fecha && semana) filtroDesc = `Día ${fecha} · ${semana}`;
-  else if(fecha) filtroDesc = `Día ${fecha}`;
-  else if(semana) filtroDesc = semana;
+  const mes = document.getElementById("bit-f-mes").value;
+  const partesFiltro = [];
+  if(fecha) partesFiltro.push(`Día ${fecha}`);
+  if(semana) partesFiltro.push(semana);
+  if(mes) partesFiltro.push(`Mes de ${bitMesLegible(mes)}`);
+  const filtroDesc = partesFiltro.length ? partesFiltro.join(" · ") : "Todo el historial";
 
   if(bitTabActivo === "seguimiento_diario"){
     const totalValor = rows.reduce((a, r) => a + (r.valTot || 0), 0);
