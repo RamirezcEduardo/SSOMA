@@ -5570,7 +5570,7 @@ function bpoChkFiltered(clasificacion){
   );
 }
 
-function bpoChkCardHtml(r, enGrupo){
+function bpoChkCardHtml(r, enGrupo, soloLectura){
   const pendUds = bpoPendienteUnidades(r);
   const done = r.estado === "recuperado";
   const parcial = r.estado === "parcial";
@@ -5588,8 +5588,8 @@ function bpoChkCardHtml(r, enGrupo){
       <div class="opk-qty-row">
         <div class="opk-qty">${bpoMoneda(bpoValorPendiente(r))}<span class="u">${bpoFmtUds(pendUds)} uds pendientes</span></div>
       </div>`;
-  const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
-  const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="bpo" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
+  const btnHtml = (done || soloLectura) ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
+  const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="bpo" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""}">
       <div class="opk-card-top">
@@ -6283,32 +6283,26 @@ function bitStats(){
   const hoyRows = rows.filter(x => bitFechaLocal(x.creadoEn) === hoy);
   const semRows = rows.filter(x => bolsaSemanaLabel(new Date(x.creadoEn)) === semanaHoy);
   const mesRows = rows.filter(x => bitMesLocal(x.creadoEn) === mesHoy);
+  // hoyCount cuenta LPNs distintos, no reportes — un LPN recuperado en 2 reportes
+  // parciales el mismo día cuenta como 1 "levantado", no 2 (el dinero sí suma los 2).
   return {
-    hoyCount: hoyRows.length, hoyValor: hoyRows.reduce((a, x) => a + x.valor, 0),
+    hoyCount: new Set(hoyRows.map(x => x.registro.id)).size, hoyValor: hoyRows.reduce((a, x) => a + x.valor, 0),
     semValor: semRows.reduce((a, x) => a + x.valor, 0),
     mesValor: mesRows.reduce((a, x) => a + x.valor, 0),
   };
 }
 
-function bitCardHtmlRecuperacion(x){
-  const r = x.registro;
-  const fecha = new Date(x.creadoEn).toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  const quien = (x.reportadoPorId && usuariosPorId[x.reportadoPorId]) ? usuariosPorId[x.reportadoPorId].nombre_completo : "—";
-  return `
-    <div class="opk-card done">
-      <div class="opk-card-top">
-        <div class="opk-check-big">✓</div>
-        <div class="opk-card-body">
-          <span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>
-          <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
-          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
-          <div class="opk-sub">🗓️ ${escapeHtml(fecha)} · 👤 ${escapeHtml(quien)}</div>
-          ${x.areaEncontrado ? `<div class="opk-sub">📍 Encontrado en: ${escapeHtml(x.areaEncontrado)}</div>` : ""}
-          ${x.comentario ? `<div class="opk-sub">💬 ${escapeHtml(x.comentario)}</div>` : ""}
-          <div class="opk-qty-row"><div class="opk-qty">${bpoMoneda(x.valor)}<span class="u">${bpoFmtUds(x.unidades)} uds reportadas</span></div></div>
-        </div>
-      </div>
-    </div>`;
+// Agrupa los reportes de recuperación por LPN — si un mismo bulto se reportó en
+// varios reportes parciales (ej. 3 uds y luego 3 uds más), acá se ve como un solo
+// LPN con su estado actual (parcial/recuperado completo), no como tarjetas repetidas
+// que parecen duplicadas.
+function bitConsolidarPorRegistro(eventos){
+  const porRegistro = new Map();
+  eventos.forEach(x => {
+    const actual = porRegistro.get(x.registro.id);
+    if(!actual || x.creadoEn > actual.ultimoEvento) porRegistro.set(x.registro.id, { registro: x.registro, ultimoEvento: x.creadoEn });
+  });
+  return [...porRegistro.values()];
 }
 
 function bitRender(){
@@ -6327,9 +6321,9 @@ function bitRender(){
       ? `<div class="opk-grid">${ordenadas.map(r => sdCardHtml(r, false, true)).join("")}</div>`
       : `<div class="empty opk-empty">Sin registros finalizados con ese filtro.</div>`;
   }else{
-    const ordenadas = [...rows].sort((a, b) => (b.creadoEn || "").localeCompare(a.creadoEn || ""));
-    list.innerHTML = ordenadas.length
-      ? `<div class="opk-grid">${ordenadas.map(bitCardHtmlRecuperacion).join("")}</div>`
+    const consolidados = bitConsolidarPorRegistro(rows).sort((a, b) => (b.ultimoEvento || "").localeCompare(a.ultimoEvento || ""));
+    list.innerHTML = consolidados.length
+      ? `<div class="opk-grid">${consolidados.map(g => bpoChkCardHtml(g.registro, false, true)).join("")}</div>`
       : `<div class="empty opk-empty">Sin recuperaciones con ese filtro.</div>`;
   }
 }
