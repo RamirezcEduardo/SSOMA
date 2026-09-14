@@ -5547,7 +5547,7 @@ function bpoChkCardHtml(r, enGrupo){
         <div class="opk-card-body">
           ${enGrupo ? "" : `<span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>`}
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
-          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}</div>
+          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
           ${extraHtml}
           ${qtyRow}
         </div>
