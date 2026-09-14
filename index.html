@@ -6102,6 +6102,7 @@ function sdCardGrupoHtml(grupo){
   const clave = sdClaveGrupo(grupo.proceso, grupo.ubicacion, grupo.semana);
   const semanaLbl = grupo.semana ? ` · ${escapeHtml(grupo.semana)}` : "";
   if(!pendientes.length){
+    const btnDeshacer = esAdmin() ? `<button type="button" class="btn btn-ghost sd-grupo-deshacer" data-clave="${escapeHtml(clave)}" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">↩️ Deshacer (volver a pendiente)</button>` : "";
     return `
       <div class="opk-card done">
         <div class="opk-card-top">
@@ -6113,6 +6114,7 @@ function sdCardGrupoHtml(grupo){
             <div class="opk-done-note">✅ Todo finalizado</div>
           </div>
         </div>
+        ${btnDeshacer}
       </div>`;
   }
   const totalValor = pendientes.reduce((a, r) => a + (r.valTot || 0), 0);
@@ -6209,6 +6211,26 @@ function sdRender(){
   grid.innerHTML = grupos.length
     ? grupos.map(sdCardGrupoHtml).join("")
     : `<div class="empty opk-empty">Sin registros con ese filtro.</div>`;
+
+  grid.querySelectorAll(".sd-grupo-deshacer").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!esAdmin()){ alert("Solo un administrador puede deshacer un grupo finalizado."); return; }
+      const clave = btn.dataset.clave;
+      const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
+      if(!grupo) return;
+      const finalizados = grupo.filas.filter(r => r.estado === "finalizado");
+      if(!finalizados.length) return;
+      if(!confirm(`¿Deshacer y volver a pendiente los ${finalizados.length} LPN finalizados de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}${grupo.semana ? " · " + grupo.semana : ""}"?`)) return;
+      const originalLabel = btn.textContent;
+      btn.disabled = true; btn.textContent = "Deshaciendo…";
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros")
+        .update({ estado: "pendiente", finalizado_en: null, finalizado_por_id: null })
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).eq("estado", "finalizado");
+      if(error){ alert("No se pudo deshacer: " + error.message); btn.disabled = false; btn.textContent = originalLabel; return; }
+      finalizados.forEach(r => { r.estado = "pendiente"; r.finalizadoEn = null; r.finalizadoPorId = null; });
+      sdRender();
+    });
+  });
 
   grid.querySelectorAll(".sd-grupo-guardar-comentario").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
