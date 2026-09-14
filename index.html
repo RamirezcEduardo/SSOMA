@@ -6071,19 +6071,21 @@ function sdGrupoHtml(grupo){
     </div>`;
 }
 
-/* Agrupa por Proceso + Ubicación — con miles de LPN pendientes, una tarjeta por LPN
-   hacía muy lento el render. Agrupado así, miles de filas quedan en un puñado de
-   tarjetas (el supervisor trabaja por proceso/ubicación, no LPN por LPN), cada una
-   con el total valorizado y los productos involucrados, y se finaliza de una vez con
-   un comentario en vez de una por una. Solo se usa cuando no hay texto de búsqueda —
-   si el usuario busca un LPN puntual, se sigue mostrando la tarjeta individual. */
-function sdClaveGrupo(proceso, ubicacion){ return proceso + "|||" + (ubicacion || ""); }
+/* Agrupa por Proceso + Ubicación + Semana — con miles de LPN pendientes, una tarjeta
+   por LPN hacía muy lento el render. Agrupado así, miles de filas quedan en un puñado
+   de tarjetas (el supervisor trabaja por proceso/ubicación, no LPN por LPN), cada una
+   con su semana, el total valorizado y los productos involucrados, y se finaliza de
+   una vez con un comentario en vez de una por una. La semana va en la clave (no solo
+   como dato mostrado) para no mezclar en un mismo grupo/finalizado LPNs de semanas
+   distintas. Solo se usa cuando no hay texto de búsqueda — si el usuario busca un LPN
+   puntual, se sigue mostrando la tarjeta individual. */
+function sdClaveGrupo(proceso, ubicacion, semana){ return proceso + "|||" + (ubicacion || "") + "|||" + (semana || ""); }
 
 function sdAgruparPorProcesoUbicacion(rows){
   const mapa = new Map();
   rows.forEach(r => {
-    const clave = sdClaveGrupo(r.proceso, r.ubicacion);
-    if(!mapa.has(clave)) mapa.set(clave, { proceso: r.proceso, ubicacion: r.ubicacion || "", filas: [] });
+    const clave = sdClaveGrupo(r.proceso, r.ubicacion, r.semana);
+    if(!mapa.has(clave)) mapa.set(clave, { proceso: r.proceso, ubicacion: r.ubicacion || "", semana: r.semana || "", filas: [] });
     mapa.get(clave).filas.push(r);
   });
   return [...mapa.values()];
@@ -6092,7 +6094,8 @@ function sdAgruparPorProcesoUbicacion(rows){
 function sdCardGrupoHtml(grupo){
   const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
   const finalizados = grupo.filas.filter(r => r.estado === "finalizado");
-  const clave = sdClaveGrupo(grupo.proceso, grupo.ubicacion);
+  const clave = sdClaveGrupo(grupo.proceso, grupo.ubicacion, grupo.semana);
+  const semanaLbl = grupo.semana ? ` · ${escapeHtml(grupo.semana)}` : "";
   if(!pendientes.length){
     return `
       <div class="opk-card done">
@@ -6100,7 +6103,7 @@ function sdCardGrupoHtml(grupo){
           <div class="opk-check-big">✓</div>
           <div class="opk-card-body">
             <span class="opk-proceso-badge">${escapeHtml(grupo.proceso)}</span>
-            <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}</div>
+            <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}${semanaLbl}</div>
             <div class="opk-sub">${finalizados.length} LPN · todos finalizados</div>
             <div class="opk-done-note">✅ Todo finalizado</div>
           </div>
@@ -6119,7 +6122,7 @@ function sdCardGrupoHtml(grupo){
         <div class="opk-check-big"></div>
         <div class="opk-card-body">
           <span class="opk-proceso-badge">${escapeHtml(grupo.proceso)}</span>
-          <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}</div>
+          <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}${semanaLbl}</div>
           <div class="opk-sub">${pendientes.length} LPN pendientes${finalizados.length ? " · " + finalizados.length + " ya finalizados" : ""}</div>
           ${quienLinea ? `<div class="opk-sub">${quienLinea}</div>` : ""}
           <details class="sd-grupo-productos">
@@ -6201,17 +6204,17 @@ function sdRender(){
   grid.querySelectorAll(".sd-grupo-finalizar").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const clave = btn.dataset.clave;
-      const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion) === clave);
+      const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
       if(!grupo) return;
       const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
       if(!pendientes.length) return;
-      if(!confirm(`¿Finalizar ${pendientes.length} LPN pendientes de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}"? Esta acción no se puede deshacer.`)) return;
+      if(!confirm(`¿Finalizar ${pendientes.length} LPN pendientes de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}${grupo.semana ? " · " + grupo.semana : ""}"? Esta acción no se puede deshacer.`)) return;
       const textarea = [...grid.querySelectorAll(".sd-grupo-comentario")].find(t => t.dataset.clave === clave);
       const comentario = textarea ? textarea.value.trim() : "";
       btn.disabled = true; btn.textContent = "Guardando…";
       const { error } = await sb.from("ssoma_seguimiento_diario_registros")
         .update({ estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null, comentario: comentario || null })
-        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).neq("estado", "finalizado");
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).neq("estado", "finalizado");
       if(error){ alert("No se pudo finalizar: " + error.message); btn.disabled = false; btn.textContent = `✓ Finalizar ${pendientes.length} LPN de este grupo`; return; }
       const ahora = new Date().toISOString();
       pendientes.forEach(r => { r.estado = "finalizado"; r.finalizadoEn = ahora; r.finalizadoPorId = miUsuario ? miUsuario.id : null; r.comentario = comentario; });
