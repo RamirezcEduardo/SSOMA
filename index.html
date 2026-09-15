@@ -407,6 +407,11 @@
   }
   .import-card-title{font-size:14px;font-weight:800;color:var(--text);}
   .import-card-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .import-card-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+  @media (max-width:640px){
+    .import-card-actions{flex-direction:column;width:100%;}
+    .import-card-actions .btn{width:100%;}
+  }
   .import-drop-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   @media (max-width:640px){.import-drop-row{grid-template-columns:1fr;}}
   .import-drop{
@@ -1927,7 +1932,7 @@
             <div class="import-card-title">💲 Actualizar catálogo de costos</div>
             <div class="import-card-sub">Solo administradores. Sube el tarifario (columnas COD_ALTERNO, PRODUCTO, COSTO, FAMILIA) para agregar productos nuevos o actualizar precios — aplica a todo Inventario (Shortpick, Bultos Perdidos, Sin Ubicación). No borra los códigos ya cargados, solo agrega o actualiza.</div>
           </div>
-          <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+          <div class="import-card-actions">
             <button type="button" class="btn btn-ghost" id="sp-costos-plantilla-btn">📥 Descargar plantilla</button>
             <button type="button" class="btn btn-ghost" id="sp-costos-export-btn">📤 Exportar informe</button>
             <button type="button" class="btn btn-ghost" id="sp-costos-import-btn" disabled>Actualizar catálogo</button>
