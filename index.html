@@ -3034,9 +3034,10 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="mrow"><b>Producto</b><span id="conc-modal-producto"></span></div>
       <div class="mrow"><b>Ubicación</b><span id="conc-modal-ubicacion"></span></div>
       <div class="mrow"><b>Cantidad faltante (WMS)</b><span id="conc-modal-cantidad"></span></div>
+      <div id="conc-modal-detalle-filas" style="font-size:11.5px;color:var(--muted);margin:-4px 0 4px;line-height:1.5;"></div>
 
       <div class="field" style="margin-top:16px;">
-        <label>¿Encontró la totalidad del producto?</label>
+        <label>¿Encontró la totalidad de lo faltante?</label>
         <div class="toggle-group" id="conc-cantidad-toggle">
           <button type="button" class="toggle-btn" id="conc-btn-completo" data-val="completo">Sí, completo</button>
           <button type="button" class="toggle-btn" id="conc-btn-parcial" data-val="parcial">No, fue parcial</button>
@@ -3044,9 +3045,13 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
 
       <div class="field" id="conc-cantidad-wrap" style="display:none;">
-        <label>Cantidad encontrada</label>
+        <label>Cantidad encontrada (total)</label>
         <input type="number" id="conc-cantidad-encontrada" min="0" step="1">
         <div class="hint" id="conc-cantidad-hint"></div>
+      </div>
+      <div class="field" id="conc-reparto-preview" style="display:none;background:var(--panel-alt);border-radius:10px;padding:10px 12px;">
+        <label style="margin-bottom:6px;">Se repartirá así (reporte más antiguo primero)</label>
+        <div id="conc-reparto-lista" style="font-size:12.5px;display:flex;flex-direction:column;gap:4px;"></div>
       </div>
 
       <div class="field">
@@ -4414,6 +4419,17 @@ function concCardCampos(r, verParcial){
     <div class="cg-item"><b>Semana</b><span>${escapeHtml(r.semana || "—")}</span></div>`;
 }
 
+/* Clave de agrupación en Conciliación: mismo código alternativo + misma semana se compilan
+   en una sola tarjeta (ver spRenderConc). */
+function concGrupoClave(r){ return r.codAlternat + "|||" + (r.semana || ""); }
+/* Lo que aún falta encontrar de una fila: el total reportado por el WMS menos lo ya
+   encontrado en una verificación previa (parcial). Una fila ya completa da 0. */
+function concFaltanteFila(r){
+  const cantWms = Math.abs(r.unajust);
+  const v = verificaciones[r.id];
+  return cantWms - (v ? v.cantidadEncontrada : 0);
+}
+
 function spRenderConc(){
   let pendientes = 0, valorConciliado = 0, unidadesTotal = 0, unidadesEncontradas = 0;
   const statsPorCodigo = {}; // cod -> {total, completos} — para avisar en la tarjeta pendiente cuántos de su mismo código ya quedaron completos
@@ -4435,32 +4451,76 @@ function spRenderConc(){
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
 
   const fBuscar = document.getElementById("conc-f-buscar").value.trim().toLowerCase();
-  let rowsPendientes = spData.filter(r=> !spEstaCompleto(r.id)).sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  let rowsPendientes = spData.filter(r=> !spEstaCompleto(r.id));
   if(fBuscar) rowsPendientes = rowsPendientes.filter(r=> (r.codAlternat || "").toLowerCase().includes(fBuscar));
+
+  // Se compila por Código alternativo + Semana: varios reportes del mismo código en la
+  // misma semana (ej. lunes 20 + martes 30) se ven en una sola tarjeta con el total
+  // faltante, en vez de una tarjeta por cada reporte — antes se veían idénticas y sin
+  // forma de diferenciarlas salvo por la fecha.
+  const gruposMap = new Map();
+  rowsPendientes.forEach(r=>{
+    const clave = concGrupoClave(r);
+    if(!gruposMap.has(clave)) gruposMap.set(clave, []);
+    gruposMap.get(clave).push(r);
+  });
+  const grupos = [...gruposMap.values()].sort((a,b)=>{
+    const fa = Math.max(...a.map(r=> new Date(r.fechaModif || r.fecha).getTime()));
+    const fb = Math.max(...b.map(r=> new Date(r.fechaModif || r.fecha).getTime()));
+    return fb - fa;
+  });
+
   const list = document.getElementById("conc-list");
-  list.innerHTML = rowsPendientes.length ? rowsPendientes.map(r=> {
-    const v = verificaciones[r.id];
+  list.innerHTML = grupos.length ? grupos.map(filas=>{
+    const primero = filas[0];
+    const clave = concGrupoClave(primero);
+    const totalFaltante = filas.reduce((a,r)=> a + concFaltanteFila(r), 0);
+    const ubicaciones = [...new Set(filas.map(r=>r.ubicacion).filter(Boolean))];
+    const ubicacionTexto = ubicaciones.length <= 1 ? (ubicaciones[0] || "—") : `Varias (${ubicaciones.length})`;
+    const hayParcial = filas.some(r=> verificaciones[r.id]);
+    const badge = hayParcial ? '<span class="estado-badge parcial">Parcial</span>' : '<span class="estado-badge pendiente">Pendiente</span>';
+
+    const detalle = [...filas].sort((a,b)=> (a.fechaModif||a.fecha).localeCompare(b.fechaModif||b.fecha)).map(r=>{
+      const v = verificaciones[r.id];
+      const cantWms = Math.abs(r.unajust);
+      const estadoTxt = v
+        ? `${cantWms - v.cantidadEncontrada} pendiente de ${cantWms} <span style="color:var(--muted);font-weight:400;">(ya se encontró ${v.cantidadEncontrada})</span>`
+        : `${cantWms} unidades reportadas`;
+      return `<div class="cg-item"><b>${escapeHtml(r.fechaModif || r.fecha)}</b><span>${estadoTxt}</span></div>`;
+    }).join("");
+
     let nota = "";
-    if(!v){
-      const st = statsPorCodigo[r.codAlternat];
-      if(st.completos > 0) nota = `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Se concilió ${st.completos} caso(s) de este código aparte — este sigue pendiente.</div>`;
+    if(!hayParcial){
+      const st = statsPorCodigo[primero.codAlternat];
+      if(st && st.completos > 0) nota = `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Se concilió ${st.completos} caso(s) de este código aparte — este sigue pendiente.</div>`;
     }
+
     return `
     <div class="conc-card">
       <div class="conc-card-top">
-        <span class="conc-card-title">${escapeHtml(r.producto || r.desc)}</span>
-        ${concEstadoBadge(v || null)}
+        <span class="conc-card-title">${escapeHtml(primero.producto || primero.desc)}</span>
+        ${badge}
       </div>
-      <div class="conc-card-grid">${concCardCampos(r, v)}</div>
+      <div class="conc-card-grid">
+        <div class="cg-item"><b>Código alternativo</b><span>${escapeHtml(primero.codAlternat)}</span></div>
+        <div class="cg-item"><b>Descripción</b><span>${escapeHtml(primero.desc)}</span></div>
+        <div class="cg-item"><b>Ubicación</b><span>${escapeHtml(ubicacionTexto)}</span></div>
+        <div class="cg-item"><b>Semana</b><span>${escapeHtml(primero.semana || "—")}</span></div>
+        <div class="cg-item"><b>Total faltante</b><span style="font-weight:700;">${totalFaltante} unidades${filas.length>1 ? ` (${filas.length} reportes)` : ""}</span></div>
+      </div>
+      <details class="sd-grupo-productos">
+        <summary>Ver detalle — ${filas.length} reporte${filas.length===1?"":"s"} de esta semana</summary>
+        <div class="conc-card-grid" style="margin-top:8px;">${detalle}</div>
+      </details>
       ${nota}
       <div class="conc-card-actions">
-        <button type="button" class="btn btn-primary conc-verificar-btn" data-id="${r.id}">${v ? "Completar" : "Verificar"}</button>
+        <button type="button" class="btn btn-primary conc-verificar-btn" data-clave="${escapeHtml(clave)}">${hayParcial ? "Completar" : "Verificar"}</button>
       </div>
     </div>`;
   }).join("") : `<div class="empty">${fBuscar ? "Ningún pendiente coincide con ese código." : "No hay faltantes pendientes de verificar."}</div>`;
 
   list.querySelectorAll(".conc-verificar-btn").forEach(btn=>{
-    btn.addEventListener("click", ()=> concOpenModal(Number(btn.dataset.id)));
+    btn.addEventListener("click", ()=> concAbrirModalGrupo(btn.dataset.clave));
   });
 }
 
@@ -4508,57 +4568,100 @@ function spRenderHistorial(){
   }).join("") : `<div class="empty">No hay verificaciones que coincidan con el filtro.</div>`;
 }
 
-let concCurrentRowId = null;
+let concCurrentClave = null;
 
-function concOpenModal(rowId){
-  const row = spData.find(r=>r.id === rowId);
-  if(!row) return;
-  concCurrentRowId = rowId;
-  const cantWms = Math.abs(row.unajust);
+/* Filas pendientes (no completas) del grupo Código alternativo + Semana identificado por
+   "clave" (ver concGrupoClave) — se recalcula desde spData cada vez para reflejar siempre
+   el estado más reciente de verificaciones. */
+function concFilasGrupo(clave){
+  return spData.filter(r=> !spEstaCompleto(r.id) && concGrupoClave(r) === clave);
+}
 
-  document.getElementById("conc-modal-producto").textContent = row.codAlternat + " — " + (row.producto || row.desc);
-  document.getElementById("conc-modal-ubicacion").textContent = row.ubicacion;
-  document.getElementById("conc-modal-cantidad").textContent = cantWms + (cantWms===1 ? " unidad" : " unidades");
-  document.getElementById("conc-cantidad-hint").textContent = "Máximo " + cantWms + " unidades";
-  document.getElementById("conc-cantidad-encontrada").max = cantWms;
+/* Reparte "totalEncontrado" unidades entre las filas del grupo, empezando por el reporte
+   más antiguo (fecha de modificación), hasta agotar el monto. Cada fila se marca completa
+   en cuanto junta lo que le faltaba; el resto de la cantidad pasa a la siguiente fila. Las
+   filas que no alcanzan a recibir nada quedan sin cambios. */
+function concCalcularReparto(filas, totalEncontrado){
+  const ordenadas = [...filas].sort((a,b)=> (a.fechaModif||a.fecha).localeCompare(b.fechaModif||b.fecha));
+  let leftover = Math.max(0, totalEncontrado || 0);
+  return ordenadas.map(r=>{
+    const cantWms = Math.abs(r.unajust);
+    const v = verificaciones[r.id];
+    const existingFound = v ? v.cantidadEncontrada : 0;
+    const restante = cantWms - existingFound;
+    const alloc = Math.min(restante, leftover);
+    leftover -= alloc;
+    const newFound = existingFound + alloc;
+    const newEstado = newFound >= cantWms ? "completo" : "parcial";
+    return { fila: r, cantWms, existingFound, restante, alloc, newFound, newEstado };
+  });
+}
+
+/* Vista previa en vivo de cómo se repartiría lo ingresado — se actualiza al tocar el
+   toggle completo/parcial o al escribir en "Cantidad encontrada". */
+function concActualizarRepartoPreview(){
+  const wrap = document.getElementById("conc-reparto-preview");
+  if(!concCurrentClave){ wrap.style.display = "none"; return; }
+  const filas = concFilasGrupo(concCurrentClave);
+  const activeCantidadBtn = document.querySelector("#conc-cantidad-toggle .toggle-btn.active");
+  if(filas.length <= 1 || !activeCantidadBtn){ wrap.style.display = "none"; return; }
+
+  const totalFaltante = filas.reduce((a,r)=> a + concFaltanteFila(r), 0);
+  let totalEncontrado;
+  if(activeCantidadBtn.dataset.val === "completo"){
+    totalEncontrado = totalFaltante;
+  }else{
+    const val = parseInt(document.getElementById("conc-cantidad-encontrada").value, 10);
+    totalEncontrado = isNaN(val) ? 0 : val;
+  }
+  const reparto = concCalcularReparto(filas, totalEncontrado);
+  document.getElementById("conc-reparto-lista").innerHTML = reparto.map(item=>{
+    const etiqueta = escapeHtml(item.fila.fechaModif || item.fila.fecha);
+    if(item.alloc <= 0){
+      return `<div style="display:flex;justify-content:space-between;gap:8px;color:var(--muted);"><span>${etiqueta} (${item.restante} pend.)</span><span>Sin cambio</span></div>`;
+    }
+    const estadoTxt = item.newEstado === "completo"
+      ? `<span style="color:var(--green);font-weight:600;">✓ Completo (${item.newFound}/${item.cantWms})</span>`
+      : `<span style="color:#CA8A04;font-weight:600;">Parcial (${item.newFound}/${item.cantWms})</span>`;
+    return `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${etiqueta}</span>${estadoTxt}</div>`;
+  }).join("");
+  wrap.style.display = "block";
+}
+
+function concAbrirModalGrupo(clave){
+  const filas = concFilasGrupo(clave);
+  if(!filas.length) return;
+  concCurrentClave = clave;
+  const primero = filas[0];
+  const totalFaltante = filas.reduce((a,r)=> a + concFaltanteFila(r), 0);
+  const ubicaciones = [...new Set(filas.map(r=>r.ubicacion).filter(Boolean))];
+
+  document.getElementById("conc-modal-producto").textContent = primero.codAlternat + " — " + (primero.producto || primero.desc);
+  document.getElementById("conc-modal-ubicacion").textContent = ubicaciones.length <= 1 ? (ubicaciones[0] || "—") : `Varias (${ubicaciones.length})`;
+  document.getElementById("conc-modal-cantidad").textContent = totalFaltante + (totalFaltante===1 ? " unidad" : " unidades") + (filas.length>1 ? ` (${filas.length} reportes)` : "");
+  document.getElementById("conc-modal-detalle-filas").innerHTML = filas.length > 1
+    ? [...filas].sort((a,b)=> (a.fechaModif||a.fecha).localeCompare(b.fechaModif||b.fecha))
+        .map(r=> `${escapeHtml(r.fechaModif || r.fecha)}: ${concFaltanteFila(r)} pend. de ${Math.abs(r.unajust)}`).join(" · ")
+    : "";
+  document.getElementById("conc-cantidad-hint").textContent = "Máximo " + totalFaltante + " unidades";
+  document.getElementById("conc-cantidad-encontrada").max = totalFaltante;
   document.getElementById("conc-modal-error").textContent = "";
   document.getElementById("conc-foto").value = "";
   document.getElementById("conc-ubicacion-encontrada").value = "";
+  document.getElementById("conc-foto-name").textContent = "Toca para tomar una foto o elegir un archivo";
+  document.getElementById("conc-drop-foto").classList.remove("filled");
 
   document.querySelectorAll("#conc-modal .toggle-btn").forEach(b=>b.classList.remove("active"));
   document.getElementById("conc-cantidad-wrap").style.display = "none";
   document.getElementById("conc-cantidad-encontrada").value = "";
   document.getElementById("conc-foto-wrap").style.display = "none";
+  concActualizarRepartoPreview();
 
-  const existing = verificaciones[rowId];
-  if(existing) document.getElementById("conc-ubicacion-encontrada").value = existing.ubicacionEncontrada || "";
-  if(existing && existing.otraUbicacion && existing.fotoNombre){
-    document.getElementById("conc-foto-name").textContent = existing.fotoNombre;
-    document.getElementById("conc-drop-foto").classList.add("filled");
-  }else{
-    document.getElementById("conc-foto-name").textContent = "Toca para tomar una foto o elegir un archivo";
-    document.getElementById("conc-drop-foto").classList.remove("filled");
-  }
-  if(existing){
-    if(existing.estado === "completo"){
-      document.getElementById("conc-btn-completo").classList.add("active");
-    }else{
-      document.getElementById("conc-btn-parcial").classList.add("active");
-      document.getElementById("conc-cantidad-wrap").style.display = "block";
-      document.getElementById("conc-cantidad-encontrada").value = existing.cantidadEncontrada;
-    }
-    if(existing.otraUbicacion){
-      document.getElementById("conc-btn-otra").classList.add("active");
-      document.getElementById("conc-foto-wrap").style.display = "block";
-    }else{
-      document.getElementById("conc-btn-misma").classList.add("active");
-    }
-  }
   document.getElementById("conc-modal").classList.add("show");
 }
 function concCloseModal(){
   document.getElementById("conc-modal").classList.remove("show");
-  concCurrentRowId = null;
+  concCurrentClave = null;
 }
 document.getElementById("conc-modal-close").addEventListener("click", concCloseModal);
 document.getElementById("conc-modal").addEventListener("click", (e)=>{
@@ -4569,6 +4672,7 @@ document.getElementById("conc-foto").addEventListener("change", (e)=>{
   document.getElementById("conc-foto-name").textContent = f ? f.name : "Toca para tomar una foto o elegir un archivo";
   document.getElementById("conc-drop-foto").classList.toggle("filled", !!f);
 });
+document.getElementById("conc-cantidad-encontrada").addEventListener("input", concActualizarRepartoPreview);
 
 document.querySelectorAll("#conc-modal .toggle-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
@@ -4580,27 +4684,28 @@ document.querySelectorAll("#conc-modal .toggle-btn").forEach(btn=>{
     }else if(grupo.id === "conc-ubicacion-toggle"){
       document.getElementById("conc-foto-wrap").style.display = btn.dataset.val === "otra" ? "block" : "none";
     }
+    concActualizarRepartoPreview();
   });
 });
 
 document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("conc-modal-error");
   errorEl.textContent = "";
-  if(concCurrentRowId == null) return;
-  const row = spData.find(r=>r.id === concCurrentRowId);
-  const cantWms = Math.abs(row.unajust);
+  if(concCurrentClave == null) return;
+  const filas = concFilasGrupo(concCurrentClave);
+  if(!filas.length) return;
+  const totalFaltante = filas.reduce((a,r)=> a + concFaltanteFila(r), 0);
 
   const activeCantidadBtn = document.querySelector("#conc-cantidad-toggle .toggle-btn.active");
   if(!activeCantidadBtn){
-    errorEl.textContent = "Indica si encontró la totalidad del producto o fue parcial.";
+    errorEl.textContent = "Indica si encontró la totalidad de lo faltante o fue parcial.";
     return;
   }
-  const estado = activeCantidadBtn.dataset.val;
-  let cantidadEncontrada = cantWms;
-  if(estado === "parcial"){
-    cantidadEncontrada = parseInt(document.getElementById("conc-cantidad-encontrada").value, 10);
-    if(isNaN(cantidadEncontrada) || cantidadEncontrada < 0 || cantidadEncontrada > cantWms){
-      errorEl.textContent = `Ingresa una cantidad encontrada válida (entre 0 y ${cantWms}).`;
+  let totalEncontrado = totalFaltante;
+  if(activeCantidadBtn.dataset.val === "parcial"){
+    totalEncontrado = parseInt(document.getElementById("conc-cantidad-encontrada").value, 10);
+    if(isNaN(totalEncontrado) || totalEncontrado < 0 || totalEncontrado > totalFaltante){
+      errorEl.textContent = `Ingresa una cantidad encontrada válida (entre 0 y ${totalFaltante}).`;
       return;
     }
   }
@@ -4618,26 +4723,39 @@ document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>
     return;
   }
 
+  const reparto = concCalcularReparto(filas, totalEncontrado).filter(item => item.alloc > 0);
+  if(!reparto.length){
+    errorEl.textContent = "Ingresa una cantidad mayor a 0.";
+    return;
+  }
+
   const fotoInput = document.getElementById("conc-foto");
   const fotoFile = fotoInput.files[0];
-  const previa = verificaciones[concCurrentRowId];
 
   const guardarBtn = document.getElementById("conc-guardar-btn");
   const originalLabel = guardarBtn.textContent;
   guardarBtn.disabled = true;
   guardarBtn.textContent = "Guardando…";
 
-  const persistir = async (fotoJson) => {
+  const persistir = async (fotoJsonNuevo) => {
     const actorId = miUsuario ? miUsuario.id : null;
-    const { error } = await sb.from("ssoma_sp_verificaciones").upsert({
-      registro_id: concCurrentRowId, estado, cantidad_encontrada: cantidadEncontrada,
-      otra_ubicacion: otraUbicacion, ubicacion_encontrada: otraUbicacion ? ubicacionEncontrada : null,
-      foto: otraUbicacion ? fotoJson : null,
-      verificado_por_id: actorId, fecha: new Date().toISOString(),
-    }, { onConflict: "registro_id" });
+    const ahora = new Date().toISOString();
+    const resultados = await Promise.all(reparto.map(item => {
+      // Si no se subió una foto nueva en esta verificación, se conserva la que ya tenía
+      // ese reporte (cada fila del grupo pudo haberse verificado por separado antes).
+      const previa = verificaciones[item.fila.id];
+      const foto = otraUbicacion ? (fotoJsonNuevo || (previa ? previa.foto : null)) : null;
+      return sb.from("ssoma_sp_verificaciones").upsert({
+        registro_id: item.fila.id, estado: item.newEstado, cantidad_encontrada: item.newFound,
+        otra_ubicacion: otraUbicacion, ubicacion_encontrada: otraUbicacion ? ubicacionEncontrada : null,
+        foto,
+        verificado_por_id: actorId, fecha: ahora,
+      }, { onConflict: "registro_id" });
+    }));
     guardarBtn.disabled = false;
     guardarBtn.textContent = originalLabel;
-    if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+    const conError = resultados.find(r => r.error);
+    if(conError){ errorEl.textContent = "No se pudo guardar: " + conError.error.message; return; }
     concCloseModal();
     await spLoadData();
   };
@@ -4645,7 +4763,7 @@ document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>
   if(otraUbicacion && fotoFile){
     accReadFileAsDataUrl(fotoFile, dataUrl => persistir({ nombre: fotoFile.name, tipo: fotoFile.type, contenido: dataUrl }));
   }else{
-    await persistir(otraUbicacion ? (previa ? previa.foto : null) : null);
+    await persistir(null);
   }
 });
 
