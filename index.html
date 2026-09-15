@@ -4184,6 +4184,7 @@ async function spLoadData(){
   if(regError){ console.error("No se pudieron cargar los registros de Short Pick:", regError.message); return; }
   spData = (registrosData || []).map(r => ({
     id: r.id, fecha: spFmtFechaHora(new Date(r.fecha)), codAlternat: r.cod_alternat,
+    fechaModif: r.fecha_modif ? spFmtFechaHora(new Date(r.fecha_modif)) : null,
     codigoBarras: r.codigo_barras, producto: r.producto, desc: r.descripcion, ubicacion: r.ubicacion,
     subarea: r.subarea, turno: r.turno, responsable: r.responsable, supervisor: r.supervisor,
     orden: r.orden, unajust: r.un_ajust, semana: r.semana, estado: r.estado, valorizado: r.valorizado,
@@ -4408,7 +4409,9 @@ function concCardCampos(r, verParcial){
     <div class="cg-item"><b>Producto</b><span>${escapeHtml(r.producto || r.desc)}</span></div>
     <div class="cg-item"><b>Descripción</b><span>${escapeHtml(r.desc)}</span></div>
     <div class="cg-item"><b>Ubicación</b><span>${escapeHtml(r.ubicacion)}</span></div>
-    <div class="cg-item"><b>Cantidad</b><span>${cantidadTexto}</span></div>`;
+    <div class="cg-item"><b>Cantidad</b><span>${cantidadTexto}</span></div>
+    <div class="cg-item"><b>Fecha de modificación</b><span>${escapeHtml(r.fechaModif || r.fecha || "—")}</span></div>
+    <div class="cg-item"><b>Semana</b><span>${escapeHtml(r.semana || "—")}</span></div>`;
 }
 
 function spRenderConc(){
@@ -8406,19 +8409,17 @@ async function spImportarRegistros(file, estadoPorOrden){
        Fe y Hr Modif, igual que las fórmulas de tu plantilla. */
     const subareaArchivo = String(spBuscaCampo(fila, ["Sub Área","Sub Area","SubArea"])).trim();
     const subarea = subareaArchivo || spSubArea(ubicacion);
+    const modifRaw = spBuscaCampo(fila, ["Fe y Hr Modif"]);
+    const modifDt = wmsParseFecha(modifRaw);
     const turnoArchivo = String(spBuscaCampo(fila, ["Turno"])).trim();
-    let turno = turnoArchivo || null;
-    if(!turno){
-      const modifRaw = spBuscaCampo(fila, ["Fe y Hr Modif"]);
-      const modifDt = wmsParseFecha(modifRaw);
-      turno = spTurnoDeHora(modifDt);
-    }
+    const turno = turnoArchivo || spTurnoDeHora(modifDt);
     const responsableArchivo = String(spBuscaCampo(fila, ["Responsable"])).trim();
     const responsable = responsableArchivo || spResponsable(subarea, turno);
     const supervisorArchivo = String(spBuscaCampo(fila, ["Supervisor"])).trim();
     const supervisor = supervisorArchivo || spSupervisor(responsable);
     return {
       fecha: fechaDt.toISOString(),
+      fecha_modif: modifDt ? modifDt.toISOString() : null,
       cod_alternat: String(spBuscaCampo(fila, ["Cod Alternat","Código Alternativo","Codigo Alternativo"])).trim(),
       codigo_barras: String(spBuscaCampo(fila, ["Producto","Código de Barras","Codigo de Barras","EAN","Serie"])).trim() || null,
       producto: String(spBuscaCampo(fila, ["Nombre Producto"])).trim() || null,
