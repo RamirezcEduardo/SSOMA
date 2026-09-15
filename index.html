@@ -6158,11 +6158,22 @@ async function sdLoadRegistros(){
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
     ubicacion: r.ubicacion || "", comentario: r.comentario || "",
     estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id, archivoOrigen: r.archivo_origen || "",
+    enRiesgo: !!r.en_riesgo, regularizadoEn: r.regularizado_en,
     createdAt: r.created_at,
   }));
   sdRenderFiltros();
   sdRender();
 }
+
+/* estado tiene 3 valores: "pendiente" (sigue abierto), "finalizado" (el equipo lo cerró
+   a mano) y "regularizado_auto" (el import posterior detectó que el LPN ya no aparece en
+   su Proceso+Ubicación — se asume resuelto fuera de la app). Ambos "finalizado" y
+   "regularizado_auto" cuentan como resueltos para el % de avance, la Bitácora y el
+   indicador "Regularizado" del Informe Semanal — solo "pendiente" sigue siendo trabajo
+   pendiente de verdad. */
+function sdEsPendiente(r){ return r.estado === "pendiente"; }
+function sdEsResuelto(r){ return r.estado === "finalizado" || r.estado === "regularizado_auto"; }
+function sdFechaResuelto(r){ return r.finalizadoEn || r.regularizadoEn || null; }
 
 function sdRenderFiltros(){
   const selSem = document.getElementById("aic-sd-semana");
@@ -6191,7 +6202,8 @@ function sdFiltered(){
 }
 
 function sdCardHtml(r, enGrupo, soloLectura){
-  const done = r.estado === "finalizado";
+  const done = sdEsResuelto(r);
+  const doneNota = r.estado === "regularizado_auto" ? "🔄 Regularizado automáticamente" : "✅ Finalizado";
   const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark finalizar" data-id="${r.id}">✓ Marcar como finalizado</button>`;
   const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sd" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
@@ -6200,10 +6212,11 @@ function sdCardHtml(r, enGrupo, soloLectura){
         <div class="opk-check-big">${done ? "✓" : ""}</div>
         <div class="opk-card-body">
           ${enGrupo ? "" : `<span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>`}<span class="opk-proceso-badge">${escapeHtml(r.proceso)}</span>
+          ${r.enRiesgo ? '<span class="opk-proceso-badge" style="background:#FDECEC;color:var(--red);">🚩 Riesgo de cobro</span>' : ""}
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
           <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.cantidad === null ? "" : " · Cant. " + bpoFmtUds(r.cantidad)}</div>
           <div class="opk-sub">${r.supervisor ? "🧑‍💼 " + escapeHtml(r.supervisor) : ""}${r.responsable ? " · 👤 " + escapeHtml(r.responsable) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
-          ${done ? `<div class="opk-done-note">✅ Finalizado</div>` : ""}
+          ${done ? `<div class="opk-done-note">${doneNota}</div>` : ""}
           <div class="opk-qty-row"><div class="opk-qty" style="color:${done ? "var(--muted)" : "var(--text)"};">${bpoMoneda(r.valTot)}</div></div>
         </div>
       </div>
@@ -6214,12 +6227,12 @@ function sdCardHtml(r, enGrupo, soloLectura){
 
 /* LPN multi-SKU: mismo bloque agrupado que en Bultos Perdidos/Sin Ubicación. */
 function sdGrupoHtml(grupo){
-  const pend = grupo.filter(r => r.estado !== "finalizado").length;
+  const pend = grupo.filter(sdEsPendiente).length;
   return `
     <div class="opk-lpn-group">
       <div class="opk-lpn-group-head">
         <span class="opk-lpn-chip big">${escapeHtml(grupo[0].nroLpn)}</span>
-        <span class="opk-multi-badge">📦 Multi-SKU · ${grupo.length} productos${pend ? " · " + pend + " pendientes" : " · todos finalizados"}</span>
+        <span class="opk-multi-badge">📦 Multi-SKU · ${grupo.length} productos${pend ? " · " + pend + " pendientes" : " · todos resueltos"}</span>
       </div>
       <div class="opk-lpn-group-items">
         ${grupo.map(r => sdCardHtml(r, true)).join("")}
@@ -6248,11 +6261,16 @@ function sdAgruparPorProcesoUbicacion(rows){
 }
 
 function sdCardGrupoHtml(grupo){
-  const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
-  const finalizados = grupo.filas.filter(r => r.estado === "finalizado");
+  const pendientes = grupo.filas.filter(sdEsPendiente);
+  const resueltos = grupo.filas.filter(sdEsResuelto);
   const clave = sdClaveGrupo(grupo.proceso, grupo.ubicacion, grupo.semana);
   const semanaLbl = grupo.semana ? ` · ${escapeHtml(grupo.semana)}` : "";
   if(!pendientes.length){
+    const finalizadosManual = resueltos.filter(r => r.estado === "finalizado").length;
+    const regularizadosAuto = resueltos.filter(r => r.estado === "regularizado_auto").length;
+    const notas = [];
+    if(finalizadosManual) notas.push(finalizadosManual + " finalizados");
+    if(regularizadosAuto) notas.push(regularizadosAuto + " regularizados automáticamente");
     const btnDeshacer = esAdmin() ? `<button type="button" class="btn btn-ghost sd-grupo-deshacer" data-clave="${escapeHtml(clave)}" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">↩️ Deshacer (volver a pendiente)</button>` : "";
     return `
       <div class="opk-card done">
@@ -6261,8 +6279,8 @@ function sdCardGrupoHtml(grupo){
           <div class="opk-card-body">
             <span class="opk-proceso-badge">${escapeHtml(grupo.proceso)}</span>
             <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}${semanaLbl}</div>
-            <div class="opk-sub">${finalizados.length} LPN · todos finalizados</div>
-            <div class="opk-done-note">✅ Todo finalizado</div>
+            <div class="opk-sub">${resueltos.length} LPN · ${notas.join(" · ")}</div>
+            <div class="opk-done-note">✅ Todo resuelto</div>
           </div>
         </div>
         ${btnDeshacer}
@@ -6277,14 +6295,20 @@ function sdCardGrupoHtml(grupo){
   // El comentario se guarda como avance del grupo (sin finalizar) o al finalizar —
   // si ya hay uno guardado de antes, se muestra acá para poder seguir editándolo.
   const comentarioGuardado = (pendientes.find(r => r.comentario) || {}).comentario || "";
+  // En riesgo de cobro: marcado manual del equipo cuando el caso corre riesgo real de
+  // que LATAM lo cobre — se suma al indicador "En riesgo" del Informe Semanal.
+  const enRiesgo = pendientes.some(r => r.enRiesgo);
+  const riesgoBadge = enRiesgo ? `<span class="opk-proceso-badge" style="background:#FDECEC;color:var(--red);">🚩 En riesgo de cobro</span>` : "";
+  const btnRiesgoLabel = enRiesgo ? "✅ Quitar riesgo de cobro" : "🚩 Marcar en riesgo de cobro";
   return `
     <div class="opk-card">
       <div class="opk-card-top">
         <div class="opk-check-big"></div>
         <div class="opk-card-body">
           <span class="opk-proceso-badge">${escapeHtml(grupo.proceso)}</span>
+          ${riesgoBadge}
           <div class="opk-prod-name">${escapeHtml(grupo.ubicacion || "Sin ubicación")}${semanaLbl}</div>
-          <div class="opk-sub">${pendientes.length} LPN pendientes${finalizados.length ? " · " + finalizados.length + " ya finalizados" : ""}</div>
+          <div class="opk-sub">${pendientes.length} LPN pendientes${resueltos.length ? " · " + resueltos.length + " ya resueltos" : ""}</div>
           ${quienLinea ? `<div class="opk-sub">${quienLinea}</div>` : ""}
           <details class="sd-grupo-productos">
             <summary>${productos.length} producto${productos.length === 1 ? "" : "s"} distinto${productos.length === 1 ? "" : "s"} — ver detalle</summary>
@@ -6293,6 +6317,7 @@ function sdCardGrupoHtml(grupo){
           <div class="opk-qty-row"><div class="opk-qty">${bpoMoneda(totalValor)}<span class="u">valorizado pendiente</span></div></div>
           <textarea class="sd-grupo-comentario" data-clave="${escapeHtml(clave)}" placeholder="Comentario de avance (opcional)…" rows="2">${escapeHtml(comentarioGuardado)}</textarea>
           <button type="button" class="btn btn-ghost sd-grupo-guardar-comentario" data-clave="${escapeHtml(clave)}" style="width:100%;margin-top:6px;padding:8px;font-size:11.5px;">💾 Guardar comentario</button>
+          <button type="button" class="btn btn-ghost sd-grupo-riesgo" data-clave="${escapeHtml(clave)}" data-riesgo="${enRiesgo ? "1" : "0"}" style="width:100%;margin-top:6px;padding:8px;font-size:11.5px;${enRiesgo ? "" : "color:var(--red);"}">${btnRiesgoLabel}</button>
         </div>
       </div>
       <button type="button" class="opk-btn-mark finalizar sd-grupo-finalizar" data-clave="${escapeHtml(clave)}">✓ Finalizar ${pendientes.length} LPN de este grupo</button>
@@ -6301,15 +6326,15 @@ function sdCardGrupoHtml(grupo){
 
 function sdRender(){
   const rows = sdFiltered();
-  const pendRows = rows.filter(r => r.estado !== "finalizado");
-  const finRows = rows.filter(r => r.estado === "finalizado");
+  const pendRows = rows.filter(sdEsPendiente);
+  const finRows = rows.filter(sdEsResuelto);
   const pct = rows.length > 0 ? Math.round((finRows.length / rows.length) * 100) : 0;
 
   document.getElementById("aic-sd-count").innerHTML = `${pendRows.length} <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span>`;
-  document.getElementById("aic-sd-pct").textContent = pct + "% finalizado";
+  document.getElementById("aic-sd-pct").textContent = pct + "% resuelto";
   document.getElementById("aic-sd-fill").style.width = pct + "%";
   document.getElementById("aic-sd-pend").textContent = bpoMoneda(pendRows.reduce((a, r) => a + (r.valTot || 0), 0)) + " en riesgo de pasar a bolsa";
-  document.getElementById("aic-sd-rec").textContent = finRows.length + " finalizados";
+  document.getElementById("aic-sd-rec").textContent = finRows.length + " resueltos";
 
   const lpnPendUnicos = [...new Set(pendRows.map(r => r.nroLpn))];
   document.getElementById("aic-sd-lpn-text").value = lpnPendUnicos.join(",");
@@ -6321,10 +6346,10 @@ function sdRender(){
 
   if(buscar){
     const grupos = opkAgruparPorLpn(rows);
-    grupos.forEach(g => g.sort((a, b) => (a.estado === "finalizado" ? 1 : 0) - (b.estado === "finalizado" ? 1 : 0)));
+    grupos.forEach(g => g.sort((a, b) => (sdEsResuelto(a) ? 1 : 0) - (sdEsResuelto(b) ? 1 : 0)));
     grupos.sort((a, b) => {
-      const aDone = a.every(r => r.estado === "finalizado") ? 1 : 0;
-      const bDone = b.every(r => r.estado === "finalizado") ? 1 : 0;
+      const aDone = a.every(sdEsResuelto) ? 1 : 0;
+      const bDone = b.every(sdEsResuelto) ? 1 : 0;
       return aDone - bDone;
     });
     grid.innerHTML = grupos.length
@@ -6352,11 +6377,11 @@ function sdRender(){
 
   const grupos = sdAgruparPorProcesoUbicacion(rows);
   grupos.sort((a, b) => {
-    const aPend = a.filas.some(r => r.estado !== "finalizado") ? 0 : 1;
-    const bPend = b.filas.some(r => r.estado !== "finalizado") ? 0 : 1;
+    const aPend = a.filas.some(sdEsPendiente) ? 0 : 1;
+    const bPend = b.filas.some(sdEsPendiente) ? 0 : 1;
     if(aPend !== bPend) return aPend - bPend;
-    const aValor = a.filas.reduce((s, r) => s + (r.estado !== "finalizado" ? (r.valTot || 0) : 0), 0);
-    const bValor = b.filas.reduce((s, r) => s + (r.estado !== "finalizado" ? (r.valTot || 0) : 0), 0);
+    const aValor = a.filas.reduce((s, r) => s + (sdEsPendiente(r) ? (r.valTot || 0) : 0), 0);
+    const bValor = b.filas.reduce((s, r) => s + (sdEsPendiente(r) ? (r.valTot || 0) : 0), 0);
     return bValor - aValor;
   });
   grid.innerHTML = grupos.length
@@ -6365,20 +6390,20 @@ function sdRender(){
 
   grid.querySelectorAll(".sd-grupo-deshacer").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
-      if(!esAdmin()){ alert("Solo un administrador puede deshacer un grupo finalizado."); return; }
+      if(!esAdmin()){ alert("Solo un administrador puede deshacer un grupo resuelto."); return; }
       const clave = btn.dataset.clave;
       const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
       if(!grupo) return;
-      const finalizados = grupo.filas.filter(r => r.estado === "finalizado");
-      if(!finalizados.length) return;
-      if(!confirm(`¿Deshacer y volver a pendiente los ${finalizados.length} LPN finalizados de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}${grupo.semana ? " · " + grupo.semana : ""}"?`)) return;
+      const resueltos = grupo.filas.filter(sdEsResuelto);
+      if(!resueltos.length) return;
+      if(!confirm(`¿Deshacer y volver a pendiente los ${resueltos.length} LPN resueltos de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}${grupo.semana ? " · " + grupo.semana : ""}"?`)) return;
       const originalLabel = btn.textContent;
       btn.disabled = true; btn.textContent = "Deshaciendo…";
       const { error } = await sb.from("ssoma_seguimiento_diario_registros")
-        .update({ estado: "pendiente", finalizado_en: null, finalizado_por_id: null })
-        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).eq("estado", "finalizado");
+        .update({ estado: "pendiente", finalizado_en: null, finalizado_por_id: null, regularizado_en: null })
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).in("estado", ["finalizado", "regularizado_auto"]);
       if(error){ alert("No se pudo deshacer: " + error.message); btn.disabled = false; btn.textContent = originalLabel; return; }
-      finalizados.forEach(r => { r.estado = "pendiente"; r.finalizadoEn = null; r.finalizadoPorId = null; });
+      resueltos.forEach(r => { r.estado = "pendiente"; r.finalizadoEn = null; r.finalizadoPorId = null; r.regularizadoEn = null; });
       sdRender();
     });
   });
@@ -6388,7 +6413,7 @@ function sdRender(){
       const clave = btn.dataset.clave;
       const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
       if(!grupo) return;
-      const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
+      const pendientes = grupo.filas.filter(sdEsPendiente);
       if(!pendientes.length) return;
       const textarea = [...grid.querySelectorAll(".sd-grupo-comentario")].find(t => t.dataset.clave === clave);
       const comentario = textarea ? textarea.value.trim() : "";
@@ -6396,7 +6421,7 @@ function sdRender(){
       btn.disabled = true; btn.textContent = "Guardando…";
       const { error } = await sb.from("ssoma_seguimiento_diario_registros")
         .update({ comentario: comentario || null })
-        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).neq("estado", "finalizado");
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).eq("estado", "pendiente");
       btn.disabled = false;
       if(error){ alert("No se pudo guardar el comentario: " + error.message); btn.textContent = originalLabel; return; }
       pendientes.forEach(r => { r.comentario = comentario; });
@@ -6405,12 +6430,32 @@ function sdRender(){
     });
   });
 
+  grid.querySelectorAll(".sd-grupo-riesgo").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const clave = btn.dataset.clave;
+      const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
+      if(!grupo) return;
+      const pendientes = grupo.filas.filter(sdEsPendiente);
+      if(!pendientes.length) return;
+      const nuevoValor = btn.dataset.riesgo !== "1";
+      const originalLabel = btn.textContent;
+      btn.disabled = true; btn.textContent = "Guardando…";
+      const { error } = await sb.from("ssoma_seguimiento_diario_registros")
+        .update({ en_riesgo: nuevoValor })
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).eq("estado", "pendiente");
+      btn.disabled = false;
+      if(error){ alert("No se pudo actualizar: " + error.message); btn.textContent = originalLabel; return; }
+      pendientes.forEach(r => { r.enRiesgo = nuevoValor; });
+      sdRender();
+    });
+  });
+
   grid.querySelectorAll(".sd-grupo-finalizar").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const clave = btn.dataset.clave;
       const grupo = grupos.find(g => sdClaveGrupo(g.proceso, g.ubicacion, g.semana) === clave);
       if(!grupo) return;
-      const pendientes = grupo.filas.filter(r => r.estado !== "finalizado");
+      const pendientes = grupo.filas.filter(sdEsPendiente);
       if(!pendientes.length) return;
       if(!confirm(`¿Finalizar ${pendientes.length} LPN pendientes de "${grupo.proceso} · ${grupo.ubicacion || "Sin ubicación"}${grupo.semana ? " · " + grupo.semana : ""}"? Esta acción no se puede deshacer.`)) return;
       const textarea = [...grid.querySelectorAll(".sd-grupo-comentario")].find(t => t.dataset.clave === clave);
@@ -6418,7 +6463,7 @@ function sdRender(){
       btn.disabled = true; btn.textContent = "Guardando…";
       const { error } = await sb.from("ssoma_seguimiento_diario_registros")
         .update({ estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null, comentario: comentario || null })
-        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).neq("estado", "finalizado");
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).eq("estado", "pendiente");
       if(error){ alert("No se pudo finalizar: " + error.message); btn.disabled = false; btn.textContent = `✓ Finalizar ${pendientes.length} LPN de este grupo`; return; }
       const ahora = new Date().toISOString();
       pendientes.forEach(r => { r.estado = "finalizado"; r.finalizadoEn = ahora; r.finalizadoPorId = miUsuario ? miUsuario.id : null; r.comentario = comentario; });
@@ -6452,12 +6497,58 @@ function sdArbolPorResponsable(rows, campoValor){
 }
 function sdOrdenado(mapEntries){ return [...mapEntries].sort((a, b) => a[0].localeCompare(b[0])); }
 
+/* Árbol Responsable → Supervisor → Proceso+Ubicación en tabla, con subtotales y total —
+   mismo formato usado por "Pendiente de regularizar" y "En riesgo de cobro" en el
+   Informe Semanal (ambas son vistas de Seguimiento Diario, solo cambia el filtro de filas). */
+function sdBuildTablaProcesoUbicacion(rows){
+  const arbol = sdArbolPorResponsable(rows);
+  let filas = "";
+  for(const [responsable, supMap] of sdOrdenado(arbol)){
+    let totalResp = 0;
+    let bloqueResp = "";
+    for(const [supervisor, filasSup] of sdOrdenado(supMap)){
+      const porProcUbic = new Map();
+      filasSup.forEach(r => {
+        const clave = r.proceso + "|||" + (r.ubicacion || "");
+        if(!porProcUbic.has(clave)) porProcUbic.set(clave, { proceso: r.proceso, ubicacion: r.ubicacion || "Sin ubicación", filas: [] });
+        porProcUbic.get(clave).filas.push(r);
+      });
+      let totalSup = 0;
+      let bloqueSup = "";
+      for(const g of [...porProcUbic.values()].sort((a, b) => a.proceso.localeCompare(b.proceso))){
+        const valor = g.filas.reduce((a, r) => a + (r.valTot || 0), 0);
+        const comentario = (g.filas.find(r => r.comentario) || {}).comentario || "";
+        totalSup += valor;
+        bloqueSup += `
+          <tr>
+            <td>${escapeHtml(g.proceso)}</td>
+            <td>${escapeHtml(g.ubicacion)}</td>
+            <td class="num">${g.filas.length}</td>
+            <td class="num">${bpoMoneda(valor).replace("S/ ", "")}</td>
+            <td>${escapeHtml(comentario)}</td>
+          </tr>`;
+      }
+      totalResp += totalSup;
+      bloqueResp += `
+        <tr style="background:#F7F8FA;"><td colspan="5" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        ${bloqueSup}
+        <tr style="font-weight:700;"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td><td></td></tr>`;
+    }
+    filas += `
+      <tr style="background:#1A1D23;color:#fff;"><td colspan="5">👤 ${escapeHtml(responsable)}</td></tr>
+      ${bloqueResp}
+      <tr style="font-weight:800;background:#FDECEC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td><td></td></tr>`;
+  }
+  return filas;
+}
+
 function sdBuildInformeSemanalHtml(semana){
-  // EN RIESGO — pendiente (no recuperado) en Bultos Perdidos/Sin Ubicación de esa semana.
-  // Es lo único que cuenta como "en riesgo" de verdad: Perdido ERU + Por Ubicar + Sin
-  // Ubicación (lo que ya vive en ssoma_bpo_registros) — no Seguimiento Diario.
+  // EN RIESGO — pendiente (no recuperado) en Bultos Perdidos/Sin Ubicación de esa semana,
+  // más lo de Seguimiento Diario que el equipo marcó a mano como "en riesgo de cobro"
+  // (botón 🚩 en la tarjeta) — un caso puntual que corre riesgo real de que LATAM lo cobre,
+  // aunque su proceso no sea Perdido ERU/Por Ubicar/Sin Ubicación.
   const pendientesBpoSemana = bpoRegistros.filter(r => r.estado !== "recuperado" && r.semana === semana);
-  const totalRiesgo = pendientesBpoSemana.reduce((a, r) => a + bpoValorPendiente(r), 0);
+  const totalRiesgoBpo = pendientesBpoSemana.reduce((a, r) => a + bpoValorPendiente(r), 0);
   const arbolBpoRiesgo = sdArbolPorResponsable(pendientesBpoSemana);
 
   let filasBpoRiesgo = "";
@@ -6500,51 +6591,21 @@ function sdBuildInformeSemanalHtml(semana){
   // semana (con el comentario de avance que se haya guardado). No es "riesgo" en el
   // sentido de pérdida total como Perdido ERU/Por Ubicar/Sin Ubicación, pero si un
   // supervisor no lo cierra puede terminar pasando a Control de Bolsa.
-  const pendientesSdSemana = sdRegistros.filter(r => r.estado !== "finalizado" && r.semana === semana);
-  const arbolRiesgo = sdArbolPorResponsable(pendientesSdSemana);
+  const pendientesSdSemana = sdRegistros.filter(r => sdEsPendiente(r) && r.semana === semana);
+  const filasRiesgo = sdBuildTablaProcesoUbicacion(pendientesSdSemana);
 
-  // REGULARIZADO — lo de Seguimiento Diario que sí se finalizó, de esa semana.
-  const finalizadosSdSemana = sdRegistros.filter(r => r.estado === "finalizado" && r.semana === semana);
-  const totalRegularizado = finalizadosSdSemana.reduce((a, r) => a + (r.valTot || 0), 0);
+  // EN RIESGO DE COBRO — subconjunto de lo pendiente que el equipo marcó a mano con el
+  // botón 🚩. Su valorizado se suma al indicador "En riesgo" junto con Bultos Perdidos.
+  const pendientesSdRiesgo = pendientesSdSemana.filter(r => r.enRiesgo);
+  const totalRiesgoSd = pendientesSdRiesgo.reduce((a, r) => a + (r.valTot || 0), 0);
+  const filasRiesgoCobro = sdBuildTablaProcesoUbicacion(pendientesSdRiesgo);
+  const totalRiesgo = totalRiesgoBpo + totalRiesgoSd;
 
-  let filasRiesgo = "";
-  for(const [responsable, supMap] of sdOrdenado(arbolRiesgo)){
-    let totalResp = 0;
-    let bloqueResp = "";
-    for(const [supervisor, filas] of sdOrdenado(supMap)){
-      // agrupar por Proceso + Ubicación dentro del supervisor, igual que las tarjetas
-      const porProcUbic = new Map();
-      filas.forEach(r => {
-        const clave = r.proceso + "|||" + (r.ubicacion || "");
-        if(!porProcUbic.has(clave)) porProcUbic.set(clave, { proceso: r.proceso, ubicacion: r.ubicacion || "Sin ubicación", filas: [] });
-        porProcUbic.get(clave).filas.push(r);
-      });
-      let totalSup = 0;
-      let bloqueSup = "";
-      for(const g of [...porProcUbic.values()].sort((a, b) => a.proceso.localeCompare(b.proceso))){
-        const valor = g.filas.reduce((a, r) => a + (r.valTot || 0), 0);
-        const comentario = (g.filas.find(r => r.comentario) || {}).comentario || "";
-        totalSup += valor;
-        bloqueSup += `
-          <tr>
-            <td>${escapeHtml(g.proceso)}</td>
-            <td>${escapeHtml(g.ubicacion)}</td>
-            <td class="num">${g.filas.length}</td>
-            <td class="num">${bpoMoneda(valor).replace("S/ ", "")}</td>
-            <td>${escapeHtml(comentario)}</td>
-          </tr>`;
-      }
-      totalResp += totalSup;
-      bloqueResp += `
-        <tr style="background:#F7F8FA;"><td colspan="5" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
-        ${bloqueSup}
-        <tr style="font-weight:700;"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td><td></td></tr>`;
-    }
-    filasRiesgo += `
-      <tr style="background:#1A1D23;color:#fff;"><td colspan="5">👤 ${escapeHtml(responsable)}</td></tr>
-      ${bloqueResp}
-      <tr style="font-weight:800;background:#FDECEC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td><td></td></tr>`;
-  }
+  // REGULARIZADO — lo de Seguimiento Diario que ya no está pendiente esa semana, sea
+  // porque el equipo lo finalizó a mano o porque un import posterior detectó que el LPN
+  // ya no aparecía en su Proceso+Ubicación (regularizado_auto).
+  const resueltosSdSemana = sdRegistros.filter(r => sdEsResuelto(r) && r.semana === semana);
+  const totalRegularizado = resueltosSdSemana.reduce((a, r) => a + (r.valTot || 0), 0);
 
   // RECUPERADO — Bultos Perdidos / Sin Ubicación, eventos de esa semana (por fecha real del reporte)
   const eventosSemana = bpoRecuperaciones
@@ -6605,6 +6666,13 @@ function sdBuildInformeSemanalHtml(semana){
     <table class="print-table">
       <thead><tr><th>Proceso</th><th>LPN</th><th>Valorizado (S/)</th></tr></thead>
       <tbody>${filasBpoRiesgo || `<tr><td colspan="3" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
+    </table>
+
+    <div class="modal-section-title">🚩 En riesgo de cobro — Seguimiento Diario</div>
+    <p class="section-desc" style="margin:-6px 0 10px;">Casos marcados a mano por el equipo (botón "Marcar en riesgo de cobro") — se suman al indicador "En riesgo" de arriba.</p>
+    <table class="print-table">
+      <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
+      <tbody>${filasRiesgoCobro || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin casos marcados en riesgo de cobro esa semana.</td></tr>`}</tbody>
     </table>
 
     <div class="modal-section-title">✅ Recuperado — Bultos Perdidos / Sin Ubicación</div>
@@ -6695,6 +6763,13 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     // su momento) que el archivo actual sí trae con Ubicación — se completan solas en
     // vez de quedar en "Sin ubicación" para siempre, sin tocar su estado ni lo demás.
     const porBackfillear = new Map();
+    // Proceso+Ubicación cubiertos por el archivo de hoy (con Ubicación no vacía) y, para
+    // cada uno, qué combinaciones LPN+Cod Alternat trae hoy — sirve después para detectar
+    // qué LPN pendientes de esa misma zona YA NO aparecen (el auditor los quitó porque se
+    // regularizaron fuera de la app) y así descontarlos solos. Solo se acota a zonas con
+    // Ubicación conocida, para no arriesgar tocar pendientes de una zona que el archivo de
+    // hoy no cubrió.
+    const clavesPorProcesoUbicacionHoy = new Map();
     hoja.rows.forEach(row => {
       const procesoRaw = String(row[hoja.cols.proceso] || "").trim();
       if(!procesoRaw) return;
@@ -6704,6 +6779,11 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       const codAlternat = String(row[hoja.cols.codAlternat] || "").trim();
       const clave = nroLpn + "|||" + codAlternat;
       const ubicacionFila = idxUbicacion !== -1 ? String(row[idxUbicacion] || "").trim() : "";
+      if(ubicacionFila){
+        const claveZona = procesoRaw + "|||" + ubicacionFila;
+        if(!clavesPorProcesoUbicacionHoy.has(claveZona)) clavesPorProcesoUbicacionHoy.set(claveZona, new Set());
+        clavesPorProcesoUbicacionHoy.get(claveZona).add(clave);
+      }
       if(clavesBpo.has(clave)){ yaEnOtroModulo++; return; }
       if(clavesSd.has(clave)){
         duplicadas++;
@@ -6766,6 +6846,39 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         statusEl.style.display = "block";
       }
     }
+
+    // Auto-regularizar: LPN pendientes cuyo Proceso+Ubicación sí está cubierto por el
+    // archivo de hoy, pero cuya combinación LPN+Cod Alternat ya no aparece en él — el
+    // auditor actualiza el reporte a diario y puede quitar LPN que ya se regularizaron
+    // fuera de la app. Queda como "regularizado_auto" (no se borra, no es "finalizado"
+    // manual) y deja de contar como pendiente.
+    let regularizadasAuto = 0;
+    if(clavesPorProcesoUbicacionHoy.size){
+      const idsARegularizar = [];
+      sdRegistros.forEach(r => {
+        if(!sdEsPendiente(r) || !r.ubicacion) return;
+        const clavesHoy = clavesPorProcesoUbicacionHoy.get(r.proceso + "|||" + r.ubicacion);
+        if(!clavesHoy) return; // el archivo de hoy no cubrió esta zona
+        if(!clavesHoy.has(r.nroLpn + "|||" + r.codAlternat)) idsARegularizar.push(r.id);
+      });
+      if(idsARegularizar.length){
+        const ahoraIso = new Date().toISOString();
+        const CONCURRENCIA = 15;
+        for(let i = 0; i < idsARegularizar.length; i += CONCURRENCIA){
+          const bloque = idsARegularizar.slice(i, i + CONCURRENCIA);
+          await Promise.all(bloque.map(id =>
+            sb.from("ssoma_seguimiento_diario_registros")
+              .update({ estado: "regularizado_auto", regularizado_en: ahoraIso })
+              .eq("id", id)
+              .then(({ error }) => { if(error) console.error("No se pudo auto-regularizar el id " + id + ":", error.message); })
+          ));
+          regularizadasAuto += bloque.length;
+          statusEl.textContent = `Auto-regularizando LPN que ya no aparecen… ${regularizadasAuto}/${idsARegularizar.length}`;
+          statusEl.style.display = "block";
+        }
+      }
+    }
+
     await sdLoadRegistros();
 
     let msg = guardadas
@@ -6773,10 +6886,15 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       : `⚠ No se cargó ninguna línea nueva. `;
     if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado en Seguimiento Diario. `;
     if(backfillHechos) msg += `${backfillHechos} de esas ya cargadas se completaron con su Ubicación (no la tenían). `;
+    if(regularizadasAuto) msg += `${regularizadasAuto} LPN pendientes se auto-regularizaron (ya no aparecen en su Proceso+Ubicación de hoy). `;
     if(yaEnOtroModulo) msg += `${yaEnOtroModulo} filas con Nro LPN que ya está en Bultos Perdidos/Sin Ubicación (no se duplicó). `;
-    if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas.`;
+    if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas. `;
+    // Total pendiente después del import, para cuadrarlo a mano contra el documento de LATAM
+    // (el valorizado se toma tal cual de la columna "Val tot" del archivo, sin recalcular).
+    const totalPendienteAhora = sdRegistros.filter(sdEsPendiente).reduce((a, r) => a + (r.valTot || 0), 0);
+    msg += `Total pendiente en Seguimiento Diario ahora: ${bpoMoneda(totalPendienteAhora)} — cuadra este monto con el documento de LATAM.`;
     statusEl.textContent = msg;
-    statusEl.className = guardadas ? "import-status success" : "import-status error";
+    statusEl.className = (guardadas || regularizadasAuto) ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
   }catch(err){
     console.error(err);
@@ -6799,7 +6917,7 @@ sdLoadRegistros();
    por cada reporte de recuperación, así se ve la actividad real día a día — no solo
    el estado final de cada LPN, que no distingue cuándo pasó cada cosa). Seguimiento
    Diario no tiene ese log por evento (finalizar es de una sola vez), así que ahí se
-   usan directo los registros con estado "finalizado". */
+   usan directo los registros resueltos ("finalizado" o "regularizado_auto"). */
 let bitTabActivo = "perdidos"; // "perdidos" | "sin_ubicacion" | "seguimiento_diario"
 let bpoRecuperaciones = [];
 
@@ -6846,10 +6964,10 @@ function bitFiltered(){
   const semana = document.getElementById("bit-f-semana").value;
   const mes = document.getElementById("bit-f-mes").value;
   if(bitTabActivo === "seguimiento_diario"){
-    return sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn
-      && (!semana || bolsaSemanaLabel(new Date(r.finalizadoEn)) === semana)
-      && (!mes || bitMesLocal(r.finalizadoEn) === mes)
-      && (!fecha || bitFechaLocal(r.finalizadoEn) === fecha));
+    return sdRegistros.filter(r => sdEsResuelto(r) && sdFechaResuelto(r)
+      && (!semana || bolsaSemanaLabel(new Date(sdFechaResuelto(r))) === semana)
+      && (!mes || bitMesLocal(sdFechaResuelto(r)) === mes)
+      && (!fecha || bitFechaLocal(sdFechaResuelto(r)) === fecha));
   }
   return bitRecuperacionesDelModulo(bitTabActivo)
     .filter(x => !semana || bolsaSemanaLabel(new Date(x.creadoEn)) === semana)
@@ -6861,7 +6979,7 @@ function bitRenderFiltroSemana(){
   const sel = document.getElementById("bit-f-semana");
   const actual = sel.value;
   const semanas = bitTabActivo === "seguimiento_diario"
-    ? [...new Set(sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn).map(r => bolsaSemanaLabel(new Date(r.finalizadoEn))))]
+    ? [...new Set(sdRegistros.filter(r => sdEsResuelto(r) && sdFechaResuelto(r)).map(r => bolsaSemanaLabel(new Date(sdFechaResuelto(r)))))]
     : [...new Set(bitRecuperacionesDelModulo(bitTabActivo).map(x => bolsaSemanaLabel(new Date(x.creadoEn))))];
   semanas.sort();
   sel.innerHTML = '<option value="">Todas</option>' + semanas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
@@ -6873,10 +6991,10 @@ function bitStats(){
   const semanaHoy = bolsaSemanaLabel(new Date());
   const mesHoy = bitMesLocal(new Date().toISOString());
   if(bitTabActivo === "seguimiento_diario"){
-    const fin = sdRegistros.filter(r => r.estado === "finalizado" && r.finalizadoEn);
-    const hoyRows = fin.filter(r => bitFechaLocal(r.finalizadoEn) === hoy);
-    const semRows = fin.filter(r => bolsaSemanaLabel(new Date(r.finalizadoEn)) === semanaHoy);
-    const mesRows = fin.filter(r => bitMesLocal(r.finalizadoEn) === mesHoy);
+    const fin = sdRegistros.filter(r => sdEsResuelto(r) && sdFechaResuelto(r));
+    const hoyRows = fin.filter(r => bitFechaLocal(sdFechaResuelto(r)) === hoy);
+    const semRows = fin.filter(r => bolsaSemanaLabel(new Date(sdFechaResuelto(r))) === semanaHoy);
+    const mesRows = fin.filter(r => bitMesLocal(sdFechaResuelto(r)) === mesHoy);
     return {
       hoyCount: hoyRows.length, hoyValor: hoyRows.reduce((a, r) => a + (r.valTot || 0), 0),
       semValor: semRows.reduce((a, r) => a + (r.valTot || 0), 0),
@@ -6920,10 +7038,10 @@ function bitRender(){
   const rows = bitFiltered();
   const list = document.getElementById("bit-list");
   if(bitTabActivo === "seguimiento_diario"){
-    const ordenadas = [...rows].sort((a, b) => (b.finalizadoEn || "").localeCompare(a.finalizadoEn || ""));
+    const ordenadas = [...rows].sort((a, b) => (sdFechaResuelto(b) || "").localeCompare(sdFechaResuelto(a) || ""));
     list.innerHTML = ordenadas.length
       ? `<div class="opk-grid">${ordenadas.map(r => sdCardHtml(r, false, true)).join("")}</div>`
-      : `<div class="empty opk-empty">Sin registros finalizados con ese filtro.</div>`;
+      : `<div class="empty opk-empty">Sin registros resueltos con ese filtro.</div>`;
   }else{
     const consolidados = bitConsolidarPorRegistro(rows).sort((a, b) => (b.ultimoEvento || "").localeCompare(a.ultimoEvento || ""));
     list.innerHTML = consolidados.length
@@ -6961,7 +7079,7 @@ function bitBuildInformeHtml(){
     const totalValor = rows.reduce((a, r) => a + (r.valTot || 0), 0);
     const filas = rows.map(r => `
       <tr>
-        <td>${escapeHtml(r.finalizadoEn ? new Date(r.finalizadoEn).toLocaleString("es-PE") : "")}</td>
+        <td>${escapeHtml(sdFechaResuelto(r) ? new Date(sdFechaResuelto(r)).toLocaleString("es-PE") : "")}</td>
         <td>${escapeHtml(r.nroLpn)}</td>
         <td>${escapeHtml(r.descripcion || r.producto)}</td>
         <td>${escapeHtml(r.proceso)}</td>
@@ -7028,7 +7146,8 @@ const BIT_COLUMNAS_RECUPERACION = [
   { header: "Reportado por", get: x => (usuariosPorId[x.reportadoPorId] || {}).nombre_completo || "" },
 ];
 const BIT_COLUMNAS_SD = [
-  { header: "Fecha finalizado", get: r => r.finalizadoEn ? new Date(r.finalizadoEn).toLocaleString("es-PE") : "" },
+  { header: "Fecha resuelto", get: r => sdFechaResuelto(r) ? new Date(sdFechaResuelto(r)).toLocaleString("es-PE") : "" },
+  { header: "Cómo se resolvió", get: r => r.estado === "regularizado_auto" ? "Regularizado automático" : "Finalizado manual" },
   { header: "Proceso", get: r => r.proceso },
   { header: "Nro LPN", get: r => r.nroLpn },
   { header: "Producto", get: r => r.descripcion || r.producto },
@@ -7044,7 +7163,7 @@ document.getElementById("bit-export-btn").addEventListener("click", ()=>{
     abrirExportModal({
       titulo: "Bitácora — Seguimiento Diario",
       obtenerFilas: () => bitFiltered(),
-      campoFecha: r => bitFechaLocal(r.finalizadoEn),
+      campoFecha: r => bitFechaLocal(sdFechaResuelto(r)),
       columnas: BIT_COLUMNAS_SD,
       nombreArchivo: "bitacora_seguimiento_diario.csv",
     });
