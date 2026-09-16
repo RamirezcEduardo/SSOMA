@@ -3195,7 +3195,10 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         </div>
       </div>
       <div class="field">
-        <label>Archivo con los LPN a agregar<span class="req">*</span></label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <label style="margin-bottom:0;">Archivo con los LPN a agregar<span class="req">*</span></label>
+          <button type="button" class="btn btn-ghost" id="sd-agregar-plantilla-btn" style="padding:4px 10px;font-size:12px;">📥 Descargar plantilla</button>
+        </div>
         <div class="import-drop-row">
           <label class="import-drop" for="sd-agregar-file" id="sd-agregar-drop">
             <input type="file" id="sd-agregar-file" accept=".xlsx,.xls,.csv" hidden>
@@ -6950,6 +6953,19 @@ document.getElementById("sd-agregar-file").addEventListener("change", ()=>{
   document.getElementById("sd-agregar-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
   document.getElementById("sd-agregar-drop").classList.toggle("filled", !!f);
   document.getElementById("sd-agregar-guardar").disabled = !f;
+});
+document.getElementById("sd-agregar-plantilla-btn").addEventListener("click", ()=>{
+  descargarCsv(
+    "plantilla_agregar_lpn.csv",
+    [
+      { header: "Nro LPN", get: r => r.nroLpn },
+      { header: "Cod Alternat", get: r => r.codAlternat },
+      { header: "Descripcion", get: r => r.descripcion },
+      { header: "Cantidad", get: r => r.cantidad },
+      { header: "Val tot", get: r => r.valTot },
+    ],
+    [{ nroLpn: "CJSA00010396003", codAlternat: "102134", descripcion: "CEFADROXILO IQ 500MG CJA 100 CAP", cantidad: "3", valTot: "45.50" }]
+  );
 });
 
 document.getElementById("sd-agregar-guardar").addEventListener("click", async ()=>{
