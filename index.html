@@ -6923,11 +6923,16 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       const CONCURRENCIA = 15;
       for(let i = 0; i < pendientesBackfill.length; i += CONCURRENCIA){
         const bloque = pendientesBackfill.slice(i, i + CONCURRENCIA);
+        // .catch() acá es crítico: un solo fallo de red en este backfill (best-effort, no
+        // crítico) no debe tumbar todo el Promise.all y abortar el import ANTES de llegar
+        // a la auto-regularización de más abajo — eso fue justo lo que parece haber pasado
+        // hoy con un archivo real de 3059 filas.
         await Promise.all(bloque.map(item =>
           sb.from("ssoma_seguimiento_diario_registros")
             .update({ ubicacion: item.ubicacion })
             .eq("nro_lpn", item.nroLpn).eq("cod_alternat", item.codAlternat)
             .then(({ error }) => { if(error) console.error("No se pudo completar la ubicación de " + item.nroLpn + ":", error.message); })
+            .catch(err => console.error("No se pudo completar la ubicación de " + item.nroLpn + " (red):", err.message))
         ));
         backfillHechos += bloque.length;
         statusEl.textContent = `Completando Ubicación en filas ya cargadas… ${backfillHechos}/${pendientesBackfill.length}`;
@@ -6959,6 +6964,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
               .update({ estado: "regularizado_auto", regularizado_en: ahoraIso })
               .eq("id", id)
               .then(({ error }) => { if(error) console.error("No se pudo auto-regularizar el id " + id + ":", error.message); })
+              .catch(err => console.error("No se pudo auto-regularizar el id " + id + " (red):", err.message))
           ));
           regularizadasAuto += bloque.length;
           statusEl.textContent = `Auto-regularizando LPN que ya no aparecen… ${regularizadasAuto}/${idsARegularizar.length}`;
