@@ -3133,7 +3133,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <button class="modal-close" id="sd-agregar-close" aria-label="Cerrar">×</button>
     </div>
     <div class="modal-body">
-      <p class="section-desc" style="margin-bottom:14px;">Para cuando notas que falta un LPN y no quieres esperar al próximo import. Queda como pendiente normal, se puede finalizar/agrupar igual que los demás.</p>
+      <p class="section-desc" style="margin-bottom:14px;">Para cuando notas que faltan LPN y no quieres esperar al próximo import. Quedan como pendientes normales, se pueden finalizar/agrupar igual que los demás. Proceso, Semana, Ubicación, Responsable y Supervisor se aplican a todos los LPN que agregues aquí.</p>
       <div style="display:flex;gap:12px;">
         <div class="field" style="flex:1;">
           <label>Proceso<span class="req">*</span></label>
@@ -3150,30 +3150,6 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
       <div style="display:flex;gap:12px;">
         <div class="field" style="flex:1;">
-          <label>Nro LPN<span class="req">*</span></label>
-          <input type="text" id="sd-agregar-lpn" placeholder="Ej. CJSA00010396003">
-        </div>
-        <div class="field" style="flex:1;">
-          <label>Cod Alternat<span class="req">*</span></label>
-          <input type="text" id="sd-agregar-cod" placeholder="Ej. 102134">
-        </div>
-      </div>
-      <div class="field">
-        <label>Producto / Descripción<span class="req">*</span></label>
-        <input type="text" id="sd-agregar-desc" placeholder="Descripción del producto">
-      </div>
-      <div style="display:flex;gap:12px;">
-        <div class="field" style="flex:1;">
-          <label>Cantidad</label>
-          <input type="number" id="sd-agregar-cantidad" min="0" step="1">
-        </div>
-        <div class="field" style="flex:1;">
-          <label>Val tot (S/)<span class="req">*</span></label>
-          <input type="number" id="sd-agregar-valtot" min="0" step="0.01">
-        </div>
-      </div>
-      <div style="display:flex;gap:12px;">
-        <div class="field" style="flex:1;">
           <label>Responsable</label>
           <input type="text" id="sd-agregar-responsable">
         </div>
@@ -3183,10 +3159,12 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         </div>
       </div>
       <div class="field">
-        <label>Nro de lote</label>
-        <input type="text" id="sd-agregar-lote">
+        <label>LPN a agregar<span class="req">*</span> — uno por línea: Nro LPN, Cod Alternat, Descripción, Val tot</label>
+        <textarea id="sd-agregar-lpns" rows="6" placeholder="CJSA00010396003, 102134, CEFADROXILO IQ 500MG CJA 100 CAP, 45.50&#10;CJSA00010396005, 815931, PARACETAMOL 500MG, 10.51&#10;CJSA00010396006, 147874, IBUPROFENO 400MG, 64.60"></textarea>
+        <div class="hint">También aceptas Cantidad de más: Nro LPN, Cod Alternat, Descripción, Cantidad, Val tot.</div>
       </div>
       <span class="login-error" id="sd-agregar-error"></span>
+      <div id="sd-agregar-resultado" style="font-size:12.5px;color:var(--muted);margin-top:6px;"></div>
       <button type="button" class="btn btn-primary" id="sd-agregar-guardar" style="width:100%;margin-top:6px;">Agregar LPN</button>
     </div>
   </div>
@@ -6907,10 +6885,11 @@ document.getElementById("sd-informe-semanal-generar").addEventListener("click", 
    Para cuando el equipo nota que falta un LPN (no llegó en ningún archivo, o se
    regularizó por error) y no quiere esperar al próximo import. */
 function sdAbrirModalAgregar(){
-  ["proceso","semana","ubicacion","lpn","cod","desc","cantidad","valtot","responsable","supervisor","lote"].forEach(id => {
+  ["proceso","semana","ubicacion","responsable","supervisor","lpns"].forEach(id => {
     document.getElementById("sd-agregar-" + id).value = "";
   });
   document.getElementById("sd-agregar-error").textContent = "";
+  document.getElementById("sd-agregar-resultado").textContent = "";
   document.getElementById("sd-agregar-modal").classList.add("show");
 }
 function sdCerrarModalAgregar(){
@@ -6922,54 +6901,68 @@ document.getElementById("sd-agregar-modal").addEventListener("click", (e)=>{ if(
 
 document.getElementById("sd-agregar-guardar").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("sd-agregar-error");
-  errorEl.textContent = "";
+  const resultadoEl = document.getElementById("sd-agregar-resultado");
+  errorEl.textContent = ""; resultadoEl.textContent = "";
+
   const proceso = document.getElementById("sd-agregar-proceso").value.trim();
   const semana = document.getElementById("sd-agregar-semana").value.trim();
   const ubicacion = document.getElementById("sd-agregar-ubicacion").value.trim();
-  const nroLpn = document.getElementById("sd-agregar-lpn").value.trim();
-  const codAlternat = document.getElementById("sd-agregar-cod").value.trim();
-  const descripcion = document.getElementById("sd-agregar-desc").value.trim();
-  const cantidadRaw = document.getElementById("sd-agregar-cantidad").value;
-  const valTotRaw = document.getElementById("sd-agregar-valtot").value;
   const responsable = document.getElementById("sd-agregar-responsable").value.trim();
   const supervisor = document.getElementById("sd-agregar-supervisor").value.trim();
-  const nroLote = document.getElementById("sd-agregar-lote").value.trim();
+  const lineas = document.getElementById("sd-agregar-lpns").value.split("\n").map(l => l.trim()).filter(Boolean);
 
-  if(!proceso || !semana || !nroLpn || !codAlternat || !descripcion){
-    errorEl.textContent = "Completa Proceso, Semana, Nro LPN, Cod Alternat y Producto/Descripción.";
-    return;
-  }
-  const valTot = parseFloat(valTotRaw);
-  if(isNaN(valTot) || valTot < 0){
-    errorEl.textContent = "Ingresa un Val tot válido (0 o más).";
-    return;
-  }
-  const yaExiste = sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat);
-  if(yaExiste){
-    errorEl.textContent = `Ese LPN + Cod Alternat ya existe (estado: ${sdEstadoLegible(yaExiste)}). Búscalo en la lista en vez de agregarlo de nuevo.`;
+  if(!proceso || !semana){ errorEl.textContent = "Completa Proceso y Semana."; return; }
+  if(!lineas.length){ errorEl.textContent = "Agrega al menos un LPN (uno por línea): Nro LPN, Cod Alternat, Descripción, Val tot."; return; }
+
+  // Cada línea: "Nro LPN, Cod Alternat, Descripción, Val tot" (4 partes) o con Cantidad
+  // de más: "Nro LPN, Cod Alternat, Descripción, Cantidad, Val tot" (5 partes).
+  const filas = [];
+  const erroresFormato = [], duplicadosEnLista = [], yaExistentes = [];
+  const clavesVistas = new Set();
+  lineas.forEach(linea => {
+    const partes = linea.split(",").map(s => s.trim());
+    let nroLpn, codAlternat, descripcion, cantidadRaw, valTotRaw;
+    if(partes.length === 4){ [nroLpn, codAlternat, descripcion, valTotRaw] = partes; cantidadRaw = ""; }
+    else if(partes.length >= 5){ [nroLpn, codAlternat, descripcion, cantidadRaw, valTotRaw] = partes; }
+    else{ erroresFormato.push(linea); return; }
+    const valTot = parseFloat(valTotRaw);
+    if(!nroLpn || !codAlternat || !descripcion || isNaN(valTot) || valTot < 0){ erroresFormato.push(linea); return; }
+    const clave = nroLpn + "|||" + codAlternat;
+    if(clavesVistas.has(clave)){ duplicadosEnLista.push(nroLpn); return; }
+    clavesVistas.add(clave);
+    if(sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat)){ yaExistentes.push(nroLpn); return; }
+    filas.push({
+      proceso, responsable: responsable || null, supervisor: supervisor || null, semana,
+      familia: null, nro_lpn: nroLpn, producto: null, cod_alternat: codAlternat, descripcion,
+      cantidad_actual: cantidadRaw === "" ? null : parseFloat(cantidadRaw),
+      nro_lote: null, val_tot: valTot, ubicacion: ubicacion || null,
+      estado: "pendiente", archivo_origen: "Agregado manualmente",
+      creado_por_id: miUsuario ? miUsuario.id : null,
+    });
+  });
+
+  if(!filas.length){
+    errorEl.textContent = erroresFormato.length
+      ? `Ninguna línea válida. Formato esperado: Nro LPN, Cod Alternat, Descripción, Val tot. Revisa: ${erroresFormato.join(" | ")}`
+      : "No hay ningún LPN nuevo para agregar (todos ya existen o están repetidos en tu lista).";
     return;
   }
 
   const btn = document.getElementById("sd-agregar-guardar");
   const originalLabel = btn.textContent;
   btn.disabled = true; btn.textContent = "Guardando…";
-  const { error } = await sb.from("ssoma_seguimiento_diario_registros").insert({
-    proceso, responsable: responsable || null, supervisor: supervisor || null, semana,
-    familia: null, nro_lpn: nroLpn, producto: null, cod_alternat: codAlternat, descripcion,
-    cantidad_actual: cantidadRaw === "" ? null : parseFloat(cantidadRaw),
-    nro_lote: nroLote || null, val_tot: valTot, ubicacion: ubicacion || null,
-    estado: "pendiente", archivo_origen: "Agregado manualmente",
-    creado_por_id: miUsuario ? miUsuario.id : null,
-  });
+  const { error } = await sb.from("ssoma_seguimiento_diario_registros").insert(filas);
   btn.disabled = false; btn.textContent = originalLabel;
-  if(error){
-    errorEl.textContent = (error.code === "23505")
-      ? "Ese LPN + Cod Alternat ya existe en la base de datos."
-      : "No se pudo guardar: " + error.message;
-    return;
-  }
-  sdCerrarModalAgregar();
+  if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+
+  let msg = `✅ ${filas.length} LPN agregado(s).`;
+  if(yaExistentes.length) msg += ` ${yaExistentes.length} ya existían: ${yaExistentes.join(", ")}.`;
+  if(duplicadosEnLista.length) msg += ` ${duplicadosEnLista.length} repetidos en tu lista (se agregó solo una vez): ${duplicadosEnLista.join(", ")}.`;
+  if(erroresFormato.length) msg += ` ${erroresFormato.length} línea(s) con formato inválido, no se agregaron.`;
+  resultadoEl.textContent = msg;
+
   await sdLoadRegistros();
+  if(!erroresFormato.length && !yaExistentes.length) setTimeout(sdCerrarModalAgregar, 2000);
 });
 
 /* ---- Quitar LPN manualmente ----
