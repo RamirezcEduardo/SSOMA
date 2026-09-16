@@ -4207,6 +4207,7 @@ async function spLoadData(){
     codigoBarras: r.codigo_barras, producto: r.producto, desc: r.descripcion, ubicacion: r.ubicacion,
     subarea: r.subarea, turno: r.turno, responsable: r.responsable, supervisor: r.supervisor,
     orden: r.orden, unajust: r.un_ajust, semana: r.semana, estado: r.estado, valorizado: r.valorizado,
+    creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
 
   verificaciones = {};
@@ -4821,6 +4822,8 @@ const SP_COLUMNAS_AUDITORIA = [
   { header: "Valorizado", get: r => spValorizado(r).toFixed(2) },
   { header: "Semana", get: r => r.semana },
   { header: "Estado", get: r => r.estado },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
 ];
 document.getElementById("sp-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -4840,6 +4843,8 @@ const SP_COLUMNAS_CONCILIACION = [
   { header: "Ubicación", get: r => r.ubicacion },
   { header: "Cantidad", get: r => Math.abs(r.unajust) },
   { header: "Semana", get: r => r.semana },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
 ];
 document.getElementById("conc-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -5139,6 +5144,7 @@ async function bolsaLoadAuditLineas(){
     reglaDesconocida: !bolsaReglaConocida(r.tipo, r.motivo_op),
     estado: r.estado_disputa,
     sustento: r.sustento || "",
+    creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
   bolsaRenderFilters();
   bolsaRender();
@@ -5302,6 +5308,8 @@ const BOLSA_COLUMNAS_CANDIDATOS = [
   { header: "Semana", get: r => r.semana },
   { header: "Monto reversado (S/)", get: r => r.monto.toFixed(2) },
   { header: "Por qué se disputa", get: r => r.sustento || (r.reglaDesconocida ? "Motivo no visto antes — confirmar si va en Considerar/No considerar." : "") },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
 ];
 document.getElementById("bolsa-candidatos-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -5487,6 +5495,7 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
       motivo: r.motivo === "SIN CLASIFICAR" ? "" : r.motivo, area: "", origen: r.origen,
       un_ajust: r.unAjust, valor_actual: r.valorActual, proveedor: r.proveedor,
       archivo_origen: archivoOrigenWms, importado_en: importadoEn,
+      creado_por_id: miUsuario ? miUsuario.id : null,
     }));
     let guardadas = 0;
     const LOTE = 500;
@@ -5539,6 +5548,7 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
       familia: r.familia, ubicacion: r.ubicacion, tipo: r.tipo, motivo_op: r.motivo,
       monto_reversado: r.monto, considera: r.considera, estado_disputa: r.estado,
       sustento: r.sustento || null, archivo_origen: fileAuditoria.name,
+      creado_por_id: miUsuario ? miUsuario.id : null,
     }));
     let guardadasAuditoria = 0;
     for(let i = 0; i < filasParaAuditoria.length; i += LOTE){
@@ -5599,7 +5609,7 @@ async function bpoLoadRegistros(){
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
     unidadesRecuperadas: r.unidades_recuperadas === null ? 0 : Number(r.unidades_recuperadas),
     estado: r.estado, recuperadoEn: r.recuperado_en, archivoOrigen: r.archivo_origen || "",
-    createdAt: r.created_at,
+    creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
   bpoRenderFiltroSemana();
   bpoRender();
@@ -5753,6 +5763,8 @@ const BPO_COLUMNAS = [
   { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
   { header: "Unidades recuperadas", get: r => bpoFmtUds(r.unidadesRecuperadas) },
   { header: "Estado", get: r => r.estado === "recuperado" ? "Recuperado" : (r.estado === "parcial" ? "Parcial" : "Pendiente") },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
 ];
 document.getElementById("bpo-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -6133,6 +6145,7 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
         val_tot: cantidadNum * spCosto(codAlternat),
         estado: "pendiente", recuperado_en: null,
         archivo_origen: file.name, actualizado_en: new Date().toISOString(),
+        creado_por_id: miUsuario ? miUsuario.id : null,
       });
     });
     if(!filas.length && !duplicadas) throw new Error(`El archivo no trajo ninguna fila en zonas "SIN-UBICACION-…" en la hoja "${hoja.sheetName}".`);
@@ -6186,7 +6199,7 @@ async function sdLoadRegistros(){
     ubicacion: r.ubicacion || "", comentario: r.comentario || "",
     estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id, archivoOrigen: r.archivo_origen || "",
     enRiesgo: !!r.en_riesgo, regularizadoEn: r.regularizado_en,
-    createdAt: r.created_at,
+    creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
   sdRenderFiltros();
   sdRender();
@@ -6838,6 +6851,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         val_tot: isNaN(valTot) ? 0 : valTot,
         ubicacion: ubicacionFila,
         estado: "pendiente", archivo_origen: file.name,
+        creado_por_id: miUsuario ? miUsuario.id : null,
       });
     });
     if(!filas.length && !duplicadas && !yaEnOtroModulo) throw new Error(`El archivo no trajo ninguna fila con un Proceso distinto de Perdido ERU/Por Ubicar/Sin Ubicación en la hoja "${hoja.sheetName}".`);
@@ -7171,6 +7185,8 @@ const BIT_COLUMNAS_RECUPERACION = [
   { header: "Área encontrado", get: x => x.areaEncontrado },
   { header: "Comentario", get: x => x.comentario },
   { header: "Reportado por", get: x => (usuariosPorId[x.reportadoPorId] || {}).nombre_completo || "" },
+  { header: "Cargado por", get: x => (usuariosPorId[x.registro.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: x => x.registro.createdAt ? new Date(x.registro.createdAt).toLocaleString("es-PE") : "" },
 ];
 const BIT_COLUMNAS_SD = [
   { header: "Fecha resuelto", get: r => sdFechaResuelto(r) ? new Date(sdFechaResuelto(r)).toLocaleString("es-PE") : "" },
@@ -7184,6 +7200,8 @@ const BIT_COLUMNAS_SD = [
   { header: "Responsable", get: r => r.responsable },
   { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
   { header: "Finalizado por", get: r => (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "" },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
 ];
 document.getElementById("bit-export-btn").addEventListener("click", ()=>{
   if(bitTabActivo === "seguimiento_diario"){
@@ -7280,6 +7298,7 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
         val_tot: isNaN(valTot) ? 0 : valTot,
         estado: "pendiente", recuperado_en: null,
         archivo_origen: file.name, actualizado_en: new Date().toISOString(),
+        creado_por_id: miUsuario ? miUsuario.id : null,
       });
     });
     if(!filas.length && !duplicadas) throw new Error(`El archivo no trajo ninguna fila con Proceso = Perdido ERU, Por Ubicar o Sin Ubicación en la hoja "${hoja.sheetName}".`);
