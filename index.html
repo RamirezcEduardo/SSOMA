@@ -1400,6 +1400,16 @@
         <button class="navitem" data-view="tareas-supervisor"><span class="dot" style="background:#16A34A;"></span><span class="label">Tareas</span></button>
       </div>
 
+      <button type="button" class="navgroup-header" id="navgroup-inbound-toggle" aria-expanded="false" style="margin-top:10px;">
+        <span class="navgroup-icon">🚢</span>
+        <span class="navgroup-title">Inbound</span>
+        <span class="navgroup-count" id="navgroup-inbound-count">1</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-inbound-body">
+        <button class="navitem" data-view="inbound-recepcion-importados"><span class="dot" style="background:#0891B2;"></span><span class="label">Recepción de Productos Importados</span></button>
+      </div>
+
       <button type="button" class="navgroup-header" id="navgroup-privado-toggle" aria-expanded="false" style="margin-top:10px;display:none;">
         <span class="navgroup-icon">🔒</span>
         <span class="navgroup-title">Privado</span>
@@ -2612,6 +2622,19 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       <div class="help-tip" style="margin-top:18px;max-width:680px;">
         <span class="ic">📌</span>
         <div>Para marcar un bulto como recuperado (total o parcial, por unidades), hazlo desde su checklist en <b>Auditoría de Inventario</b> → pestañas <b>📦 Bultos Perdidos</b> / <b>📍 Sin Ubicación</b>. Acá solo se importa y se consulta el listado completo con su estado.</div>
+      </div>
+    </section>
+
+    <!-- INBOUND · RECEPCIÓN DE PRODUCTOS IMPORTADOS -->
+    <section class="panel" id="panel-inbound-recepcion-importados">
+      <div class="section-head">
+        <h2 class="section-title">Recepción de Productos Importados</h2>
+      </div>
+      <p class="section-desc">Apartado nuevo — todavía en construcción.</p>
+
+      <div class="help-tip" style="margin-top:18px;max-width:680px;">
+        <span class="ic">🚧</span>
+        <div>Esta vista está en construcción. Pronto vas a poder registrar y hacer seguimiento a la recepción de productos importados desde acá.</div>
       </div>
     </section>
 
@@ -7770,18 +7793,20 @@ function aplicarVisibilidadNav(){
   const cuerpoSuministros = document.getElementById("navgroup-suministros-body");
   const grupoTareas = document.getElementById("navgroup-tareas-toggle");
   const cuerpoTareas = document.getElementById("navgroup-tareas-body");
+  const grupoInbound = document.getElementById("navgroup-inbound-toggle");
+  const cuerpoInbound = document.getElementById("navgroup-inbound-body");
   const itemJefatura = document.querySelector('.navitem[data-view="tareas-jefatura"]');
   const itemCoordinador = document.querySelector('.navitem[data-view="tareas-coordinador"]');
   const itemTareas = document.querySelector('.navitem[data-view="tareas-supervisor"]');
 
   if(seccion === "admin"){
     [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
-     grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, true));
+     grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas, grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, true));
     return;
   }
 
   [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
-   grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, false));
+   grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas, grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, false));
 
   let vistaInicial = null;
   if(seccion === "ssoma"){
@@ -7809,6 +7834,7 @@ function aplicarVisibilidadNav(){
   } else if(seccion === "inventario"){
     mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
     mostrar(grupoSuministros, true); mostrar(cuerpoSuministros, true);
+    mostrar(grupoInbound, true); mostrar(cuerpoInbound, true);
     vistaInicial = "auditoria-inventario";
   }
 
