@@ -6154,10 +6154,15 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true });
+      // .select("id") para contar solo lo que en verdad se insertó — sin esto, filas que
+      // ignoreDuplicates descarta en silencio (sesión con datos desactualizados) se
+      // contaban igual como "guardadas", mintiendo en el mensaje de éxito.
+      const { data, error } = await sb.from("ssoma_bpo_registros")
+        .upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
-      guardadas += lote.length;
+      guardadas += (data || []).length;
     }
+    const yaExistianEnServidor = filas.length - guardadas;
     if(guardadas) await importRegistrarLog("sin_ubicacion_wms", file, chequeo.hash, guardadas);
     await bpoLoadRegistros();
 
@@ -6165,6 +6170,7 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
       ? `✅ Importado desde WMS: ${guardadas} líneas nuevas en zonas "SIN-UBICACION-…" (hoja "${hoja.sheetName}"). `
       : `⚠ No se cargó ninguna línea nueva — todo lo que trae este archivo ya estaba cargado. `;
     if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado fueron detectadas como duplicado. `;
+    if(yaExistianEnServidor > 0) msg += `${yaExistianEnServidor} de las que parecían nuevas ya estaban guardadas de antes (tu pantalla tenía datos desactualizados — no se duplicaron). `;
     if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas. `;
     statusEl.textContent = msg;
     statusEl.className = guardadas ? "import-status success" : "import-status error";
@@ -6860,12 +6866,19 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_seguimiento_diario_registros").upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true });
+      // .select("id") es necesario para que Supabase devuelva solo las filas que
+      // realmente se insertaron — sin esto, cuando ignoreDuplicates descarta filas en
+      // silencio (porque la sesión tenía datos desactualizados y creyó que un LPN ya
+      // guardado era nuevo), "guardadas" contaba lote.length igual, mintiendo en el
+      // mensaje de éxito ("Importado: N líneas nuevas" aunque N-por-descartar hayan sido 0).
+      const { data, error } = await sb.from("ssoma_seguimiento_diario_registros")
+        .upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
-      guardadas += lote.length;
+      guardadas += (data || []).length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
       statusEl.style.display = "block";
     }
+    const yaExistianEnServidor = filas.length - guardadas;
     if(guardadas) await importRegistrarLog("seguimiento_diario", file, chequeo.hash, guardadas);
 
     // Backfill de Ubicación en filas ya cargadas — un update real por LPN+Cod Alternat
@@ -6926,6 +6939,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       ? `✅ Importado: ${guardadas} líneas nuevas en la hoja "${hoja.sheetName}". `
       : `⚠ No se cargó ninguna línea nueva. `;
     if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado en Seguimiento Diario. `;
+    if(yaExistianEnServidor > 0) msg += `${yaExistianEnServidor} de las que parecían nuevas ya estaban guardadas de antes (tu pantalla tenía datos desactualizados — no se duplicaron). `;
     if(backfillHechos) msg += `${backfillHechos} de esas ya cargadas se completaron con su Ubicación (no la tenían). `;
     if(regularizadasAuto) msg += `${regularizadasAuto} LPN pendientes se auto-regularizaron (ya no aparecen en su Proceso+Ubicación de hoy). `;
     if(yaEnOtroModulo) msg += `${yaEnOtroModulo} filas con Nro LPN que ya está en Bultos Perdidos/Sin Ubicación (no se duplicó). `;
@@ -7307,12 +7321,17 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
     const LOTE = 500;
     for(let i = 0; i < filas.length; i += LOTE){
       const lote = filas.slice(i, i + LOTE);
-      const { error } = await sb.from("ssoma_bpo_registros").upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true });
+      // .select("id") para contar solo lo que en verdad se insertó — sin esto, filas que
+      // ignoreDuplicates descarta en silencio (sesión con datos desactualizados) se
+      // contaban igual como "guardadas", mintiendo en el mensaje de éxito.
+      const { data, error } = await sb.from("ssoma_bpo_registros")
+        .upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
-      guardadas += lote.length;
+      guardadas += (data || []).length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
       statusEl.style.display = "block";
     }
+    const yaExistianEnServidor = filas.length - guardadas;
     if(guardadas) await importRegistrarLog("bultos_pendientes_operacion", file, chequeo.hash, guardadas);
     await bpoLoadRegistros();
 
@@ -7322,6 +7341,7 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
       ? `✅ Importado: ${guardadas} líneas nuevas de la hoja "${hoja.sheetName}" (${perdidos} Perdidos + ${sinUbic} Sin Ubicación). `
       : `⚠ No se cargó ninguna línea nueva — todo lo que trae este archivo ya estaba cargado. `;
     if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado fueron detectadas como duplicado y no se volvieron a guardar. `;
+    if(yaExistianEnServidor > 0) msg += `${yaExistianEnServidor} de las que parecían nuevas ya estaban guardadas de antes (tu pantalla tenía datos desactualizados — no se duplicaron). `;
     if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas.`;
     statusEl.textContent = msg;
     statusEl.className = guardadas ? "import-status success" : "import-status error";
