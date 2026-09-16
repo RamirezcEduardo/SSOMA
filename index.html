@@ -2717,7 +2717,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 
           <div class="help-tip" style="margin-top:18px;max-width:680px;">
             <span class="ic">📌</span>
-            <div>Por ahora "Finalizado" se marca a mano. Más adelante se va a poder cruzar automáticamente contra un reporte del WMS para detectar solo las que de verdad ya se atendieron.</div>
+            <div>Todas quedan como "Pendiente" hasta que se defina el cruce automático contra un reporte del WMS — esa va a ser la única forma de marcarlas como "Finalizado".</div>
           </div>
         </div>
       </div>
@@ -8518,7 +8518,6 @@ function sotCardHtml(r, enGrupo){
         <div style="margin-top:6px;"><b>Actividad de reacondicionado:</b> ${escapeHtml(r.actividadReacondicionado) || "—"}</div>
         <div style="margin-top:6px;"><b>Validación:</b> ${escapeHtml(r.validacion) || "—"}</div>
       </div>
-      <button type="button" class="opk-btn-mark ${done ? "parcial" : ""}" data-id="${r.id}">${done ? "↩ Reabrir" : "✓ Marcar como finalizado"}</button>
     </div>`;
 }
 /* Varios N° Protocolo bajo la misma O/C vienen del mismo PDF/solicitud — se agrupan
@@ -8565,30 +8564,13 @@ function sotRenderHistorial(){
 }
 document.getElementById("sot-f-buscar").addEventListener("input", sotRenderHistorial);
 document.getElementById("sot-f-estado").addEventListener("change", sotRenderHistorial);
-document.getElementById("sot-hist-grid").addEventListener("click", async (e) => {
+document.getElementById("sot-hist-grid").addEventListener("click", (e) => {
   const toggleBtn = e.target.closest(".sot-toggle-detalle");
-  if(toggleBtn){
-    const detalle = document.getElementById("sot-detalle-" + toggleBtn.dataset.id);
-    const abierto = detalle.style.display !== "none";
-    detalle.style.display = abierto ? "none" : "block";
-    toggleBtn.textContent = abierto ? "Ver detalle ▾" : "Ocultar detalle ▴";
-    return;
-  }
-  const btn = e.target.closest(".opk-btn-mark");
-  if(!btn) return;
-  const id = Number(btn.dataset.id);
-  const row = sotRegistros.find(r => r.id === id);
-  if(!row) return;
-  const nuevoEstado = row.estado === "finalizado" ? "pendiente" : "finalizado";
-  const payload = nuevoEstado === "finalizado"
-    ? { estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null }
-    : { estado: "pendiente", finalizado_en: null, finalizado_por_id: null };
-  btn.disabled = true;
-  const { error } = await sb.from("ssoma_inbound_solicitudes_ot").update(payload).eq("id", id);
-  btn.disabled = false;
-  if(error){ alert("No se pudo actualizar: " + error.message); return; }
-  Object.assign(row, { estado: nuevoEstado, finalizadoEn: payload.finalizado_en, finalizadoPorId: payload.finalizado_por_id });
-  sotRenderHistorial();
+  if(!toggleBtn) return;
+  const detalle = document.getElementById("sot-detalle-" + toggleBtn.dataset.id);
+  const abierto = detalle.style.display !== "none";
+  detalle.style.display = abierto ? "none" : "block";
+  toggleBtn.textContent = abierto ? "Ver detalle ▾" : "Ocultar detalle ▴";
 });
 const SOT_COLUMNAS_EXPORT = [
   { header: "N° Protocolo", get: r => r.numeroProtocolo },
