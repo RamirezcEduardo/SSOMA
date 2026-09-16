@@ -2634,6 +2634,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 
       <div class="tab-bar" id="inbound-recepcion-tabs">
         <button type="button" class="tab-btn active" data-tab="solicitudes-ot">📋 Solicitudes/OT</button>
+        <button type="button" class="tab-btn" data-tab="checklist">✅ Checklist</button>
         <button type="button" class="tab-btn" data-tab="programacion-contenedores">📅 Programación de Contenedores</button>
       </div>
 
@@ -2685,11 +2686,14 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
             <button type="button" class="btn btn-primary" id="sot-preview-guardar" style="flex:1;">Guardar en el Historial</button>
           </div>
         </div>
+      </div>
 
-        <div class="section-head" style="margin-top:28px;">
-          <h2 class="section-title" style="font-size:15px;">Historial de Solicitudes</h2>
+      <div id="inbound-recepcion-tab-checklist" style="display:none;">
+        <div class="section-head">
+          <h2 class="section-title" style="font-size:15px;">Checklist de Solicitudes</h2>
           <span class="count-pill" id="sot-hist-count">0 solicitudes</span>
         </div>
+        <p class="section-desc">Sube el PDF en la pestaña 📋 Solicitudes/OT — acá le haces seguimiento a cada una hasta que finalice.</p>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-top:10px;margin-bottom:6px;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;">
             <div class="field" style="flex:1;min-width:200px;margin-bottom:0;"><label>Buscar</label><input type="text" id="sot-f-buscar" placeholder="N° Protocolo, O/C, Proveedor, Producto, Lote…"></div>
@@ -2705,21 +2709,14 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <div class="stat-card"><div class="stat-label">Última carga</div><div class="stat-value" id="sot-stat-ultima-carga" style="font-size:15px;">—</div></div>
         </div>
 
-        <div class="table-wrap" style="margin-top:18px;">
-          <table class="data-table" id="sot-hist-table">
-            <thead><tr>
-              <th>N° Protocolo</th><th>O/C</th><th>Proveedor</th><th>Cod</th><th>Producto</th>
-              <th>Lote</th><th>F.V</th><th>Qty</th><th>Fecha emisión</th><th>Cargado por</th><th>Estado</th><th></th>
-            </tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <div class="opk-grid" id="sot-hist-grid" style="margin-top:18px;"></div>
 
         <div class="help-tip" style="margin-top:18px;max-width:680px;">
           <span class="ic">📌</span>
           <div>Por ahora "Finalizado" se marca a mano. Más adelante se va a poder cruzar automáticamente contra un reporte del WMS para detectar solo las que de verdad ya se atendieron.</div>
         </div>
       </div>
+
       <div id="inbound-recepcion-tab-programacion-contenedores" style="display:none;">
         <div class="help-tip" style="margin-top:18px;max-width:680px;">
           <span class="ic">🚧</span>
@@ -8465,14 +8462,13 @@ document.getElementById("sot-preview-guardar").addEventListener("click", async (
 });
 
 let sotRegistros = [];
-function sotEsc(s){ return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 async function sotLoadRegistros(){
   const { data, error } = await sbSelectAll("ssoma_inbound_solicitudes_ot", "*", q => q.order("created_at", { ascending: false }));
   if(error){ console.error(error); return; }
   sotRegistros = (data || []).map(r => ({
     id: r.id, numeroProtocolo: r.numero_protocolo || "", ordenCompra: r.orden_compra || "",
     proveedor: r.proveedor || "", codProducto: r.cod_producto || "", producto: r.producto || "",
-    lote: r.lote || "", fechaVencimiento: r.fecha_vencimiento || "",
+    rsNso: r.rs_nso || "", crs: r.crs || "", lote: r.lote || "", fechaVencimiento: r.fecha_vencimiento || "",
     cantidad: r.cantidad === null ? null : Number(r.cantidad),
     tipoProducto: r.tipo_producto || "", temperatura: r.temperatura || "",
     observacion: r.observacion || "", actividadReacondicionado: r.actividad_reacondicionado || "",
@@ -8491,6 +8487,35 @@ function sotFiltered(){
     return true;
   });
 }
+function sotCardHtml(r){
+  const done = r.estado === "finalizado";
+  const cantidadTxt = r.cantidad === null ? "" : " · Qty " + r.cantidad;
+  const fechaEmisionTxt = r.fechaEmision ? new Date(r.fechaEmision + "T00:00:00").toLocaleDateString("es-PE") : "";
+  const cargadoPor = (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "";
+  const finalizadoPor = (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "";
+  return `
+    <div class="opk-card ${done ? "done" : ""}">
+      <div class="opk-card-top">
+        <div class="opk-check-big">${done ? "✓" : ""}</div>
+        <div class="opk-card-body">
+          <span class="opk-lpn-chip">${escapeHtml(r.numeroProtocolo)}</span><span class="opk-proceso-badge">${escapeHtml(r.proveedor)}</span>
+          <div class="opk-prod-name">${escapeHtml(r.producto)}</div>
+          <div class="opk-sub">O/C ${escapeHtml(r.ordenCompra)} · Cod ${escapeHtml(r.codProducto)}${r.lote ? " · Lote " + escapeHtml(r.lote) : ""}${cantidadTxt}</div>
+          <div class="opk-sub">${fechaEmisionTxt ? "📅 " + fechaEmisionTxt : ""}${cargadoPor ? " · 👤 Cargado por " + escapeHtml(cargadoPor) : ""}</div>
+          ${done ? `<div class="opk-done-note">✅ Finalizado${finalizadoPor ? " por " + escapeHtml(finalizadoPor) : ""}</div>` : ""}
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost sot-toggle-detalle" data-id="${r.id}" style="width:100%;margin-top:10px;">Ver detalle ▾</button>
+      <div class="sot-detalle" id="sot-detalle-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
+        <div><b>R.S./N.S.O.:</b> ${escapeHtml(r.rsNso) || "—"} &nbsp; <b>C.R.S:</b> ${escapeHtml(r.crs) || "—"}</div>
+        <div style="margin-top:6px;"><b>F.V:</b> ${escapeHtml(r.fechaVencimiento) || "—"} &nbsp; <b>Tipo:</b> ${escapeHtml(r.tipoProducto) || "—"} &nbsp; <b>T°:</b> ${escapeHtml(r.temperatura) || "—"}</div>
+        <div style="margin-top:6px;"><b>Observación:</b> ${escapeHtml(r.observacion) || "—"}</div>
+        <div style="margin-top:6px;"><b>Actividad de reacondicionado:</b> ${escapeHtml(r.actividadReacondicionado) || "—"}</div>
+        <div style="margin-top:6px;"><b>Validación:</b> ${escapeHtml(r.validacion) || "—"}</div>
+      </div>
+      <button type="button" class="opk-btn-mark ${done ? "parcial" : ""}" data-id="${r.id}" style="${done ? "" : ""}">${done ? "↩ Reabrir" : "✓ Marcar como finalizado"}</button>
+    </div>`;
+}
 function sotRenderHistorial(){
   const filtradas = sotFiltered();
   document.getElementById("sot-hist-count").textContent = filtradas.length + " solicitud(es)";
@@ -8499,22 +8524,21 @@ function sotRenderHistorial(){
   document.getElementById("sot-stat-finalizadas").textContent = sotRegistros.filter(r => r.estado === "finalizado").length;
   const ultima = sotRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
   document.getElementById("sot-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleString("es-PE") : "—";
-  document.querySelector("#sot-hist-table tbody").innerHTML = filtradas.map(r => `
-    <tr>
-      <td>${sotEsc(r.numeroProtocolo)}</td><td>${sotEsc(r.ordenCompra)}</td><td>${sotEsc(r.proveedor)}</td>
-      <td>${sotEsc(r.codProducto)}</td><td>${sotEsc(r.producto)}</td><td>${sotEsc(r.lote)}</td>
-      <td>${sotEsc(r.fechaVencimiento)}</td><td>${r.cantidad ?? ""}</td>
-      <td>${r.fechaEmision ? new Date(r.fechaEmision + "T00:00:00").toLocaleDateString("es-PE") : ""}</td>
-      <td>${sotEsc((usuariosPorId[r.creadoPorId] || {}).nombre_completo || "")}</td>
-      <td>${r.estado === "finalizado" ? '<span class="opk-proceso-badge" style="background:#E7F6EC;color:var(--green);">✅ Finalizado</span>' : '<span class="opk-proceso-badge" style="background:#FDECEC;color:var(--red);">Pendiente</span>'}</td>
-      <td><button type="button" class="btn btn-ghost sot-toggle-estado" data-id="${r.id}" style="padding:4px 10px;font-size:12px;white-space:nowrap;">${r.estado === "finalizado" ? "Reabrir" : "Marcar finalizado"}</button></td>
-    </tr>
-  `).join("");
+  const grid = document.getElementById("sot-hist-grid");
+  grid.innerHTML = filtradas.length ? filtradas.map(sotCardHtml).join("") : `<div class="opk-empty">Sin solicitudes${sotRegistros.length ? " con ese filtro" : " todavía — súbelas desde 📋 Solicitudes/OT"}.</div>`;
 }
 document.getElementById("sot-f-buscar").addEventListener("input", sotRenderHistorial);
 document.getElementById("sot-f-estado").addEventListener("change", sotRenderHistorial);
-document.querySelector("#sot-hist-table tbody").addEventListener("click", async (e) => {
-  const btn = e.target.closest(".sot-toggle-estado");
+document.getElementById("sot-hist-grid").addEventListener("click", async (e) => {
+  const toggleBtn = e.target.closest(".sot-toggle-detalle");
+  if(toggleBtn){
+    const detalle = document.getElementById("sot-detalle-" + toggleBtn.dataset.id);
+    const abierto = detalle.style.display !== "none";
+    detalle.style.display = abierto ? "none" : "block";
+    toggleBtn.textContent = abierto ? "Ver detalle ▾" : "Ocultar detalle ▴";
+    return;
+  }
+  const btn = e.target.closest(".opk-btn-mark");
   if(!btn) return;
   const id = Number(btn.dataset.id);
   const row = sotRegistros.find(r => r.id === id);
@@ -8591,6 +8615,7 @@ document.addEventListener("click", (e)=>{
   }
   else if(barra.id === "inbound-recepcion-tabs"){
     document.getElementById("inbound-recepcion-tab-solicitudes-ot").style.display = btn.dataset.tab === "solicitudes-ot" ? "" : "none";
+    document.getElementById("inbound-recepcion-tab-checklist").style.display = btn.dataset.tab === "checklist" ? "" : "none";
     document.getElementById("inbound-recepcion-tab-programacion-contenedores").style.display = btn.dataset.tab === "programacion-contenedores" ? "" : "none";
   }
   else if(barra.id === "help-tabs"){
