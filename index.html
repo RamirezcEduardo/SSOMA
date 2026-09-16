@@ -3195,13 +3195,20 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         </div>
       </div>
       <div class="field">
-        <label>LPN a agregar<span class="req">*</span> — uno por línea: Nro LPN, Cod Alternat, Descripción, Val tot</label>
-        <textarea id="sd-agregar-lpns" rows="6" placeholder="CJSA00010396003, 102134, CEFADROXILO IQ 500MG CJA 100 CAP, 45.50&#10;CJSA00010396005, 815931, PARACETAMOL 500MG, 10.51&#10;CJSA00010396006, 147874, IBUPROFENO 400MG, 64.60"></textarea>
-        <div class="hint">También aceptas Cantidad de más: Nro LPN, Cod Alternat, Descripción, Cantidad, Val tot.</div>
+        <label>Archivo con los LPN a agregar<span class="req">*</span></label>
+        <div class="import-drop-row">
+          <label class="import-drop" for="sd-agregar-file" id="sd-agregar-drop">
+            <input type="file" id="sd-agregar-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📄</span>
+            <span class="import-drop-title">Excel o CSV con columnas Nro LPN, Cod Alternat, Descripción y Val tot</span>
+            <span class="import-drop-hint" id="sd-agregar-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="hint">Columna Cantidad es opcional. Los nombres de columna pueden variar un poco (ej. "Descripcion" o "Val tot (S/)").</div>
       </div>
       <span class="login-error" id="sd-agregar-error"></span>
       <div id="sd-agregar-resultado" style="font-size:12.5px;color:var(--muted);margin-top:6px;"></div>
-      <button type="button" class="btn btn-primary" id="sd-agregar-guardar" style="width:100%;margin-top:6px;">Agregar LPN</button>
+      <button type="button" class="btn btn-primary" id="sd-agregar-guardar" style="width:100%;margin-top:6px;" disabled>Agregar LPN</button>
     </div>
   </div>
 </div>
@@ -6921,9 +6928,13 @@ document.getElementById("sd-informe-semanal-generar").addEventListener("click", 
    Para cuando el equipo nota que falta un LPN (no llegó en ningún archivo, o se
    regularizó por error) y no quiere esperar al próximo import. */
 function sdAbrirModalAgregar(){
-  ["proceso","semana","ubicacion","responsable","supervisor","lpns"].forEach(id => {
+  ["proceso","semana","ubicacion","responsable","supervisor"].forEach(id => {
     document.getElementById("sd-agregar-" + id).value = "";
   });
+  document.getElementById("sd-agregar-file").value = "";
+  document.getElementById("sd-agregar-file-name").textContent = "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sd-agregar-drop").classList.remove("filled");
+  document.getElementById("sd-agregar-guardar").disabled = true;
   document.getElementById("sd-agregar-error").textContent = "";
   document.getElementById("sd-agregar-resultado").textContent = "";
   document.getElementById("sd-agregar-modal").classList.add("show");
@@ -6934,6 +6945,12 @@ function sdCerrarModalAgregar(){
 document.getElementById("aic-sd-agregar-btn").addEventListener("click", sdAbrirModalAgregar);
 document.getElementById("sd-agregar-close").addEventListener("click", sdCerrarModalAgregar);
 document.getElementById("sd-agregar-modal").addEventListener("click", (e)=>{ if(e.target.id === "sd-agregar-modal") sdCerrarModalAgregar(); });
+document.getElementById("sd-agregar-file").addEventListener("change", ()=>{
+  const f = document.getElementById("sd-agregar-file").files[0];
+  document.getElementById("sd-agregar-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sd-agregar-drop").classList.toggle("filled", !!f);
+  document.getElementById("sd-agregar-guardar").disabled = !f;
+});
 
 document.getElementById("sd-agregar-guardar").addEventListener("click", async ()=>{
   const errorEl = document.getElementById("sd-agregar-error");
@@ -6945,60 +6962,87 @@ document.getElementById("sd-agregar-guardar").addEventListener("click", async ()
   const ubicacion = document.getElementById("sd-agregar-ubicacion").value.trim();
   const responsable = document.getElementById("sd-agregar-responsable").value.trim();
   const supervisor = document.getElementById("sd-agregar-supervisor").value.trim();
-  const lineas = document.getElementById("sd-agregar-lpns").value.split("\n").map(l => l.trim()).filter(Boolean);
+  const file = document.getElementById("sd-agregar-file").files[0];
 
   if(!proceso || !semana){ errorEl.textContent = "Completa Proceso y Semana."; return; }
-  if(!lineas.length){ errorEl.textContent = "Agrega al menos un LPN (uno por línea): Nro LPN, Cod Alternat, Descripción, Val tot."; return; }
-
-  // Cada línea: "Nro LPN, Cod Alternat, Descripción, Val tot" (4 partes) o con Cantidad
-  // de más: "Nro LPN, Cod Alternat, Descripción, Cantidad, Val tot" (5 partes).
-  const filas = [];
-  const erroresFormato = [], duplicadosEnLista = [], yaExistentes = [];
-  const clavesVistas = new Set();
-  lineas.forEach(linea => {
-    const partes = linea.split(",").map(s => s.trim());
-    let nroLpn, codAlternat, descripcion, cantidadRaw, valTotRaw;
-    if(partes.length === 4){ [nroLpn, codAlternat, descripcion, valTotRaw] = partes; cantidadRaw = ""; }
-    else if(partes.length >= 5){ [nroLpn, codAlternat, descripcion, cantidadRaw, valTotRaw] = partes; }
-    else{ erroresFormato.push(linea); return; }
-    const valTot = parseFloat(valTotRaw);
-    if(!nroLpn || !codAlternat || !descripcion || isNaN(valTot) || valTot < 0){ erroresFormato.push(linea); return; }
-    const clave = nroLpn + "|||" + codAlternat;
-    if(clavesVistas.has(clave)){ duplicadosEnLista.push(nroLpn); return; }
-    clavesVistas.add(clave);
-    if(sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat)){ yaExistentes.push(nroLpn); return; }
-    filas.push({
-      proceso, responsable: responsable || null, supervisor: supervisor || null, semana,
-      familia: null, nro_lpn: nroLpn, producto: null, cod_alternat: codAlternat, descripcion,
-      cantidad_actual: cantidadRaw === "" ? null : parseFloat(cantidadRaw),
-      nro_lote: null, val_tot: valTot, ubicacion: ubicacion || null,
-      estado: "pendiente", archivo_origen: "Agregado manualmente",
-      creado_por_id: miUsuario ? miUsuario.id : null,
-    });
-  });
-
-  if(!filas.length){
-    errorEl.textContent = erroresFormato.length
-      ? `Ninguna línea válida. Formato esperado: Nro LPN, Cod Alternat, Descripción, Val tot. Revisa: ${erroresFormato.join(" | ")}`
-      : "No hay ningún LPN nuevo para agregar (todos ya existen o están repetidos en tu lista).";
-    return;
-  }
+  if(!file){ errorEl.textContent = "Elige un archivo con los LPN a agregar."; return; }
 
   const btn = document.getElementById("sd-agregar-guardar");
   const originalLabel = btn.textContent;
-  btn.disabled = true; btn.textContent = "Guardando…";
-  const { error } = await sb.from("ssoma_seguimiento_diario_registros").insert(filas);
+  btn.disabled = true; btn.textContent = "Leyendo archivo…";
+
+  let filas;
+  const erroresFormato = [], duplicadosEnLista = [], yaExistentes = [];
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      nroLpn: ["Nro LPN"], codAlternat: ["Cod Alternat"],
+      descripcion: ["Descripcion", "Descripción"], valTot: ["Val tot", "Val tot (S/)"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" columnas Nro LPN, Cod Alternat, Descripción y Val tot.`);
+    const colCantidad = bolsaFindCol(hoja.header, ["Cantidad actual", "Cantidad"]);
+
+    filas = [];
+    const clavesVistas = new Set();
+    hoja.rows.forEach((row, idx) => {
+      const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
+      const codAlternat = String(row[hoja.cols.codAlternat] || "").trim();
+      const descripcion = String(row[hoja.cols.descripcion] || "").trim();
+      if(!nroLpn && !codAlternat && !descripcion) return; // fila vacía, se ignora en silencio
+      const valTot = parseFloat(row[hoja.cols.valTot]);
+      if(!nroLpn || !codAlternat || !descripcion || isNaN(valTot) || valTot < 0){
+        erroresFormato.push("fila " + (idx + 2));
+        return;
+      }
+      const clave = nroLpn + "|||" + codAlternat;
+      if(clavesVistas.has(clave)){ duplicadosEnLista.push(nroLpn); return; }
+      clavesVistas.add(clave);
+      if(sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat)){ yaExistentes.push(nroLpn); return; }
+      const cantidad = colCantidad === -1 ? NaN : parseFloat(row[colCantidad]);
+      filas.push({
+        proceso, responsable: responsable || null, supervisor: supervisor || null, semana,
+        familia: null, nro_lpn: nroLpn, producto: null, cod_alternat: codAlternat, descripcion,
+        cantidad_actual: isNaN(cantidad) ? null : cantidad,
+        nro_lote: null, val_tot: valTot, ubicacion: ubicacion || null,
+        estado: "pendiente", archivo_origen: "Agregado manualmente: " + file.name,
+        creado_por_id: miUsuario ? miUsuario.id : null,
+      });
+    });
+  } catch(err){
+    btn.disabled = false; btn.textContent = originalLabel;
+    errorEl.textContent = "No se pudo leer el archivo: " + err.message;
+    return;
+  }
+
+  if(!filas.length){
+    btn.disabled = false; btn.textContent = originalLabel;
+    errorEl.textContent = erroresFormato.length
+      ? `Ninguna fila válida. Revisa el formato de: ${erroresFormato.join(", ")}.`
+      : "No hay ningún LPN nuevo para agregar (todos ya existen o están repetidos en el archivo).";
+    return;
+  }
+
+  btn.textContent = "Guardando…";
+  // Upsert con ignoreDuplicates en vez de insert: si algún LPN+Cod Alternat ya existe en el
+  // servidor (por ejemplo porque tu sesión llevaba rato abierta y alguien más lo agregó o
+  // importó mientras tanto), esa fila se descarta en silencio en vez de tumbar con un error
+  // de llave duplicada TODO el resto del archivo, que sí eran válidos.
+  const { data, error } = await sb.from("ssoma_seguimiento_diario_registros")
+    .upsert(filas, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
   btn.disabled = false; btn.textContent = originalLabel;
   if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
 
-  let msg = `✅ ${filas.length} LPN agregado(s).`;
-  if(yaExistentes.length) msg += ` ${yaExistentes.length} ya existían: ${yaExistentes.join(", ")}.`;
-  if(duplicadosEnLista.length) msg += ` ${duplicadosEnLista.length} repetidos en tu lista (se agregó solo una vez): ${duplicadosEnLista.join(", ")}.`;
-  if(erroresFormato.length) msg += ` ${erroresFormato.length} línea(s) con formato inválido, no se agregaron.`;
+  const guardadas = (data || []).length;
+  const yaEnServidor = filas.length - guardadas;
+  let msg = `✅ ${guardadas} LPN agregado(s) de "${file.name}".`;
+  if(yaEnServidor > 0) msg += ` ${yaEnServidor} ya estaban guardados de antes (no se duplicaron).`;
+  if(yaExistentes.length) msg += ` ${yaExistentes.length} ya existían según lo cargado en pantalla: ${yaExistentes.join(", ")}.`;
+  if(duplicadosEnLista.length) msg += ` ${duplicadosEnLista.length} repetidos dentro del archivo (se agregó solo una vez): ${duplicadosEnLista.join(", ")}.`;
+  if(erroresFormato.length) msg += ` ${erroresFormato.length} fila(s) con formato inválido, no se agregaron: ${erroresFormato.join(", ")}.`;
   resultadoEl.textContent = msg;
 
   await sdLoadRegistros();
-  if(!erroresFormato.length && !yaExistentes.length) setTimeout(sdCerrarModalAgregar, 2000);
+  if(!erroresFormato.length && !yaExistentes.length && yaEnServidor === 0) setTimeout(sdCerrarModalAgregar, 2000);
 });
 
 /* ---- Quitar LPN manualmente ----
