@@ -2647,8 +2647,8 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <div class="import-card">
             <div class="import-card-head">
               <div>
-                <div class="import-card-title">📄 Subir Orden de Trabajo (PDF)</div>
-                <div class="import-card-sub">Sube el PDF tal cual te lo mandan — se extraen los datos automáticamente y los puedes revisar antes de guardar.</div>
+                <div class="import-card-title">📄 Subir Solicitud y OT (PDF)</div>
+                <div class="import-card-sub">Sube los dos PDF tal cual te los mandan — se extraen los datos automáticamente (la OT por OCR, ya que no trae texto real) y los puedes revisar antes de guardar.</div>
               </div>
               <div class="import-card-actions">
                 <button type="button" class="btn btn-primary" id="sot-extraer-btn" disabled>Extraer datos</button>
@@ -2657,9 +2657,15 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
             <div class="import-drop-row">
               <label class="import-drop" for="sot-file" id="sot-drop">
                 <input type="file" id="sot-file" accept=".pdf" hidden>
-                <span class="import-drop-icon">📄</span>
-                <span class="import-drop-title">Orden de Trabajo (PDF)</span>
+                <span class="import-drop-icon">📋</span>
+                <span class="import-drop-title">Solicitud (PDF)</span>
                 <span class="import-drop-hint" id="sot-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+              </label>
+              <label class="import-drop" for="sot-ot-file" id="sot-ot-drop">
+                <input type="file" id="sot-ot-file" accept=".pdf" hidden>
+                <span class="import-drop-icon">📑</span>
+                <span class="import-drop-title">OT (PDF)</span>
+                <span class="import-drop-hint" id="sot-ot-file-name">Arrastra el archivo o haz clic para elegirlo</span>
               </label>
             </div>
             <div class="import-status" id="sot-import-status" style="display:none;"></div>
@@ -2686,6 +2692,31 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
                 <tbody></tbody>
               </table>
             </div>
+
+            <div class="section-head" style="margin-top:22px;">
+              <h2 class="section-title" style="font-size:15px;">Datos de la OT</h2>
+            </div>
+            <p class="section-desc">Leído con OCR (la OT no trae texto real) — revisa con más cuidado los números, sobre todo los totales.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+              <div class="field" style="flex:1;min-width:120px;margin-bottom:0;"><label>OT Nro.</label><input type="text" id="sot-prev-ot-nro"></div>
+              <div class="field" style="flex:1;min-width:120px;margin-bottom:0;"><label>Fecha</label><input type="text" id="sot-prev-ot-fecha"></div>
+              <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Proveedor</label><input type="text" id="sot-prev-ot-proveedor"></div>
+              <div class="field" style="flex:1;min-width:120px;margin-bottom:0;"><label>Fecha entrega</label><input type="text" id="sot-prev-ot-fecha-entrega"></div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+              <div class="field" style="flex:2;min-width:200px;margin-bottom:0;"><label>Dirección</label><input type="text" id="sot-prev-ot-direccion"></div>
+              <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Lugar de entrega</label><input type="text" id="sot-prev-ot-lugar-entrega"></div>
+              <div class="field" style="flex:1;min-width:120px;margin-bottom:0;"><label>Vendedor</label><input type="text" id="sot-prev-ot-vendedor"></div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+              <div class="field" style="flex:1;min-width:120px;margin-bottom:0;"><label>Moneda</label><input type="text" id="sot-prev-ot-moneda"></div>
+              <div class="field" style="flex:1;min-width:120px;margin-bottom:0;"><label>Cond. pago</label><input type="text" id="sot-prev-ot-cond-pago"></div>
+              <div class="field" style="flex:1;min-width:100px;margin-bottom:0;"><label>Subtotal</label><input type="text" id="sot-prev-ot-subtotal"></div>
+              <div class="field" style="flex:1;min-width:100px;margin-bottom:0;"><label>IGV</label><input type="text" id="sot-prev-ot-igv"></div>
+              <div class="field" style="flex:1;min-width:100px;margin-bottom:0;"><label>Total</label><input type="text" id="sot-prev-ot-total"></div>
+            </div>
+            <div id="sot-prev-ot-items" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
+
             <div style="display:flex;gap:10px;margin-top:14px;">
               <button type="button" class="btn btn-ghost" id="sot-preview-cancelar">Cancelar</button>
               <button type="button" class="btn btn-primary" id="sot-preview-guardar" style="flex:1;">Guardar en el Historial</button>
@@ -3524,6 +3555,7 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
 <script>
 const SUPABASE_URL = "https://zlukrktpjffiycarpduc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QFLNZihxZRqdvyc-GSRZPw_Q-rkA6No";
@@ -8245,19 +8277,55 @@ function sotDetectarColumnas(items){
   columnas.sort((a, b) => a.x - b.x);
   return { columnas, itemsDeEncabezado };
 }
-function sotAsignarColumna(x, columnas){
+/* El punto medio entre dos encabezados NO es un límite de columna confiable: en
+   algunos PDF el dato de una columna arranca bastante a la izquierda de su
+   propio encabezado (ej. "PRODUCTO" centrado sobre una columna ancha, con el
+   texto real empezando mucho antes que la etiqueta) y el punto medio termina
+   fusionando esa columna con la anterior. En vez de eso, se busca el hueco en
+   blanco más ancho entre los datos reales de cada par de columnas — el límite
+   real de la tabla — y solo si no hay ningún hueco se cae al punto medio. */
+function sotLimitesReales(columnas, itemsDatos){
+  const limites = [];
+  for(let i = 0; i < columnas.length - 1; i++){
+    // Cada búsqueda queda acotada a su propio "territorio" — nunca más allá del punto
+    // medio con el par de columnas vecino — para que no invada la búsqueda de al lado
+    // y termine detectando un hueco que en realidad le pertenece a la otra columna
+    // (eso colapsaba columnas angostas como "Observación" a ancho cero).
+    const xIzq = i === 0 ? columnas[i].x - 60 : (columnas[i - 1].x + columnas[i].x) / 2;
+    const xDer = i === columnas.length - 2 ? columnas[i + 1].x + 60 : (columnas[i + 1].x + columnas[i + 2].x) / 2;
+    const intervalos = itemsDatos
+      .filter(it => { const centro = it.x + (it.w || 0) / 2; return centro > xIzq && centro < xDer; })
+      .map(it => [it.x, it.x + (it.w || 0)])
+      .sort((a, b) => a[0] - b[0]);
+    const fusionados = [];
+    intervalos.forEach(([a, b]) => {
+      if(fusionados.length && a <= fusionados[fusionados.length - 1][1] + 2){
+        fusionados[fusionados.length - 1][1] = Math.max(fusionados[fusionados.length - 1][1], b);
+      } else fusionados.push([a, b]);
+    });
+    let mejorHueco = null;
+    for(let j = 0; j < fusionados.length - 1; j++){
+      const ancho = fusionados[j + 1][0] - fusionados[j][1];
+      if(ancho > 3 && (!mejorHueco || ancho > mejorHueco.ancho)) mejorHueco = { ancho, centro: (fusionados[j][1] + fusionados[j + 1][0]) / 2 };
+    }
+    limites.push(mejorHueco ? mejorHueco.centro : (columnas[i].x + columnas[i + 1].x) / 2);
+  }
+  return limites;
+}
+function sotAsignarColumna(x, columnas, limites){
   for(let i = columnas.length - 1; i >= 0; i--){
-    const limite = i === 0 ? -Infinity : (columnas[i - 1].x + columnas[i].x) / 2;
+    const limite = i === 0 ? -Infinity : limites[i - 1];
     if(x >= limite) return columnas[i].key;
   }
   return columnas.length ? columnas[0].key : null;
 }
 function sotParsePaginaTabla(items, columnas, itemsDeEncabezado){
+  const itemsSinEncabezado = items.filter(it => !itemsDeEncabezado.has(it));
+  const limites = sotLimitesReales(columnas, itemsSinEncabezado);
   // Filas ancladas por el N° Protocolo (patrón "150926-1105"), dentro del
   // rango de X de la primera columna — así una fila puede ocupar varias
   // líneas visuales (celdas largas como Actividad) sin perder su lugar.
-  const anchoPrimeraColumna = columnas.length > 1 ? (columnas[0].x + columnas[1].x) / 2 : Infinity;
-  const itemsSinEncabezado = items.filter(it => !itemsDeEncabezado.has(it));
+  const anchoPrimeraColumna = limites.length ? limites[0] : Infinity;
   const anclas = itemsSinEncabezado
     .filter(it => /^\d{5,8}-\d{2,6}$/.test(it.str.trim()) && it.x < anchoPrimeraColumna)
     .sort((a, b) => b.y - a.y);
@@ -8272,7 +8340,7 @@ function sotParsePaginaTabla(items, columnas, itemsDeEncabezado){
     const itemsFila = itemsSinEncabezado.filter(it => it.y <= yTop && it.y > yBottom);
     const porColumna = {};
     itemsFila.forEach(it => {
-      const col = sotAsignarColumna(it.x, columnas);
+      const col = sotAsignarColumna(it.x, columnas, limites);
       if(!col) return;
       if(!porColumna[col]) porColumna[col] = [];
       porColumna[col].push(it);
@@ -8335,7 +8403,7 @@ async function sotExtraerPdf(file){
   for(let p = 1; p <= pdf.numPages; p++){
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const items = content.items.filter(it => it.str && it.str.trim()).map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }));
+    const items = content.items.filter(it => it.str && it.str.trim()).map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width }));
     const { columnas, itemsDeEncabezado } = sotDetectarColumnas(items);
     if(columnas.length){
       const filas = sotParsePaginaTabla(items, columnas, itemsDeEncabezado);
@@ -8353,15 +8421,97 @@ function sotFechaDDMMYYYYaISO(s){
   return `${yyyy}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
+/* ---- OT (Orden de Trabajo Subcontratación): el PDF NO trae texto real (es
+   texto convertido a gráficos, sin capa de texto — pdf.js no encuentra nada
+   con getTextContent()), así que se renderiza la página a un canvas y se lee
+   con OCR (Tesseract.js). Los números finos (subtotal/IGV/total) pueden salir
+   mal leídos — por eso siempre se revisan en la vista previa antes de guardar. */
+let sotTessWorkerPromise = null;
+function sotGetTessWorker(){
+  if(!sotTessWorkerPromise) sotTessWorkerPromise = Tesseract.createWorker("spa", 1);
+  return sotTessWorkerPromise;
+}
+async function sotRenderPdfPaginaACanvas(file, pagina){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  const page = await pdf.getPage(pagina);
+  const viewport = page.getViewport({ scale: 2.5 });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return canvas;
+}
+function sotOtCampo(texto, regex){
+  const m = texto.match(regex);
+  return m ? m[1].replace(/[\s.]+$/, "").trim() : "";
+}
+function sotExtraerCabeceraOt(texto){
+  const cab = {};
+  cab.fecha = sotOtCampo(texto, /FECHA(?!\s*ENTREGA)\s+(\d{1,2}-\d{1,2}-\d{2,4})/i);
+  cab.fecha_entrega = sotOtCampo(texto, /FECHA ENTREGA\s*:?\s*(\d{1,2}-\d{1,2}-\d{2,4})/i);
+  cab.nro = sotOtCampo(texto, /OT\s*Nro\.?\s*[:.]?\s*(\S+)/i);
+  cab.proveedor = sotOtCampo(texto, /PROVEEDOR\s+(.+?)(?:\s+MONEDA|\n|$)/i);
+  cab.moneda = sotOtCampo(texto, /MONEDA\s*:?\s*(.+?)(?:\n|$)/i);
+  cab.direccion = sotOtCampo(texto, /DIRECCION\s+(.+?)(?:\s+COND\.?\s*PAGO|\n|$)/i);
+  cab.cond_pago = sotOtCampo(texto, /COND\.?\s*PAGO\s*:?\s*(.+?)(?:\n|$)/i);
+  cab.lugar_entrega = sotOtCampo(texto, /LUGAR DE ENTREGA[^:]*:\s*(.+?)(?:\n|$)/i);
+  cab.vendedor = sotOtCampo(texto, /VENDEDOR\s+(\S+)/i);
+  // Los totales van en un bloque de 4-5 líneas seguidas (Subtotal/Dsctos/Neto/IGV/Total);
+  // se ubican por posición relativa a "DSCTOS" porque el OCR suele deletrear mal las
+  // otras etiquetas (ej. "SUBTOTAL" → "[susTOTAL", "I.G.V." → "196.").
+  const lineas = texto.split("\n");
+  const idxDsctos = lineas.findIndex(l => /DSCTOS/i.test(l));
+  const numeroDeLinea = (l) => { const m = (l || "").match(/([\d]+[.,]\d{1,2})\s*$/); return m ? m[1] : ""; };
+  if(idxDsctos > 0){
+    cab.subtotal = numeroDeLinea(lineas[idxDsctos - 1]);
+    cab.dsctos = numeroDeLinea(lineas[idxDsctos]);
+    cab.neto = numeroDeLinea(lineas[idxDsctos + 1]);
+    cab.igv = numeroDeLinea(lineas[idxDsctos + 2]);
+    cab.total = numeroDeLinea(lineas[idxDsctos + 3]);
+  }
+  return cab;
+}
+function sotExtraerItemsOt(texto){
+  // Solo las filas "principales" (empiezan con un código de 5-7 dígitos, sin el
+  // prefijo "L" de las sub-líneas de equivalencia de código SAP/barra).
+  const items = [];
+  texto.split("\n").forEach(linea => {
+    const limpia = linea.replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+    const m = limpia.match(/^(\d{5,7})\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s+([A-Z]{2,4})\s+[\d.,]+\s+[\d.,]+.*?([\d]+[.,]\d{1,2})\s*$/);
+    if(m) items.push({ cod: m[1], descripcion: m[2].trim(), cantidad: m[3], ump: m[4], total: m[5] });
+  });
+  return items;
+}
+async function sotExtraerOtPdf(file){
+  const canvas = await sotRenderPdfPaginaACanvas(file, 1);
+  const worker = await sotGetTessWorker();
+  const { data } = await worker.recognize(canvas);
+  const texto = data.text || "";
+  return { cabeceraOt: sotExtraerCabeceraOt(texto), itemsOt: sotExtraerItemsOt(texto), textoOt: texto };
+}
+
+function sotActualizarBotonExtraer(){
+  const tieneAmbos = !!document.getElementById("sot-file").files[0] && !!document.getElementById("sot-ot-file").files[0];
+  document.getElementById("sot-extraer-btn").disabled = !tieneAmbos;
+}
 document.getElementById("sot-file").addEventListener("change", () => {
   const f = document.getElementById("sot-file").files[0];
   document.getElementById("sot-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
   document.getElementById("sot-drop").classList.toggle("filled", !!f);
-  document.getElementById("sot-extraer-btn").disabled = !f;
+  sotActualizarBotonExtraer();
+});
+document.getElementById("sot-ot-file").addEventListener("change", () => {
+  const f = document.getElementById("sot-ot-file").files[0];
+  document.getElementById("sot-ot-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sot-ot-drop").classList.toggle("filled", !!f);
+  sotActualizarBotonExtraer();
 });
 
 let sotExtraccionActual = null; // { archivo, hash, cabecera, filas: [{...}] }
 const SOT_CAMPOS_PREVIEW = ["numero_protocolo","orden_compra","proveedor","cod_producto","producto","rs_nso","crs","lote","fecha_vencimiento","cantidad","tipo_producto","temperatura","observacion","actividad_reacondicionado","validacion"];
+const SOT_CAMPOS_OT_PREVIEW = ["nro","fecha","proveedor","fecha_entrega","direccion","lugar_entrega","vendedor","moneda","cond_pago","subtotal","igv","total"];
 function sotRenderPreview(){
   if(!sotExtraccionActual){ document.getElementById("sot-preview-wrap").style.display = "none"; return; }
   document.getElementById("sot-preview-count").textContent = sotExtraccionActual.filas.length + " protocolo(s)";
@@ -8377,6 +8527,15 @@ function sotRenderPreview(){
     }).join("");
     return `<tr>${celdas}<td><button type="button" class="btn btn-ghost sot-preview-quitar" data-idx="${idx}" style="padding:4px 8px;color:var(--red);" title="Quitar esta fila">✕</button></td></tr>`;
   }).join("");
+  const cabOt = sotExtraccionActual.cabeceraOt || {};
+  SOT_CAMPOS_OT_PREVIEW.forEach(campo => {
+    const el = document.getElementById("sot-prev-ot-" + campo.replace(/_/g, "-"));
+    if(el) el.value = cabOt[campo] || "";
+  });
+  const items = sotExtraccionActual.itemsOt || [];
+  document.getElementById("sot-prev-ot-items").textContent = items.length
+    ? `Líneas de la OT leídas: ${items.map(it => `${it.descripcion} (Cant. ${it.cantidad} ${it.ump})`).join(" · ")}`
+    : "No se pudieron leer las líneas de detalle de la OT (revisa el total manualmente).";
   document.getElementById("sot-preview-wrap").style.display = "";
 }
 document.querySelector("#sot-preview-table tbody").addEventListener("input", (e) => {
@@ -8394,25 +8553,34 @@ function sotReiniciarImportCard(){
   document.getElementById("sot-file").value = "";
   document.getElementById("sot-file-name").textContent = "Arrastra el archivo o haz clic para elegirlo";
   document.getElementById("sot-drop").classList.remove("filled");
+  document.getElementById("sot-ot-file").value = "";
+  document.getElementById("sot-ot-file-name").textContent = "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sot-ot-drop").classList.remove("filled");
   document.getElementById("sot-extraer-btn").disabled = true;
 }
 document.getElementById("sot-extraer-btn").addEventListener("click", async () => {
   const file = document.getElementById("sot-file").files[0];
-  if(!file) return;
+  const fileOt = document.getElementById("sot-ot-file").files[0];
+  if(!file || !fileOt) return;
   const chequeo = await importVerificarDuplicado("inbound_solicitudes_ot", file);
   if(!chequeo.ok) return;
+  const chequeoOt = await importVerificarDuplicado("inbound_solicitudes_ot", fileOt);
+  if(!chequeoOt.ok) return;
 
   const btn = document.getElementById("sot-extraer-btn");
   const originalLabel = btn.textContent;
-  btn.disabled = true; btn.textContent = "Extrayendo…";
+  btn.disabled = true;
   const statusEl = document.getElementById("sot-import-status");
   statusEl.style.display = "none"; statusEl.className = "import-status";
   try{
+    btn.textContent = "Extrayendo Solicitud…";
     const { filas, cabecera } = await sotExtraerPdf(file);
-    if(!filas.length) throw new Error(`No se encontró ninguna fila con N° Protocolo en "${file.name}". Revisa que sea una Orden de Trabajo con el mismo formato.`);
-    sotExtraccionActual = { archivo: file, hash: chequeo.hash, cabecera, filas };
+    if(!filas.length) throw new Error(`No se encontró ninguna fila con N° Protocolo en "${file.name}". Revisa que sea la Solicitud con el mismo formato.`);
+    btn.textContent = "Leyendo la OT (OCR, puede tardar unos segundos)…";
+    const { cabeceraOt, itemsOt } = await sotExtraerOtPdf(fileOt);
+    sotExtraccionActual = { archivo: file, hash: chequeo.hash, archivoOt: fileOt, hashOt: chequeoOt.hash, cabecera, filas, cabeceraOt, itemsOt };
     sotRenderPreview();
-    statusEl.textContent = `✅ Se leyeron ${filas.length} protocolo(s) de "${file.name}". Revisa los datos abajo antes de guardar.`;
+    statusEl.textContent = `✅ Se leyeron ${filas.length} protocolo(s) de "${file.name}" y los datos de "${fileOt.name}". Revisa todo abajo antes de guardar (los números de la OT vienen por OCR, revísalos con cuidado).`;
     statusEl.className = "import-status success";
     statusEl.style.display = "block";
   }catch(err){
@@ -8436,6 +8604,12 @@ document.getElementById("sot-preview-guardar").addEventListener("click", async (
   const cab = sotExtraccionActual.cabecera;
   const fechaEmision = document.getElementById("sot-prev-fecha-emision").value || null;
   const empresa = document.getElementById("sot-prev-empresa").value.trim() || null;
+  const otCampos = {};
+  SOT_CAMPOS_OT_PREVIEW.forEach(campo => {
+    const el = document.getElementById("sot-prev-ot-" + campo.replace(/_/g, "-"));
+    otCampos[campo] = el && el.value.trim() ? el.value.trim() : null;
+  });
+  const itemsOt = sotExtraccionActual.itemsOt && sotExtraccionActual.itemsOt.length ? sotExtraccionActual.itemsOt : null;
   const filas = sotExtraccionActual.filas.map(f => {
     const cantidadNum = parseFloat(String(f.cantidad || "").replace(/[^\d.-]/g, ""));
     return {
@@ -8452,6 +8626,11 @@ document.getElementById("sot-preview-guardar").addEventListener("click", async (
       vb_qa_por: cab.vb_qa_por || null, vb_qa_fecha_hora: cab.vb_qa_fecha_hora || null,
       recibido_por: cab.recibido_por || null, recibido_fecha_hora: cab.recibido_fecha_hora || null,
       entregado_por: cab.entregado_por || null, entregado_fecha_hora: cab.entregado_fecha_hora || null,
+      ot_nro: otCampos.nro, ot_fecha: otCampos.fecha, ot_proveedor: otCampos.proveedor,
+      ot_direccion: otCampos.direccion, ot_vendedor: otCampos.vendedor, ot_fecha_entrega: otCampos.fecha_entrega,
+      ot_lugar_entrega: otCampos.lugar_entrega, ot_moneda: otCampos.moneda, ot_cond_pago: otCampos.cond_pago,
+      ot_subtotal: otCampos.subtotal, ot_igv: otCampos.igv, ot_total: otCampos.total,
+      ot_items: itemsOt, archivo_origen_ot: sotExtraccionActual.archivoOt ? sotExtraccionActual.archivoOt.name : null,
       estado: "pendiente", archivo_origen: sotExtraccionActual.archivo.name,
       creado_por_id: miUsuario ? miUsuario.id : null,
     };
@@ -8460,6 +8639,7 @@ document.getElementById("sot-preview-guardar").addEventListener("click", async (
   btn.disabled = false; btn.textContent = originalLabel;
   if(error){ alert("No se pudo guardar: " + error.message); return; }
   if(sotExtraccionActual.hash) await importRegistrarLog("inbound_solicitudes_ot", sotExtraccionActual.archivo, sotExtraccionActual.hash, filas.length);
+  if(sotExtraccionActual.hashOt) await importRegistrarLog("inbound_solicitudes_ot", sotExtraccionActual.archivoOt, sotExtraccionActual.hashOt, filas.length);
   sotExtraccionActual = null;
   sotRenderPreview();
   sotReiniciarImportCard();
@@ -8480,6 +8660,11 @@ async function sotLoadRegistros(){
     validacion: r.validacion || "", fechaEmision: r.fecha_emision, empresa: r.empresa || "",
     estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id,
     archivoOrigen: r.archivo_origen || "", creadoPorId: r.creado_por_id, createdAt: r.created_at,
+    otNro: r.ot_nro || "", otFecha: r.ot_fecha || "", otProveedor: r.ot_proveedor || "",
+    otDireccion: r.ot_direccion || "", otVendedor: r.ot_vendedor || "", otFechaEntrega: r.ot_fecha_entrega || "",
+    otLugarEntrega: r.ot_lugar_entrega || "", otMoneda: r.ot_moneda || "", otCondPago: r.ot_cond_pago || "",
+    otSubtotal: r.ot_subtotal || "", otIgv: r.ot_igv || "", otTotal: r.ot_total || "",
+    otItems: r.ot_items || [], archivoOrigenOt: r.archivo_origen_ot || "",
   }));
   sotRenderHistorial();
 }
@@ -8510,13 +8695,25 @@ function sotCardHtml(r, enGrupo){
           ${done ? `<div class="opk-done-note">✅ Finalizado${finalizadoPor ? " por " + escapeHtml(finalizadoPor) : ""}</div>` : ""}
         </div>
       </div>
-      <button type="button" class="btn btn-ghost sot-toggle-detalle" data-id="${r.id}" style="width:100%;margin-top:10px;">Ver detalle ▾</button>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-ghost sot-toggle-detalle" data-id="${r.id}" style="flex:1;">📋 Detalle Solicitud ▾</button>
+        <button type="button" class="btn btn-ghost sot-toggle-detalle-ot" data-id="${r.id}" style="flex:1;">📑 Detalle OT ▾</button>
+      </div>
       <div class="sot-detalle" id="sot-detalle-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
         <div><b>R.S./N.S.O.:</b> ${escapeHtml(r.rsNso) || "—"} &nbsp; <b>C.R.S:</b> ${escapeHtml(r.crs) || "—"}</div>
         <div style="margin-top:6px;"><b>F.V:</b> ${escapeHtml(r.fechaVencimiento) || "—"} &nbsp; <b>Tipo:</b> ${escapeHtml(r.tipoProducto) || "—"} &nbsp; <b>T°:</b> ${escapeHtml(r.temperatura) || "—"}</div>
         <div style="margin-top:6px;"><b>Observación:</b> ${escapeHtml(r.observacion) || "—"}</div>
         <div style="margin-top:6px;"><b>Actividad de reacondicionado:</b> ${escapeHtml(r.actividadReacondicionado) || "—"}</div>
         <div style="margin-top:6px;"><b>Validación:</b> ${escapeHtml(r.validacion) || "—"}</div>
+      </div>
+      <div class="sot-detalle-ot" id="sot-detalle-ot-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
+        <div><b>OT Nro.:</b> ${escapeHtml(r.otNro) || "—"} &nbsp; <b>Fecha:</b> ${escapeHtml(r.otFecha) || "—"} &nbsp; <b>Fecha entrega:</b> ${escapeHtml(r.otFechaEntrega) || "—"}</div>
+        <div style="margin-top:6px;"><b>Proveedor:</b> ${escapeHtml(r.otProveedor) || "—"}</div>
+        <div style="margin-top:6px;"><b>Dirección:</b> ${escapeHtml(r.otDireccion) || "—"}</div>
+        <div style="margin-top:6px;"><b>Lugar de entrega:</b> ${escapeHtml(r.otLugarEntrega) || "—"} &nbsp; <b>Vendedor:</b> ${escapeHtml(r.otVendedor) || "—"}</div>
+        <div style="margin-top:6px;"><b>Moneda:</b> ${escapeHtml(r.otMoneda) || "—"} &nbsp; <b>Cond. pago:</b> ${escapeHtml(r.otCondPago) || "—"}</div>
+        <div style="margin-top:6px;"><b>Subtotal:</b> ${escapeHtml(r.otSubtotal) || "—"} &nbsp; <b>IGV:</b> ${escapeHtml(r.otIgv) || "—"} &nbsp; <b>Total:</b> ${escapeHtml(r.otTotal) || "—"}</div>
+        <div style="margin-top:6px;font-style:italic;">Leído por OCR — el PDF de la OT no trae texto real, revisa contra el documento original si algo no cuadra.</div>
       </div>
     </div>`;
 }
@@ -8566,11 +8763,20 @@ document.getElementById("sot-f-buscar").addEventListener("input", sotRenderHisto
 document.getElementById("sot-f-estado").addEventListener("change", sotRenderHistorial);
 document.getElementById("sot-hist-grid").addEventListener("click", (e) => {
   const toggleBtn = e.target.closest(".sot-toggle-detalle");
-  if(!toggleBtn) return;
-  const detalle = document.getElementById("sot-detalle-" + toggleBtn.dataset.id);
-  const abierto = detalle.style.display !== "none";
-  detalle.style.display = abierto ? "none" : "block";
-  toggleBtn.textContent = abierto ? "Ver detalle ▾" : "Ocultar detalle ▴";
+  const toggleBtnOt = e.target.closest(".sot-toggle-detalle-ot");
+  if(toggleBtn){
+    const detalle = document.getElementById("sot-detalle-" + toggleBtn.dataset.id);
+    const abierto = detalle.style.display !== "none";
+    detalle.style.display = abierto ? "none" : "block";
+    toggleBtn.textContent = abierto ? "📋 Detalle Solicitud ▾" : "📋 Detalle Solicitud ▴";
+    return;
+  }
+  if(toggleBtnOt){
+    const detalle = document.getElementById("sot-detalle-ot-" + toggleBtnOt.dataset.id);
+    const abierto = detalle.style.display !== "none";
+    detalle.style.display = abierto ? "none" : "block";
+    toggleBtnOt.textContent = abierto ? "📑 Detalle OT ▾" : "📑 Detalle OT ▴";
+  }
 });
 const SOT_COLUMNAS_EXPORT = [
   { header: "N° Protocolo", get: r => r.numeroProtocolo },
