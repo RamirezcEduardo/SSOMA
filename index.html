@@ -2242,6 +2242,17 @@
           <button type="button" class="btn btn-primary" id="aic-sd-informe-semanal-btn">📄 Generar informe PDF</button>
         </div>
 
+        <div class="import-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div class="import-card-title">➕ Agregar / ➖ Quitar LPN manualmente</div>
+            <div class="import-card-sub">Si notas que falta un LPN, agrégalo a mano con su valorizado. Si sabes que uno o varios ya no están pendientes (sin depender del import automático), quítalos aquí.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-ghost" id="aic-sd-agregar-btn">➕ Agregar LPN</button>
+            <button type="button" class="btn btn-ghost" id="aic-sd-quitar-btn" style="color:var(--red);">➖ Quitar LPN</button>
+          </div>
+        </div>
+
         <div class="opk-grid" id="aic-sd-grid"></div>
       </div>
 
@@ -3111,6 +3122,91 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
         <select id="sd-informe-semanal-semana"></select>
       </div>
       <button type="button" class="btn btn-primary" id="sd-informe-semanal-generar" style="width:100%;margin-top:14px;">📄 Generar informe PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sd-agregar-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>➕ Agregar LPN manualmente</h3>
+      <button class="modal-close" id="sd-agregar-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" style="margin-bottom:14px;">Para cuando notas que falta un LPN y no quieres esperar al próximo import. Queda como pendiente normal, se puede finalizar/agrupar igual que los demás.</p>
+      <div style="display:flex;gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Proceso<span class="req">*</span></label>
+          <input type="text" id="sd-agregar-proceso" placeholder="Ej. Averias/Canjes">
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Semana<span class="req">*</span></label>
+          <input type="text" id="sd-agregar-semana" placeholder="Ej. SEM 37">
+        </div>
+      </div>
+      <div class="field">
+        <label>Ubicación</label>
+        <input type="text" id="sd-agregar-ubicacion" placeholder="Ej. DROP-KNAPP1-MER-CI">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Nro LPN<span class="req">*</span></label>
+          <input type="text" id="sd-agregar-lpn" placeholder="Ej. CJSA00010396003">
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Cod Alternat<span class="req">*</span></label>
+          <input type="text" id="sd-agregar-cod" placeholder="Ej. 102134">
+        </div>
+      </div>
+      <div class="field">
+        <label>Producto / Descripción<span class="req">*</span></label>
+        <input type="text" id="sd-agregar-desc" placeholder="Descripción del producto">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Cantidad</label>
+          <input type="number" id="sd-agregar-cantidad" min="0" step="1">
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Val tot (S/)<span class="req">*</span></label>
+          <input type="number" id="sd-agregar-valtot" min="0" step="0.01">
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Responsable</label>
+          <input type="text" id="sd-agregar-responsable">
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Supervisor</label>
+          <input type="text" id="sd-agregar-supervisor">
+        </div>
+      </div>
+      <div class="field">
+        <label>Nro de lote</label>
+        <input type="text" id="sd-agregar-lote">
+      </div>
+      <span class="login-error" id="sd-agregar-error"></span>
+      <button type="button" class="btn btn-primary" id="sd-agregar-guardar" style="width:100%;margin-top:6px;">Agregar LPN</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sd-quitar-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>➖ Quitar LPN manualmente</h3>
+      <button class="modal-close" id="sd-quitar-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" style="margin-bottom:14px;">Para cuando sabes que uno o varios LPN ya no están pendientes, sin depender de que el próximo import los detecte. Quedan marcados como "Regularizado manual" (no se borran, se puede deshacer).</p>
+      <div class="field">
+        <label>Nro LPN a quitar (sepáralos con coma)</label>
+        <textarea id="sd-quitar-lpns" rows="4" placeholder="Ej. CJSA00010396011, CJSA00010396012, CJSA00010396016"></textarea>
+      </div>
+      <span class="login-error" id="sd-quitar-error"></span>
+      <div id="sd-quitar-resultado" style="font-size:12.5px;color:var(--muted);margin-top:6px;"></div>
+      <button type="button" class="btn btn-primary" id="sd-quitar-confirmar" style="width:100%;margin-top:6px;background:var(--red);border-color:var(--red);">Quitar de pendientes</button>
     </div>
   </div>
 </div>
@@ -6205,22 +6301,29 @@ async function sdLoadRegistros(){
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
     ubicacion: r.ubicacion || "", comentario: r.comentario || "",
     estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id, archivoOrigen: r.archivo_origen || "",
-    enRiesgo: !!r.en_riesgo, regularizadoEn: r.regularizado_en,
+    enRiesgo: !!r.en_riesgo, regularizadoEn: r.regularizado_en, regularizadoPorId: r.regularizado_por_id,
     creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
   sdRenderFiltros();
   sdRender();
 }
 
-/* estado tiene 3 valores: "pendiente" (sigue abierto), "finalizado" (el equipo lo cerró
-   a mano) y "regularizado_auto" (el import posterior detectó que el LPN ya no aparece en
-   su Proceso+Ubicación — se asume resuelto fuera de la app). Ambos "finalizado" y
-   "regularizado_auto" cuentan como resueltos para el % de avance, la Bitácora y el
-   indicador "Regularizado" del Informe Semanal — solo "pendiente" sigue siendo trabajo
-   pendiente de verdad. */
+/* estado tiene 4 valores: "pendiente" (sigue abierto), "finalizado" (el equipo lo cerró
+   a mano con el flujo normal), "regularizado_auto" (un import detectó que el LPN ya no
+   aparece en su Proceso+Ubicación) y "regularizado_manual" (el equipo lo quitó a mano con
+   "Quitar LPN", sin depender del import — para cuando suben solo un avance parcial y no
+   quieren arriesgar que la comparación automática se equivoque). Los 3 estados resueltos
+   cuentan para el % de avance, la Bitácora y el indicador "Regularizado" del Informe
+   Semanal — solo "pendiente" sigue siendo trabajo pendiente de verdad. */
 function sdEsPendiente(r){ return r.estado === "pendiente"; }
-function sdEsResuelto(r){ return r.estado === "finalizado" || r.estado === "regularizado_auto"; }
+function sdEsResuelto(r){ return r.estado === "finalizado" || r.estado === "regularizado_auto" || r.estado === "regularizado_manual"; }
 function sdFechaResuelto(r){ return r.finalizadoEn || r.regularizadoEn || null; }
+function sdEstadoLegible(r){
+  if(r.estado === "regularizado_auto") return "Regularizado automático";
+  if(r.estado === "regularizado_manual") return "Regularizado manual";
+  if(r.estado === "finalizado") return "Finalizado";
+  return "Pendiente";
+}
 
 function sdRenderFiltros(){
   const selSem = document.getElementById("aic-sd-semana");
@@ -6250,7 +6353,8 @@ function sdFiltered(){
 
 function sdCardHtml(r, enGrupo, soloLectura){
   const done = sdEsResuelto(r);
-  const doneNota = r.estado === "regularizado_auto" ? "🔄 Regularizado automáticamente" : "✅ Finalizado";
+  const doneNota = r.estado === "regularizado_auto" ? "🔄 Regularizado automáticamente"
+    : r.estado === "regularizado_manual" ? "➖ Quitado a mano" : "✅ Finalizado";
   const btnHtml = done ? "" : `<button type="button" class="opk-btn-mark finalizar" data-id="${r.id}">✓ Marcar como finalizado</button>`;
   const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sd" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
@@ -6315,9 +6419,11 @@ function sdCardGrupoHtml(grupo){
   if(!pendientes.length){
     const finalizadosManual = resueltos.filter(r => r.estado === "finalizado").length;
     const regularizadosAuto = resueltos.filter(r => r.estado === "regularizado_auto").length;
+    const regularizadosManual = resueltos.filter(r => r.estado === "regularizado_manual").length;
     const notas = [];
     if(finalizadosManual) notas.push(finalizadosManual + " finalizados");
     if(regularizadosAuto) notas.push(regularizadosAuto + " regularizados automáticamente");
+    if(regularizadosManual) notas.push(regularizadosManual + " quitados a mano");
     const btnDeshacer = esAdmin() ? `<button type="button" class="btn btn-ghost sd-grupo-deshacer" data-clave="${escapeHtml(clave)}" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">↩️ Deshacer (volver a pendiente)</button>` : "";
     return `
       <div class="opk-card done">
@@ -6447,10 +6553,10 @@ function sdRender(){
       const originalLabel = btn.textContent;
       btn.disabled = true; btn.textContent = "Deshaciendo…";
       const { error } = await sb.from("ssoma_seguimiento_diario_registros")
-        .update({ estado: "pendiente", finalizado_en: null, finalizado_por_id: null, regularizado_en: null })
-        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).in("estado", ["finalizado", "regularizado_auto"]);
+        .update({ estado: "pendiente", finalizado_en: null, finalizado_por_id: null, regularizado_en: null, regularizado_por_id: null })
+        .eq("proceso", grupo.proceso).eq("ubicacion", grupo.ubicacion).eq("semana", grupo.semana).in("estado", ["finalizado", "regularizado_auto", "regularizado_manual"]);
       if(error){ alert("No se pudo deshacer: " + error.message); btn.disabled = false; btn.textContent = originalLabel; return; }
-      resueltos.forEach(r => { r.estado = "pendiente"; r.finalizadoEn = null; r.finalizadoPorId = null; r.regularizadoEn = null; });
+      resueltos.forEach(r => { r.estado = "pendiente"; r.finalizadoEn = null; r.finalizadoPorId = null; r.regularizadoEn = null; r.regularizadoPorId = null; });
       sdRender();
     });
   });
@@ -6536,7 +6642,7 @@ const SD_COLUMNAS_DETALLE = [
   { header: "Nro de lote", get: r => r.nroLote },
   { header: "Cantidad actual", get: r => r.cantidad === null ? "" : r.cantidad },
   { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
-  { header: "Estado", get: r => r.estado === "regularizado_auto" ? "Regularizado automático" : (r.estado === "finalizado" ? "Finalizado" : "Pendiente") },
+  { header: "Estado", get: r => sdEstadoLegible(r) },
   { header: "En riesgo de cobro", get: r => r.enRiesgo ? "Sí" : "No" },
   { header: "Comentario", get: r => r.comentario || "" },
   { header: "Responsable", get: r => r.responsable },
@@ -6545,6 +6651,7 @@ const SD_COLUMNAS_DETALLE = [
   { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
   { header: "Fecha resuelto", get: r => sdFechaResuelto(r) ? new Date(sdFechaResuelto(r)).toLocaleString("es-PE") : "" },
   { header: "Finalizado por", get: r => (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "" },
+  { header: "Quitado por", get: r => (usuariosPorId[r.regularizadoPorId] || {}).nombre_completo || "" },
 ];
 document.getElementById("aic-sd-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
@@ -6794,6 +6901,138 @@ document.getElementById("sd-informe-semanal-generar").addEventListener("click", 
   btn.disabled = false; btn.textContent = originalLabel;
   sdCerrarModalInformeSemanal();
   abrirVentanaImpresion("Informe Semanal — " + semana, sdBuildInformeSemanalHtml(semana), "Equipo de Control de Inventario · Auditoría de Inventario");
+});
+
+/* ---- Agregar LPN manualmente ----
+   Para cuando el equipo nota que falta un LPN (no llegó en ningún archivo, o se
+   regularizó por error) y no quiere esperar al próximo import. */
+function sdAbrirModalAgregar(){
+  ["proceso","semana","ubicacion","lpn","cod","desc","cantidad","valtot","responsable","supervisor","lote"].forEach(id => {
+    document.getElementById("sd-agregar-" + id).value = "";
+  });
+  document.getElementById("sd-agregar-error").textContent = "";
+  document.getElementById("sd-agregar-modal").classList.add("show");
+}
+function sdCerrarModalAgregar(){
+  document.getElementById("sd-agregar-modal").classList.remove("show");
+}
+document.getElementById("aic-sd-agregar-btn").addEventListener("click", sdAbrirModalAgregar);
+document.getElementById("sd-agregar-close").addEventListener("click", sdCerrarModalAgregar);
+document.getElementById("sd-agregar-modal").addEventListener("click", (e)=>{ if(e.target.id === "sd-agregar-modal") sdCerrarModalAgregar(); });
+
+document.getElementById("sd-agregar-guardar").addEventListener("click", async ()=>{
+  const errorEl = document.getElementById("sd-agregar-error");
+  errorEl.textContent = "";
+  const proceso = document.getElementById("sd-agregar-proceso").value.trim();
+  const semana = document.getElementById("sd-agregar-semana").value.trim();
+  const ubicacion = document.getElementById("sd-agregar-ubicacion").value.trim();
+  const nroLpn = document.getElementById("sd-agregar-lpn").value.trim();
+  const codAlternat = document.getElementById("sd-agregar-cod").value.trim();
+  const descripcion = document.getElementById("sd-agregar-desc").value.trim();
+  const cantidadRaw = document.getElementById("sd-agregar-cantidad").value;
+  const valTotRaw = document.getElementById("sd-agregar-valtot").value;
+  const responsable = document.getElementById("sd-agregar-responsable").value.trim();
+  const supervisor = document.getElementById("sd-agregar-supervisor").value.trim();
+  const nroLote = document.getElementById("sd-agregar-lote").value.trim();
+
+  if(!proceso || !semana || !nroLpn || !codAlternat || !descripcion){
+    errorEl.textContent = "Completa Proceso, Semana, Nro LPN, Cod Alternat y Producto/Descripción.";
+    return;
+  }
+  const valTot = parseFloat(valTotRaw);
+  if(isNaN(valTot) || valTot < 0){
+    errorEl.textContent = "Ingresa un Val tot válido (0 o más).";
+    return;
+  }
+  const yaExiste = sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat);
+  if(yaExiste){
+    errorEl.textContent = `Ese LPN + Cod Alternat ya existe (estado: ${sdEstadoLegible(yaExiste)}). Búscalo en la lista en vez de agregarlo de nuevo.`;
+    return;
+  }
+
+  const btn = document.getElementById("sd-agregar-guardar");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  const { error } = await sb.from("ssoma_seguimiento_diario_registros").insert({
+    proceso, responsable: responsable || null, supervisor: supervisor || null, semana,
+    familia: null, nro_lpn: nroLpn, producto: null, cod_alternat: codAlternat, descripcion,
+    cantidad_actual: cantidadRaw === "" ? null : parseFloat(cantidadRaw),
+    nro_lote: nroLote || null, val_tot: valTot, ubicacion: ubicacion || null,
+    estado: "pendiente", archivo_origen: "Agregado manualmente",
+    creado_por_id: miUsuario ? miUsuario.id : null,
+  });
+  btn.disabled = false; btn.textContent = originalLabel;
+  if(error){
+    errorEl.textContent = (error.code === "23505")
+      ? "Ese LPN + Cod Alternat ya existe en la base de datos."
+      : "No se pudo guardar: " + error.message;
+    return;
+  }
+  sdCerrarModalAgregar();
+  await sdLoadRegistros();
+});
+
+/* ---- Quitar LPN manualmente ----
+   Para cuando el equipo sabe que uno o varios LPN ya no están pendientes, sin depender
+   de que el próximo import los detecte (evita marcar de más si solo suben un avance
+   parcial). Quita por Nro LPN (no por Cod Alternat): si el LPN es multi-SKU, se quitan
+   todos sus productos pendientes juntos. Queda como "regularizado_manual" — no se borra,
+   se puede deshacer con el botón de Deshacer del grupo (solo admin). */
+function sdAbrirModalQuitar(){
+  document.getElementById("sd-quitar-lpns").value = "";
+  document.getElementById("sd-quitar-error").textContent = "";
+  document.getElementById("sd-quitar-resultado").textContent = "";
+  document.getElementById("sd-quitar-modal").classList.add("show");
+}
+function sdCerrarModalQuitar(){
+  document.getElementById("sd-quitar-modal").classList.remove("show");
+}
+document.getElementById("aic-sd-quitar-btn").addEventListener("click", sdAbrirModalQuitar);
+document.getElementById("sd-quitar-close").addEventListener("click", sdCerrarModalQuitar);
+document.getElementById("sd-quitar-modal").addEventListener("click", (e)=>{ if(e.target.id === "sd-quitar-modal") sdCerrarModalQuitar(); });
+
+document.getElementById("sd-quitar-confirmar").addEventListener("click", async ()=>{
+  const errorEl = document.getElementById("sd-quitar-error");
+  const resultadoEl = document.getElementById("sd-quitar-resultado");
+  errorEl.textContent = ""; resultadoEl.textContent = "";
+  const raw = document.getElementById("sd-quitar-lpns").value;
+  const lpns = [...new Set(raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean))];
+  if(!lpns.length){ errorEl.textContent = "Escribe al menos un Nro LPN."; return; }
+
+  const lpnsSet = new Set(lpns);
+  const filas = sdRegistros.filter(r => sdEsPendiente(r) && lpnsSet.has(r.nroLpn));
+  if(!filas.length){ errorEl.textContent = "Ninguno de esos LPN está pendiente ahora mismo (revisa que estén bien escritos)."; return; }
+
+  const encontrados = new Set(filas.map(r => r.nroLpn));
+  const noEncontrados = lpns.filter(l => !encontrados.has(l));
+
+  if(!confirm(`¿Quitar ${filas.length} fila(s) pendiente(s) de ${encontrados.size} LPN? Quedan como "Regularizado manual" — se pueden deshacer después con el botón de Deshacer del grupo.`)) return;
+
+  const btn = document.getElementById("sd-quitar-confirmar");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Quitando…";
+  const ahoraIso = new Date().toISOString();
+  const actorId = miUsuario ? miUsuario.id : null;
+  const resultados = await Promise.all(filas.map(r =>
+    sb.from("ssoma_seguimiento_diario_registros")
+      .update({ estado: "regularizado_manual", regularizado_en: ahoraIso, regularizado_por_id: actorId })
+      .eq("id", r.id)
+      .then(({ error }) => ({ id: r.id, error }))
+      .catch(err => ({ id: r.id, error: err }))
+  ));
+  btn.disabled = false; btn.textContent = originalLabel;
+  const conError = resultados.filter(r => r.error);
+  const exitosos = new Set(resultados.filter(r => !r.error).map(r => r.id));
+  filas.forEach(r => {
+    if(exitosos.has(r.id)){ r.estado = "regularizado_manual"; r.regularizadoEn = ahoraIso; r.regularizadoPorId = actorId; }
+  });
+  sdRender();
+
+  let msg = `✅ ${exitosos.size} fila(s) quitada(s) de pendientes.`;
+  if(noEncontrados.length) msg += ` ${noEncontrados.length} LPN no estaban pendientes: ${noEncontrados.join(", ")}.`;
+  if(conError.length) msg += ` ⚠ ${conError.length} no se pudieron actualizar (revisa conexión e intenta de nuevo).`;
+  resultadoEl.textContent = msg;
+  if(!conError.length) setTimeout(sdCerrarModalQuitar, 2500);
 });
 
 function sdUpdateImportState(){
@@ -7244,7 +7483,7 @@ const BIT_COLUMNAS_RECUPERACION = [
 ];
 const BIT_COLUMNAS_SD = [
   { header: "Fecha resuelto", get: r => sdFechaResuelto(r) ? new Date(sdFechaResuelto(r)).toLocaleString("es-PE") : "" },
-  { header: "Cómo se resolvió", get: r => r.estado === "regularizado_auto" ? "Regularizado automático" : "Finalizado manual" },
+  { header: "Cómo se resolvió", get: r => sdEstadoLegible(r) === "Pendiente" ? "" : sdEstadoLegible(r) },
   { header: "Proceso", get: r => r.proceso },
   { header: "Nro LPN", get: r => r.nroLpn },
   { header: "Producto", get: r => r.descripcion || r.producto },
