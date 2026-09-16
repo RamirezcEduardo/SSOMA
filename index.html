@@ -2638,9 +2638,86 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
 
       <div id="inbound-recepcion-tab-solicitudes-ot">
+        <div class="import-card">
+          <div class="import-card-head">
+            <div>
+              <div class="import-card-title">📄 Subir Orden de Trabajo (PDF)</div>
+              <div class="import-card-sub">Sube el PDF tal cual te lo mandan — se extraen los datos automáticamente y los puedes revisar antes de guardar.</div>
+            </div>
+            <div class="import-card-actions">
+              <button type="button" class="btn btn-primary" id="sot-extraer-btn" disabled>Extraer datos</button>
+            </div>
+          </div>
+          <div class="import-drop-row">
+            <label class="import-drop" for="sot-file" id="sot-drop">
+              <input type="file" id="sot-file" accept=".pdf" hidden>
+              <span class="import-drop-icon">📄</span>
+              <span class="import-drop-title">Orden de Trabajo (PDF)</span>
+              <span class="import-drop-hint" id="sot-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+            </label>
+          </div>
+          <div class="import-status" id="sot-import-status" style="display:none;"></div>
+        </div>
+
+        <div id="sot-preview-wrap" style="display:none;">
+          <div class="section-head" style="margin-top:22px;">
+            <h2 class="section-title" style="font-size:15px;">Revisa antes de guardar</h2>
+            <span class="count-pill" id="sot-preview-count">0 protocolos</span>
+          </div>
+          <p class="section-desc">Corrige cualquier dato que se haya leído mal antes de confirmar — se va a guardar una fila por cada N° Protocolo.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+            <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Fecha de emisión</label><input type="date" id="sot-prev-fecha-emision"></div>
+            <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Empresa</label><input type="text" id="sot-prev-empresa"></div>
+            <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Código de formato</label><input type="text" id="sot-prev-codigo"></div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="sot-preview-table">
+              <thead><tr>
+                <th>N° Protocolo</th><th>O/C</th><th>Proveedor</th><th>Cod</th><th>Producto</th>
+                <th>R.S./N.S.O.</th><th>C.R.S</th><th>Lote</th><th>F.V</th><th>Qty</th>
+                <th>Tipo</th><th>T°</th><th>Observación</th><th>Actividad</th><th>Validación</th><th></th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;">
+            <button type="button" class="btn btn-ghost" id="sot-preview-cancelar">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="sot-preview-guardar" style="flex:1;">Guardar en el Historial</button>
+          </div>
+        </div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2 class="section-title" style="font-size:15px;">Historial de Solicitudes</h2>
+          <span class="count-pill" id="sot-hist-count">0 solicitudes</span>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-top:10px;margin-bottom:6px;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;">
+            <div class="field" style="flex:1;min-width:200px;margin-bottom:0;"><label>Buscar</label><input type="text" id="sot-f-buscar" placeholder="N° Protocolo, O/C, Proveedor, Producto, Lote…"></div>
+            <div class="field" style="min-width:150px;margin-bottom:0;"><label>Estado</label><select id="sot-f-estado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="finalizado">Finalizado</option></select></div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="sot-export-btn">📤 Exportar</button>
+        </div>
+
+        <div class="stats-row" style="margin-top:12px;">
+          <div class="stat-card"><div class="stat-label">Solicitudes</div><div class="stat-value" id="sot-stat-total">0</div></div>
+          <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="sot-stat-pendientes" style="color:var(--red);">0</div></div>
+          <div class="stat-card"><div class="stat-label">Finalizadas</div><div class="stat-value" id="sot-stat-finalizadas" style="color:var(--green);">0</div></div>
+          <div class="stat-card"><div class="stat-label">Última carga</div><div class="stat-value" id="sot-stat-ultima-carga" style="font-size:15px;">—</div></div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:18px;">
+          <table class="data-table" id="sot-hist-table">
+            <thead><tr>
+              <th>N° Protocolo</th><th>O/C</th><th>Proveedor</th><th>Cod</th><th>Producto</th>
+              <th>Lote</th><th>F.V</th><th>Qty</th><th>Fecha emisión</th><th>Cargado por</th><th>Estado</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
         <div class="help-tip" style="margin-top:18px;max-width:680px;">
-          <span class="ic">🚧</span>
-          <div>Esta vista está en construcción. Pronto vas a poder registrar y hacer seguimiento a las Solicitudes/OT desde acá.</div>
+          <span class="ic">📌</span>
+          <div>Por ahora "Finalizado" se marca a mano. Más adelante se va a poder cruzar automáticamente contra un reporte del WMS para detectar solo las que de verdad ya se atendieron.</div>
         </div>
       </div>
       <div id="inbound-recepcion-tab-programacion-contenedores" style="display:none;">
@@ -3444,10 +3521,12 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 <script>
 const SUPABASE_URL = "https://zlukrktpjffiycarpduc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QFLNZihxZRqdvyc-GSRZPw_Q-rkA6No";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js";
 
 /* ---- Tema claro/oscuro ---- */
 const THEME_KEY = "ssoma-theme";
@@ -4034,6 +4113,8 @@ function irAVista(view){
     trLoadTareas();
   } else if(view === "inventario-suministros"){
     cargarSuministrosSSOMA();
+  } else if(view === "inbound-recepcion-importados"){
+    sotLoadRegistros();
   }
 }
 document.querySelectorAll(".navitem").forEach(btn=>{
@@ -8115,6 +8196,364 @@ document.addEventListener("change", (e)=>{
   else if(sel.dataset.view === "coordinador") trRenderCoordinador();
   else if(sel.dataset.view === "supervisor") trRenderSupervisor();
 });
+
+/* ============ Inbound · Solicitudes/OT ============
+   El operador sube el PDF de la Orden de Trabajo tal cual se lo mandan. Se
+   extrae el texto por POSICIÓN (x,y de cada fragmento de texto en el PDF),
+   no como texto plano — la tabla tiene columnas fijas pero celdas que se
+   envuelven a varias líneas (ej. el encabezado "TIPO DE PRODUCTO", o la
+   "ACTIVIDAD DE REACONDICIONADO" que es un párrafo largo), así que separar
+   por comas/saltos de línea mezclaría columnas. Cada N° Protocolo del PDF
+   se guarda como una fila/solicitud aparte (un mismo PDF puede traer varias
+   bajo la misma O/C). No se sabe si N° Protocolo se repite entre PDFs
+   distintos, así que no es llave única — solo se avisa (no se bloquea) si
+   se sube el mismo archivo dos veces, con el mismo chequeo de hash que usan
+   los demás importadores. */
+function sotLimpiar(s){ return String(s || "").replace(/\s+/g, " ").trim(); }
+const SOT_COLUMNAS_TABLA = [
+  { key: "numero_protocolo", label: /^N°\s*PROTOCOLO$/i },
+  { key: "orden_compra", label: /^O\/C$/i },
+  { key: "proveedor", label: /^PROVEEDOR$/i },
+  { key: "cod_producto", label: /^COD$/i },
+  { key: "producto", label: /^PRODUCTO$/i },
+  { key: "rs_nso", label: /^R\.S\.\s*\/\s*N\.S\.O\.$/i },
+  { key: "crs", label: /^C\.R\.S$/i },
+  { key: "lote", label: /^LOTE$/i },
+  { key: "fecha_vencimiento", label: /^F\.V$/i },
+  { key: "cantidad", label: /^Qty$/i },
+  { key: "tipo_producto", label: /^TIPO DE$/i },
+  { key: "temperatura", label: /^T°$/i },
+  { key: "observacion", label: /^OBSERVACIÓN$/i },
+  { key: "actividad_reacondicionado", label: /^ACTIVIDAD DE REACONDICIONADO/i },
+  { key: "validacion", label: /^VALIDACIÓN$/i },
+];
+function sotDetectarColumnas(items){
+  const columnas = [];
+  const itemsDeEncabezado = new Set();
+  for(const col of SOT_COLUMNAS_TABLA){
+    let candidatos = items.filter(it => col.label.test(it.str.trim()));
+    candidatos.forEach(it => itemsDeEncabezado.add(it));
+    if(col.key === "producto") candidatos = candidatos.filter(it => it.str.trim() === "PRODUCTO");
+    if(!candidatos.length) continue;
+    // "PRODUCTO" también aparece envuelto dentro de "TIPO DE PRODUCTO" — nos
+    // quedamos con el de menor X (la columna Producto está más a la izquierda).
+    candidatos.sort((a, b) => a.x - b.x);
+    columnas.push({ key: col.key, x: candidatos[0].x });
+  }
+  columnas.sort((a, b) => a.x - b.x);
+  return { columnas, itemsDeEncabezado };
+}
+function sotAsignarColumna(x, columnas){
+  for(let i = columnas.length - 1; i >= 0; i--){
+    const limite = i === 0 ? -Infinity : (columnas[i - 1].x + columnas[i].x) / 2;
+    if(x >= limite) return columnas[i].key;
+  }
+  return columnas.length ? columnas[0].key : null;
+}
+function sotParsePaginaTabla(items, columnas, itemsDeEncabezado){
+  // Filas ancladas por el N° Protocolo (patrón "150926-1105"), dentro del
+  // rango de X de la primera columna — así una fila puede ocupar varias
+  // líneas visuales (celdas largas como Actividad) sin perder su lugar.
+  const anchoPrimeraColumna = columnas.length > 1 ? (columnas[0].x + columnas[1].x) / 2 : Infinity;
+  const itemsSinEncabezado = items.filter(it => !itemsDeEncabezado.has(it));
+  const anclas = itemsSinEncabezado
+    .filter(it => /^\d{5,8}-\d{2,6}$/.test(it.str.trim()) && it.x < anchoPrimeraColumna)
+    .sort((a, b) => b.y - a.y);
+  if(!anclas.length) return [];
+  const yHeaderMin = Math.min(...items.filter(it => SOT_COLUMNAS_TABLA.some(c => c.label.test(it.str.trim()))).map(it => it.y));
+  const marcaFin = items.find(it => /DATOS ADICIONALES/i.test(it.str));
+  const yFin = marcaFin ? marcaFin.y : -Infinity;
+  const filas = [];
+  for(let i = 0; i < anclas.length; i++){
+    const yTop = i === 0 ? yHeaderMin : (anclas[i - 1].y + anclas[i].y) / 2;
+    const yBottom = i === anclas.length - 1 ? yFin : (anclas[i].y + anclas[i + 1].y) / 2;
+    const itemsFila = itemsSinEncabezado.filter(it => it.y <= yTop && it.y > yBottom);
+    const porColumna = {};
+    itemsFila.forEach(it => {
+      const col = sotAsignarColumna(it.x, columnas);
+      if(!col) return;
+      if(!porColumna[col]) porColumna[col] = [];
+      porColumna[col].push(it);
+    });
+    const fila = {};
+    Object.keys(porColumna).forEach(col => {
+      const ordenados = porColumna[col].sort((a, b) => b.y - a.y || a.x - b.x);
+      fila[col] = sotLimpiar(ordenados.map(it => it.str).join(" "));
+    });
+    filas.push(fila);
+  }
+  return filas;
+}
+function sotExtraerCabecera(items){
+  const cab = {};
+  const itFecha = items.find(i => /FECHA DE EMISIÓN/i.test(i.str));
+  if(itFecha){
+    const resto = items.filter(i => Math.abs(i.y - itFecha.y) < 1 && i.x > itFecha.x).sort((a, b) => a.x - b.x);
+    const match = sotLimpiar(resto.map(i => i.str).join(" ")).match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+    cab.fecha_emision_raw = match ? match[1] : "";
+  } else cab.fecha_emision_raw = "";
+  const itCodigo = items.find(i => /^Código:/i.test(i.str.trim()));
+  cab.codigo_formato = itCodigo ? sotLimpiar(itCodigo.str.replace(/^Código:\s*/i, "")) : "";
+  const itVersion = items.find(i => /^Versión:/i.test(i.str.trim()));
+  cab.version_formato = itVersion ? sotLimpiar(itVersion.str.replace(/^Versión:\s*/i, "")) : "";
+  const itTitulo = items.find(i => /^Orden de trabajo/i.test(i.str.trim()));
+  cab.titulo_documento = itTitulo ? sotLimpiar(itTitulo.str) : "";
+  const itEmpresa = items.find(i => /^[A-ZÁÉÍÓÚÑ0-9.,\s]+S\.A\.?$/.test(i.str.trim()) && i.str.trim().length < 40);
+  cab.empresa = itEmpresa ? sotLimpiar(itEmpresa.str) : "";
+  // Bloque de firmas: 4 columnas (Elaborado / V°B° QA / Recibido / Entregado),
+  // cada una con su etiqueta y, arriba, el nombre+cargo de quien firma (si el
+  // PDF lo trae como texto real y no como imagen de firma escaneada).
+  const etiquetas = [
+    { key: "elaborado", re: /^ELABORADO POR:$/i },
+    { key: "vb_qa", re: /^V°B° DE QA:$/i },
+    { key: "recibido", re: /^RECIBIDO POR:$/i },
+    { key: "entregado", re: /^ENTREGADO POR:$/i },
+  ];
+  const columnasFirma = etiquetas
+    .map(e => ({ key: e.key, it: items.find(i => e.re.test(i.str.trim())) }))
+    .filter(e => e.it)
+    .map(e => ({ key: e.key, x: e.it.x, y: e.it.y }))
+    .sort((a, b) => a.x - b.x);
+  columnasFirma.forEach((col, idx) => {
+    const xIzq = idx === 0 ? -Infinity : (columnasFirma[idx - 1].x + col.x) / 2;
+    const xDer = idx === columnasFirma.length - 1 ? Infinity : (columnasFirma[idx + 1].x + col.x) / 2;
+    const nombreItems = items.filter(i => i.x >= xIzq && i.x < xDer && i.y > col.y + 1 && i.y < col.y + 40);
+    nombreItems.sort((a, b) => b.y - a.y);
+    cab[col.key + "_por"] = sotLimpiar(nombreItems.map(i => i.str).join(" — "));
+    const itFechaHora = items.find(i => /FECHA Y HORA:/i.test(i.str) && i.x >= xIzq && i.x < xDer && i.y < col.y);
+    cab[col.key + "_fecha_hora"] = itFechaHora ? sotLimpiar(itFechaHora.str.replace(/^FECHA Y HORA:\s*/i, "")) : "";
+  });
+  return cab;
+}
+async function sotExtraerPdf(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  let todasFilas = [];
+  let cabecera = null;
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const items = content.items.filter(it => it.str && it.str.trim()).map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }));
+    const { columnas, itemsDeEncabezado } = sotDetectarColumnas(items);
+    if(columnas.length){
+      const filas = sotParsePaginaTabla(items, columnas, itemsDeEncabezado);
+      todasFilas = todasFilas.concat(filas);
+    }
+    if(!cabecera) cabecera = sotExtraerCabecera(items);
+  }
+  return { filas: todasFilas, cabecera: cabecera || {} };
+}
+function sotFechaDDMMYYYYaISO(s){
+  const m = String(s || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(!m) return "";
+  const [, d, mo, y] = m;
+  const yyyy = y.length === 2 ? "20" + y : y;
+  return `${yyyy}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
+document.getElementById("sot-file").addEventListener("change", () => {
+  const f = document.getElementById("sot-file").files[0];
+  document.getElementById("sot-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sot-drop").classList.toggle("filled", !!f);
+  document.getElementById("sot-extraer-btn").disabled = !f;
+});
+
+let sotExtraccionActual = null; // { archivo, hash, cabecera, filas: [{...}] }
+const SOT_CAMPOS_PREVIEW = ["numero_protocolo","orden_compra","proveedor","cod_producto","producto","rs_nso","crs","lote","fecha_vencimiento","cantidad","tipo_producto","temperatura","observacion","actividad_reacondicionado","validacion"];
+function sotRenderPreview(){
+  if(!sotExtraccionActual){ document.getElementById("sot-preview-wrap").style.display = "none"; return; }
+  document.getElementById("sot-preview-count").textContent = sotExtraccionActual.filas.length + " protocolo(s)";
+  document.getElementById("sot-prev-fecha-emision").value = sotFechaDDMMYYYYaISO(sotExtraccionActual.cabecera.fecha_emision_raw);
+  document.getElementById("sot-prev-empresa").value = sotExtraccionActual.cabecera.empresa || "";
+  document.getElementById("sot-prev-codigo").value = [sotExtraccionActual.cabecera.codigo_formato, sotExtraccionActual.cabecera.version_formato ? ("v" + sotExtraccionActual.cabecera.version_formato) : ""].filter(Boolean).join(" ");
+  const tbody = document.querySelector("#sot-preview-table tbody");
+  tbody.innerHTML = sotExtraccionActual.filas.map((fila, idx) => {
+    const celdas = SOT_CAMPOS_PREVIEW.map(campo => {
+      const ancho = campo === "actividad_reacondicionado" ? "min-width:220px;" : (campo === "producto" || campo === "observacion") ? "min-width:140px;" : "min-width:80px;";
+      const valor = String(fila[campo] || "").replace(/"/g, "&quot;");
+      return `<td><input type="text" data-campo="${campo}" data-idx="${idx}" value="${valor}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:12px;${ancho}"></td>`;
+    }).join("");
+    return `<tr>${celdas}<td><button type="button" class="btn btn-ghost sot-preview-quitar" data-idx="${idx}" style="padding:4px 8px;color:var(--red);" title="Quitar esta fila">✕</button></td></tr>`;
+  }).join("");
+  document.getElementById("sot-preview-wrap").style.display = "";
+}
+document.querySelector("#sot-preview-table tbody").addEventListener("input", (e) => {
+  const input = e.target.closest("input[data-campo]");
+  if(!input || !sotExtraccionActual) return;
+  sotExtraccionActual.filas[Number(input.dataset.idx)][input.dataset.campo] = input.value;
+});
+document.querySelector("#sot-preview-table tbody").addEventListener("click", (e) => {
+  const btn = e.target.closest(".sot-preview-quitar");
+  if(!btn || !sotExtraccionActual) return;
+  sotExtraccionActual.filas.splice(Number(btn.dataset.idx), 1);
+  sotRenderPreview();
+});
+function sotReiniciarImportCard(){
+  document.getElementById("sot-file").value = "";
+  document.getElementById("sot-file-name").textContent = "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("sot-drop").classList.remove("filled");
+  document.getElementById("sot-extraer-btn").disabled = true;
+}
+document.getElementById("sot-extraer-btn").addEventListener("click", async () => {
+  const file = document.getElementById("sot-file").files[0];
+  if(!file) return;
+  const chequeo = await importVerificarDuplicado("inbound_solicitudes_ot", file);
+  if(!chequeo.ok) return;
+
+  const btn = document.getElementById("sot-extraer-btn");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Extrayendo…";
+  const statusEl = document.getElementById("sot-import-status");
+  statusEl.style.display = "none"; statusEl.className = "import-status";
+  try{
+    const { filas, cabecera } = await sotExtraerPdf(file);
+    if(!filas.length) throw new Error(`No se encontró ninguna fila con N° Protocolo en "${file.name}". Revisa que sea una Orden de Trabajo con el mismo formato.`);
+    sotExtraccionActual = { archivo: file, hash: chequeo.hash, cabecera, filas };
+    sotRenderPreview();
+    statusEl.textContent = `✅ Se leyeron ${filas.length} protocolo(s) de "${file.name}". Revisa los datos abajo antes de guardar.`;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+  }catch(err){
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
+});
+document.getElementById("sot-preview-cancelar").addEventListener("click", () => {
+  sotExtraccionActual = null;
+  sotRenderPreview();
+  sotReiniciarImportCard();
+});
+document.getElementById("sot-preview-guardar").addEventListener("click", async () => {
+  if(!sotExtraccionActual || !sotExtraccionActual.filas.length) return;
+  const btn = document.getElementById("sot-preview-guardar");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  const cab = sotExtraccionActual.cabecera;
+  const fechaEmision = document.getElementById("sot-prev-fecha-emision").value || null;
+  const empresa = document.getElementById("sot-prev-empresa").value.trim() || null;
+  const filas = sotExtraccionActual.filas.map(f => {
+    const cantidadNum = parseFloat(String(f.cantidad || "").replace(/[^\d.-]/g, ""));
+    return {
+      numero_protocolo: f.numero_protocolo || "", orden_compra: f.orden_compra || null,
+      proveedor: f.proveedor || null, cod_producto: f.cod_producto || null, producto: f.producto || null,
+      rs_nso: f.rs_nso || null, crs: f.crs || null, lote: f.lote || null,
+      fecha_vencimiento: f.fecha_vencimiento || null, cantidad: isNaN(cantidadNum) ? null : cantidadNum,
+      tipo_producto: f.tipo_producto || null, temperatura: f.temperatura || null,
+      observacion: f.observacion || null, actividad_reacondicionado: f.actividad_reacondicionado || null,
+      validacion: f.validacion || null,
+      fecha_emision: fechaEmision, codigo_formato: cab.codigo_formato || null, version_formato: cab.version_formato || null,
+      empresa, titulo_documento: cab.titulo_documento || null,
+      elaborado_por: cab.elaborado_por || null, elaborado_fecha_hora: cab.elaborado_fecha_hora || null,
+      vb_qa_por: cab.vb_qa_por || null, vb_qa_fecha_hora: cab.vb_qa_fecha_hora || null,
+      recibido_por: cab.recibido_por || null, recibido_fecha_hora: cab.recibido_fecha_hora || null,
+      entregado_por: cab.entregado_por || null, entregado_fecha_hora: cab.entregado_fecha_hora || null,
+      estado: "pendiente", archivo_origen: sotExtraccionActual.archivo.name,
+      creado_por_id: miUsuario ? miUsuario.id : null,
+    };
+  });
+  const { error } = await sb.from("ssoma_inbound_solicitudes_ot").insert(filas);
+  btn.disabled = false; btn.textContent = originalLabel;
+  if(error){ alert("No se pudo guardar: " + error.message); return; }
+  if(sotExtraccionActual.hash) await importRegistrarLog("inbound_solicitudes_ot", sotExtraccionActual.archivo, sotExtraccionActual.hash, filas.length);
+  sotExtraccionActual = null;
+  sotRenderPreview();
+  sotReiniciarImportCard();
+  await sotLoadRegistros();
+});
+
+let sotRegistros = [];
+function sotEsc(s){ return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+async function sotLoadRegistros(){
+  const { data, error } = await sbSelectAll("ssoma_inbound_solicitudes_ot", "*", q => q.order("created_at", { ascending: false }));
+  if(error){ console.error(error); return; }
+  sotRegistros = (data || []).map(r => ({
+    id: r.id, numeroProtocolo: r.numero_protocolo || "", ordenCompra: r.orden_compra || "",
+    proveedor: r.proveedor || "", codProducto: r.cod_producto || "", producto: r.producto || "",
+    lote: r.lote || "", fechaVencimiento: r.fecha_vencimiento || "",
+    cantidad: r.cantidad === null ? null : Number(r.cantidad),
+    tipoProducto: r.tipo_producto || "", temperatura: r.temperatura || "",
+    observacion: r.observacion || "", actividadReacondicionado: r.actividad_reacondicionado || "",
+    validacion: r.validacion || "", fechaEmision: r.fecha_emision, empresa: r.empresa || "",
+    estado: r.estado, finalizadoEn: r.finalizado_en, finalizadoPorId: r.finalizado_por_id,
+    archivoOrigen: r.archivo_origen || "", creadoPorId: r.creado_por_id, createdAt: r.created_at,
+  }));
+  sotRenderHistorial();
+}
+function sotFiltered(){
+  const q = document.getElementById("sot-f-buscar").value.trim().toLowerCase();
+  const estado = document.getElementById("sot-f-estado").value;
+  return sotRegistros.filter(r => {
+    if(estado && r.estado !== estado) return false;
+    if(q && ![r.numeroProtocolo, r.ordenCompra, r.proveedor, r.producto, r.lote, r.codProducto].some(c => String(c || "").toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+function sotRenderHistorial(){
+  const filtradas = sotFiltered();
+  document.getElementById("sot-hist-count").textContent = filtradas.length + " solicitud(es)";
+  document.getElementById("sot-stat-total").textContent = sotRegistros.length;
+  document.getElementById("sot-stat-pendientes").textContent = sotRegistros.filter(r => r.estado === "pendiente").length;
+  document.getElementById("sot-stat-finalizadas").textContent = sotRegistros.filter(r => r.estado === "finalizado").length;
+  const ultima = sotRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
+  document.getElementById("sot-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleString("es-PE") : "—";
+  document.querySelector("#sot-hist-table tbody").innerHTML = filtradas.map(r => `
+    <tr>
+      <td>${sotEsc(r.numeroProtocolo)}</td><td>${sotEsc(r.ordenCompra)}</td><td>${sotEsc(r.proveedor)}</td>
+      <td>${sotEsc(r.codProducto)}</td><td>${sotEsc(r.producto)}</td><td>${sotEsc(r.lote)}</td>
+      <td>${sotEsc(r.fechaVencimiento)}</td><td>${r.cantidad ?? ""}</td>
+      <td>${r.fechaEmision ? new Date(r.fechaEmision + "T00:00:00").toLocaleDateString("es-PE") : ""}</td>
+      <td>${sotEsc((usuariosPorId[r.creadoPorId] || {}).nombre_completo || "")}</td>
+      <td>${r.estado === "finalizado" ? '<span class="opk-proceso-badge" style="background:#E7F6EC;color:var(--green);">✅ Finalizado</span>' : '<span class="opk-proceso-badge" style="background:#FDECEC;color:var(--red);">Pendiente</span>'}</td>
+      <td><button type="button" class="btn btn-ghost sot-toggle-estado" data-id="${r.id}" style="padding:4px 10px;font-size:12px;white-space:nowrap;">${r.estado === "finalizado" ? "Reabrir" : "Marcar finalizado"}</button></td>
+    </tr>
+  `).join("");
+}
+document.getElementById("sot-f-buscar").addEventListener("input", sotRenderHistorial);
+document.getElementById("sot-f-estado").addEventListener("change", sotRenderHistorial);
+document.querySelector("#sot-hist-table tbody").addEventListener("click", async (e) => {
+  const btn = e.target.closest(".sot-toggle-estado");
+  if(!btn) return;
+  const id = Number(btn.dataset.id);
+  const row = sotRegistros.find(r => r.id === id);
+  if(!row) return;
+  const nuevoEstado = row.estado === "finalizado" ? "pendiente" : "finalizado";
+  const payload = nuevoEstado === "finalizado"
+    ? { estado: "finalizado", finalizado_en: new Date().toISOString(), finalizado_por_id: miUsuario ? miUsuario.id : null }
+    : { estado: "pendiente", finalizado_en: null, finalizado_por_id: null };
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_inbound_solicitudes_ot").update(payload).eq("id", id);
+  btn.disabled = false;
+  if(error){ alert("No se pudo actualizar: " + error.message); return; }
+  Object.assign(row, { estado: nuevoEstado, finalizadoEn: payload.finalizado_en, finalizadoPorId: payload.finalizado_por_id });
+  sotRenderHistorial();
+});
+const SOT_COLUMNAS_EXPORT = [
+  { header: "N° Protocolo", get: r => r.numeroProtocolo },
+  { header: "O/C", get: r => r.ordenCompra },
+  { header: "Proveedor", get: r => r.proveedor },
+  { header: "Cod", get: r => r.codProducto },
+  { header: "Producto", get: r => r.producto },
+  { header: "Lote", get: r => r.lote },
+  { header: "F.V", get: r => r.fechaVencimiento },
+  { header: "Qty", get: r => r.cantidad ?? "" },
+  { header: "Tipo de producto", get: r => r.tipoProducto },
+  { header: "T°", get: r => r.temperatura },
+  { header: "Observación", get: r => r.observacion },
+  { header: "Actividad de reacondicionado", get: r => r.actividadReacondicionado },
+  { header: "Validación", get: r => r.validacion },
+  { header: "Fecha de emisión", get: r => r.fechaEmision || "" },
+  { header: "Empresa", get: r => r.empresa },
+  { header: "Estado", get: r => r.estado === "finalizado" ? "Finalizado" : "Pendiente" },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
+];
+document.getElementById("sot-export-btn").addEventListener("click", () => {
+  descargarCsv("inbound_solicitudes_ot.csv", SOT_COLUMNAS_EXPORT, sotFiltered());
+});
+sotLoadRegistros();
 
 /* Pestañas "Pendientes / Finalizadas" de la bandeja del coordinador y de "Mis Tareas",
    para no mezclar lo activo con lo ya cerrado en una sola lista larga. */
