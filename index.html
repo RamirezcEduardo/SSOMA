@@ -334,6 +334,7 @@
   .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
   .stats-row-3{grid-template-columns:repeat(3,1fr);}
   .stats-row-4{grid-template-columns:repeat(4,1fr);}
+  .stats-row-4{grid-template-columns:repeat(4,1fr);}
   @media (max-width:980px){.stats-row{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:520px){.stats-row{grid-template-columns:1fr;}}
 
@@ -2039,7 +2040,7 @@
       <span id="conc-count" style="display:none;"></span>
       <p class="section-desc">Verifica físicamente cada faltante reportado por el WMS e indica si recuperaste la cantidad completa o solo una parte. La foto solo hace falta si lo encontraste en una ubicación distinta a la indicada. Solo lo encontrado se resta del valorizado como "conciliado" — una vez verificado, el registro pasa a <b>Historial</b>.</p>
 
-      <div class="stats-row stats-row-3" style="margin-top:18px;">
+      <div class="stats-row stats-row-4" style="margin-top:18px;">
         <div class="stat-card">
           <div class="stat-label">Pendientes de verificar</div>
           <div class="stat-value" id="conc-stat-pendientes" style="color:#B45309;">0</div>
@@ -2047,6 +2048,10 @@
         <div class="stat-card">
           <div class="stat-label">% Avance</div>
           <div class="stat-value" id="conc-stat-verificados" style="color:#16A34A;">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valor pendiente por encontrar</div>
+          <div class="stat-value" id="conc-stat-valor-pendiente" style="color:var(--red);">S/ 0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Valor conciliado</div>
@@ -4436,11 +4441,16 @@ function concFaltanteFila(r){
 }
 
 function spRenderConc(){
-  let pendientes = 0, valorConciliado = 0, unidadesTotal = 0, unidadesEncontradas = 0;
+  let pendientes = 0, valorConciliado = 0, valorPendiente = 0, unidadesTotal = 0, unidadesEncontradas = 0;
   const statsPorCodigo = {}; // cod -> {total, completos} — para avisar en la tarjeta pendiente cuántos de su mismo código ya quedaron completos
   spData.forEach(r=>{
     const completo = spEstaCompleto(r.id);
-    if(!completo) pendientes++;
+    if(!completo){
+      pendientes++;
+      // Lo que aún falta encontrar en soles: el valorizado de la fila menos lo que ya
+      // se encontró en un avance parcial (eso ya suma en "Valor conciliado").
+      valorPendiente += Math.max(0, spValorizado(r) - concValorConciliadoRow(r));
+    }
     valorConciliado += concValorConciliadoRow(r);
     unidadesTotal += Math.abs(r.unajust);
     if(verificaciones[r.id]) unidadesEncontradas += verificaciones[r.id].cantidadEncontrada; // parcial también suma su avance
@@ -4453,6 +4463,7 @@ function spRenderConc(){
   document.getElementById("sp-tab-count-conciliacion").textContent = pendientes;
   document.getElementById("conc-stat-pendientes").textContent = pendientes;
   document.getElementById("conc-stat-verificados").textContent = porcentajeAvance + "%";
+  document.getElementById("conc-stat-valor-pendiente").textContent = "S/ " + valorPendiente.toFixed(2);
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
 
   const fBuscar = document.getElementById("conc-f-buscar").value.trim().toLowerCase();
