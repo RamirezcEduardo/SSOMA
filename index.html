@@ -2222,6 +2222,7 @@
               <select id="aic-sd-semana" style="flex:1;"><option value="">Todas las semanas</option></select>
               <select id="aic-sd-supervisor" style="flex:1;"><option value="">Todos los supervisores</option></select>
             </div>
+            <button type="button" class="btn btn-ghost" id="aic-sd-export-btn" style="margin-top:8px;width:100%;">📤 Exportar detalle (LPN por LPN)</button>
           </div>
         </div>
 
@@ -6521,6 +6522,39 @@ function sdRender(){
 document.getElementById("aic-sd-buscar").addEventListener("input", sdRender);
 document.getElementById("aic-sd-semana").addEventListener("change", sdRender);
 document.getElementById("aic-sd-supervisor").addEventListener("change", sdRender);
+
+/* Exportar el detalle LPN por LPN de Seguimiento Diario (respeta los filtros de arriba:
+   búsqueda/semana/supervisor) — para poder cuadrar a mano contra el archivo de origen
+   cuando algo no cuadra, en vez de depender solo de las tarjetas compiladas. */
+const SD_COLUMNAS_DETALLE = [
+  { header: "Proceso", get: r => r.proceso },
+  { header: "Ubicación", get: r => r.ubicacion },
+  { header: "Semana", get: r => r.semana },
+  { header: "Nro LPN", get: r => r.nroLpn },
+  { header: "Cod Alternat", get: r => r.codAlternat },
+  { header: "Producto", get: r => r.descripcion || r.producto },
+  { header: "Nro de lote", get: r => r.nroLote },
+  { header: "Cantidad actual", get: r => r.cantidad === null ? "" : r.cantidad },
+  { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
+  { header: "Estado", get: r => r.estado === "regularizado_auto" ? "Regularizado automático" : (r.estado === "finalizado" ? "Finalizado" : "Pendiente") },
+  { header: "En riesgo de cobro", get: r => r.enRiesgo ? "Sí" : "No" },
+  { header: "Comentario", get: r => r.comentario || "" },
+  { header: "Responsable", get: r => r.responsable },
+  { header: "Supervisor", get: r => r.supervisor },
+  { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
+  { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
+  { header: "Fecha resuelto", get: r => sdFechaResuelto(r) ? new Date(sdFechaResuelto(r)).toLocaleString("es-PE") : "" },
+  { header: "Finalizado por", get: r => (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "" },
+];
+document.getElementById("aic-sd-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Seguimiento Diario — Detalle LPN por LPN",
+    obtenerFilas: () => sdFiltered(),
+    campoFecha: r => r.createdAt ? r.createdAt.slice(0, 10) : "",
+    columnas: SD_COLUMNAS_DETALLE,
+    nombreArchivo: "seguimiento_diario_detalle.csv",
+  });
+});
 
 /* ---- Informe Semanal (Seguimiento Diario) ----
    El informe que se revisa cada lunes/martes: árbol Responsable → Supervisor →
