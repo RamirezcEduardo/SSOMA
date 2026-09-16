@@ -2634,86 +2634,91 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 
       <div class="tab-bar" id="inbound-recepcion-tabs">
         <button type="button" class="tab-btn active" data-tab="solicitudes-ot">📋 Solicitudes/OT</button>
-        <button type="button" class="tab-btn" data-tab="checklist">✅ Checklist</button>
         <button type="button" class="tab-btn" data-tab="programacion-contenedores">📅 Programación de Contenedores</button>
       </div>
 
       <div id="inbound-recepcion-tab-solicitudes-ot">
-        <div class="import-card">
-          <div class="import-card-head">
-            <div>
-              <div class="import-card-title">📄 Subir Orden de Trabajo (PDF)</div>
-              <div class="import-card-sub">Sube el PDF tal cual te lo mandan — se extraen los datos automáticamente y los puedes revisar antes de guardar.</div>
+        <div class="tab-bar" id="sot-subtabs" style="margin-top:14px;">
+          <button type="button" class="tab-btn active" data-subtab="subir">📄 Subir PDF</button>
+          <button type="button" class="tab-btn" data-subtab="checklist">✅ Checklist</button>
+        </div>
+
+        <div id="sot-subtab-subir">
+          <div class="import-card">
+            <div class="import-card-head">
+              <div>
+                <div class="import-card-title">📄 Subir Orden de Trabajo (PDF)</div>
+                <div class="import-card-sub">Sube el PDF tal cual te lo mandan — se extraen los datos automáticamente y los puedes revisar antes de guardar.</div>
+              </div>
+              <div class="import-card-actions">
+                <button type="button" class="btn btn-primary" id="sot-extraer-btn" disabled>Extraer datos</button>
+              </div>
             </div>
-            <div class="import-card-actions">
-              <button type="button" class="btn btn-primary" id="sot-extraer-btn" disabled>Extraer datos</button>
+            <div class="import-drop-row">
+              <label class="import-drop" for="sot-file" id="sot-drop">
+                <input type="file" id="sot-file" accept=".pdf" hidden>
+                <span class="import-drop-icon">📄</span>
+                <span class="import-drop-title">Orden de Trabajo (PDF)</span>
+                <span class="import-drop-hint" id="sot-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+              </label>
+            </div>
+            <div class="import-status" id="sot-import-status" style="display:none;"></div>
+          </div>
+
+          <div id="sot-preview-wrap" style="display:none;">
+            <div class="section-head" style="margin-top:22px;">
+              <h2 class="section-title" style="font-size:15px;">Revisa antes de guardar</h2>
+              <span class="count-pill" id="sot-preview-count">0 protocolos</span>
+            </div>
+            <p class="section-desc">Corrige cualquier dato que se haya leído mal antes de confirmar — se va a guardar una fila por cada N° Protocolo.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+              <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Fecha de emisión</label><input type="date" id="sot-prev-fecha-emision"></div>
+              <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Empresa</label><input type="text" id="sot-prev-empresa"></div>
+              <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Código de formato</label><input type="text" id="sot-prev-codigo"></div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="sot-preview-table">
+                <thead><tr>
+                  <th>N° Protocolo</th><th>O/C</th><th>Proveedor</th><th>Cod</th><th>Producto</th>
+                  <th>R.S./N.S.O.</th><th>C.R.S</th><th>Lote</th><th>F.V</th><th>Qty</th>
+                  <th>Tipo</th><th>T°</th><th>Observación</th><th>Actividad</th><th>Validación</th><th></th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button type="button" class="btn btn-ghost" id="sot-preview-cancelar">Cancelar</button>
+              <button type="button" class="btn btn-primary" id="sot-preview-guardar" style="flex:1;">Guardar en el Historial</button>
             </div>
           </div>
-          <div class="import-drop-row">
-            <label class="import-drop" for="sot-file" id="sot-drop">
-              <input type="file" id="sot-file" accept=".pdf" hidden>
-              <span class="import-drop-icon">📄</span>
-              <span class="import-drop-title">Orden de Trabajo (PDF)</span>
-              <span class="import-drop-hint" id="sot-file-name">Arrastra el archivo o haz clic para elegirlo</span>
-            </label>
-          </div>
-          <div class="import-status" id="sot-import-status" style="display:none;"></div>
         </div>
 
-        <div id="sot-preview-wrap" style="display:none;">
-          <div class="section-head" style="margin-top:22px;">
-            <h2 class="section-title" style="font-size:15px;">Revisa antes de guardar</h2>
-            <span class="count-pill" id="sot-preview-count">0 protocolos</span>
+        <div id="sot-subtab-checklist" style="display:none;">
+          <div class="section-head" style="margin-top:18px;">
+            <h2 class="section-title" style="font-size:15px;">Checklist de Solicitudes</h2>
+            <span class="count-pill" id="sot-hist-count">0 solicitudes</span>
           </div>
-          <p class="section-desc">Corrige cualquier dato que se haya leído mal antes de confirmar — se va a guardar una fila por cada N° Protocolo.</p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-            <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Fecha de emisión</label><input type="date" id="sot-prev-fecha-emision"></div>
-            <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Empresa</label><input type="text" id="sot-prev-empresa"></div>
-            <div class="field" style="flex:1;min-width:150px;margin-bottom:0;"><label>Código de formato</label><input type="text" id="sot-prev-codigo"></div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-top:10px;margin-bottom:6px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;">
+              <div class="field" style="flex:1;min-width:200px;margin-bottom:0;"><label>Buscar</label><input type="text" id="sot-f-buscar" placeholder="N° Protocolo, O/C, Proveedor, Producto, Lote…"></div>
+              <div class="field" style="min-width:150px;margin-bottom:0;"><label>Estado</label><select id="sot-f-estado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="finalizado">Finalizado</option></select></div>
+            </div>
+            <button type="button" class="btn btn-ghost" id="sot-export-btn">📤 Exportar</button>
           </div>
-          <div class="table-wrap">
-            <table class="data-table" id="sot-preview-table">
-              <thead><tr>
-                <th>N° Protocolo</th><th>O/C</th><th>Proveedor</th><th>Cod</th><th>Producto</th>
-                <th>R.S./N.S.O.</th><th>C.R.S</th><th>Lote</th><th>F.V</th><th>Qty</th>
-                <th>Tipo</th><th>T°</th><th>Observación</th><th>Actividad</th><th>Validación</th><th></th>
-              </tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:14px;">
-            <button type="button" class="btn btn-ghost" id="sot-preview-cancelar">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="sot-preview-guardar" style="flex:1;">Guardar en el Historial</button>
-          </div>
-        </div>
-      </div>
 
-      <div id="inbound-recepcion-tab-checklist" style="display:none;">
-        <div class="section-head">
-          <h2 class="section-title" style="font-size:15px;">Checklist de Solicitudes</h2>
-          <span class="count-pill" id="sot-hist-count">0 solicitudes</span>
-        </div>
-        <p class="section-desc">Sube el PDF en la pestaña 📋 Solicitudes/OT — acá le haces seguimiento a cada una hasta que finalice.</p>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-top:10px;margin-bottom:6px;">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;">
-            <div class="field" style="flex:1;min-width:200px;margin-bottom:0;"><label>Buscar</label><input type="text" id="sot-f-buscar" placeholder="N° Protocolo, O/C, Proveedor, Producto, Lote…"></div>
-            <div class="field" style="min-width:150px;margin-bottom:0;"><label>Estado</label><select id="sot-f-estado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="finalizado">Finalizado</option></select></div>
+          <div class="stats-row" style="margin-top:12px;">
+            <div class="stat-card"><div class="stat-label">Solicitudes</div><div class="stat-value" id="sot-stat-total">0</div></div>
+            <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="sot-stat-pendientes" style="color:var(--red);">0</div></div>
+            <div class="stat-card"><div class="stat-label">Finalizadas</div><div class="stat-value" id="sot-stat-finalizadas" style="color:var(--green);">0</div></div>
+            <div class="stat-card"><div class="stat-label">Última carga</div><div class="stat-value" id="sot-stat-ultima-carga" style="font-size:15px;">—</div></div>
           </div>
-          <button type="button" class="btn btn-ghost" id="sot-export-btn">📤 Exportar</button>
-        </div>
 
-        <div class="stats-row" style="margin-top:12px;">
-          <div class="stat-card"><div class="stat-label">Solicitudes</div><div class="stat-value" id="sot-stat-total">0</div></div>
-          <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="sot-stat-pendientes" style="color:var(--red);">0</div></div>
-          <div class="stat-card"><div class="stat-label">Finalizadas</div><div class="stat-value" id="sot-stat-finalizadas" style="color:var(--green);">0</div></div>
-          <div class="stat-card"><div class="stat-label">Última carga</div><div class="stat-value" id="sot-stat-ultima-carga" style="font-size:15px;">—</div></div>
-        </div>
+          <div class="opk-grid" id="sot-hist-grid" style="margin-top:18px;"></div>
 
-        <div class="opk-grid" id="sot-hist-grid" style="margin-top:18px;"></div>
-
-        <div class="help-tip" style="margin-top:18px;max-width:680px;">
-          <span class="ic">📌</span>
-          <div>Por ahora "Finalizado" se marca a mano. Más adelante se va a poder cruzar automáticamente contra un reporte del WMS para detectar solo las que de verdad ya se atendieron.</div>
+          <div class="help-tip" style="margin-top:18px;max-width:680px;">
+            <span class="ic">📌</span>
+            <div>Por ahora "Finalizado" se marca a mano. Más adelante se va a poder cruzar automáticamente contra un reporte del WMS para detectar solo las que de verdad ya se atendieron.</div>
+          </div>
         </div>
       </div>
 
@@ -8615,8 +8620,11 @@ document.addEventListener("click", (e)=>{
   }
   else if(barra.id === "inbound-recepcion-tabs"){
     document.getElementById("inbound-recepcion-tab-solicitudes-ot").style.display = btn.dataset.tab === "solicitudes-ot" ? "" : "none";
-    document.getElementById("inbound-recepcion-tab-checklist").style.display = btn.dataset.tab === "checklist" ? "" : "none";
     document.getElementById("inbound-recepcion-tab-programacion-contenedores").style.display = btn.dataset.tab === "programacion-contenedores" ? "" : "none";
+  }
+  else if(barra.id === "sot-subtabs"){
+    document.getElementById("sot-subtab-subir").style.display = btn.dataset.subtab === "subir" ? "" : "none";
+    document.getElementById("sot-subtab-checklist").style.display = btn.dataset.subtab === "checklist" ? "" : "none";
   }
   else if(barra.id === "help-tabs"){
     document.querySelectorAll(".help-tab-panel").forEach(p=> p.style.display = "none");
