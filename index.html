@@ -8492,7 +8492,7 @@ function sotFiltered(){
     return true;
   });
 }
-function sotCardHtml(r){
+function sotCardHtml(r, enGrupo){
   const done = r.estado === "finalizado";
   const cantidadTxt = r.cantidad === null ? "" : " · Qty " + r.cantidad;
   const fechaEmisionTxt = r.fechaEmision ? new Date(r.fechaEmision + "T00:00:00").toLocaleDateString("es-PE") : "";
@@ -8505,7 +8505,7 @@ function sotCardHtml(r){
         <div class="opk-card-body">
           <span class="opk-lpn-chip">${escapeHtml(r.numeroProtocolo)}</span><span class="opk-proceso-badge">${escapeHtml(r.proveedor)}</span>
           <div class="opk-prod-name">${escapeHtml(r.producto)}</div>
-          <div class="opk-sub">O/C ${escapeHtml(r.ordenCompra)} · Cod ${escapeHtml(r.codProducto)}${r.lote ? " · Lote " + escapeHtml(r.lote) : ""}${cantidadTxt}</div>
+          <div class="opk-sub">${enGrupo ? "" : "O/C " + escapeHtml(r.ordenCompra) + " · "}Cod ${escapeHtml(r.codProducto)}${r.lote ? " · Lote " + escapeHtml(r.lote) : ""}${cantidadTxt}</div>
           <div class="opk-sub">${fechaEmisionTxt ? "📅 " + fechaEmisionTxt : ""}${cargadoPor ? " · 👤 Cargado por " + escapeHtml(cargadoPor) : ""}</div>
           ${done ? `<div class="opk-done-note">✅ Finalizado${finalizadoPor ? " por " + escapeHtml(finalizadoPor) : ""}</div>` : ""}
         </div>
@@ -8518,8 +8518,34 @@ function sotCardHtml(r){
         <div style="margin-top:6px;"><b>Actividad de reacondicionado:</b> ${escapeHtml(r.actividadReacondicionado) || "—"}</div>
         <div style="margin-top:6px;"><b>Validación:</b> ${escapeHtml(r.validacion) || "—"}</div>
       </div>
-      <button type="button" class="opk-btn-mark ${done ? "parcial" : ""}" data-id="${r.id}" style="${done ? "" : ""}">${done ? "↩ Reabrir" : "✓ Marcar como finalizado"}</button>
+      <button type="button" class="opk-btn-mark ${done ? "parcial" : ""}" data-id="${r.id}">${done ? "↩ Reabrir" : "✓ Marcar como finalizado"}</button>
     </div>`;
+}
+/* Varios N° Protocolo bajo la misma O/C vienen del mismo PDF/solicitud — se agrupan
+   bajo un solo encabezado en vez de aparecer como tarjetas sueltas sin relación
+   visible entre ellas, igual que el agrupado de LPN multi-SKU en Seguimiento Diario. */
+function sotGrupoHtml(grupo){
+  const pend = grupo.filter(r => r.estado === "pendiente").length;
+  return `
+    <div class="opk-lpn-group">
+      <div class="opk-lpn-group-head">
+        <span class="opk-lpn-chip big">O/C ${escapeHtml(grupo[0].ordenCompra)}</span>
+        <span class="opk-multi-badge">📋 ${grupo.length} protocolos${pend ? " · " + pend + " pendiente(s)" : " · todos finalizados"}</span>
+      </div>
+      <div class="opk-lpn-group-items">
+        ${grupo.map(r => sotCardHtml(r, true)).join("")}
+      </div>
+    </div>`;
+}
+function sotAgruparPorOC(rows){
+  const grupos = [];
+  const indice = {};
+  rows.forEach(r => {
+    const clave = r.ordenCompra || ("__sin_oc_" + r.id);
+    if(!(clave in indice)){ indice[clave] = grupos.length; grupos.push([]); }
+    grupos[indice[clave]].push(r);
+  });
+  return grupos;
 }
 function sotRenderHistorial(){
   const filtradas = sotFiltered();
@@ -8530,7 +8556,12 @@ function sotRenderHistorial(){
   const ultima = sotRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
   document.getElementById("sot-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleString("es-PE") : "—";
   const grid = document.getElementById("sot-hist-grid");
-  grid.innerHTML = filtradas.length ? filtradas.map(sotCardHtml).join("") : `<div class="opk-empty">Sin solicitudes${sotRegistros.length ? " con ese filtro" : " todavía — súbelas desde 📋 Solicitudes/OT"}.</div>`;
+  if(!filtradas.length){
+    grid.innerHTML = `<div class="opk-empty">Sin solicitudes${sotRegistros.length ? " con ese filtro" : " todavía — súbelas desde 📄 Subir PDF"}.</div>`;
+    return;
+  }
+  const grupos = sotAgruparPorOC(filtradas);
+  grid.innerHTML = grupos.map(g => g.length > 1 ? sotGrupoHtml(g) : sotCardHtml(g[0])).join("");
 }
 document.getElementById("sot-f-buscar").addEventListener("input", sotRenderHistorial);
 document.getElementById("sot-f-estado").addEventListener("change", sotRenderHistorial);
