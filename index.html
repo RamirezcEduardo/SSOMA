@@ -7010,10 +7010,14 @@ document.getElementById("sd-agregar-guardar").addEventListener("click", async ()
         erroresFormato.push("fila " + (idx + 2));
         return;
       }
-      const clave = nroLpn + "|||" + codAlternat;
+      // La clave incluye Semana: el mismo LPN+Cod Alternat puede reaparecer en una
+      // semana distinta (a veces cambia de Proceso/Ubicación, a veces simplemente
+      // sigue sin finalizar) — no es un duplicado real, es un pendiente nuevo de esa
+      // semana. Reagregar el mismo LPN+Cod Alternat+Semana sí sigue bloqueado.
+      const clave = nroLpn + "|||" + codAlternat + "|||" + semana;
       if(clavesVistas.has(clave)){ duplicadosEnLista.push(nroLpn); return; }
       clavesVistas.add(clave);
-      if(sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat)){ yaExistentes.push(nroLpn); return; }
+      if(sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat && r.semana === semana)){ yaExistentes.push(nroLpn); return; }
       const cantidad = colCantidad === -1 ? NaN : parseFloat(row[colCantidad]);
       filas.push({
         proceso, responsable: responsable || null, supervisor: supervisor || null, semana,
@@ -7039,12 +7043,12 @@ document.getElementById("sd-agregar-guardar").addEventListener("click", async ()
   }
 
   btn.textContent = "Guardando…";
-  // Upsert con ignoreDuplicates en vez de insert: si algún LPN+Cod Alternat ya existe en el
-  // servidor (por ejemplo porque tu sesión llevaba rato abierta y alguien más lo agregó o
-  // importó mientras tanto), esa fila se descarta en silencio en vez de tumbar con un error
+  // Upsert con ignoreDuplicates en vez de insert: si algún LPN+Cod Alternat+Semana ya existe
+  // en el servidor (por ejemplo porque tu sesión llevaba rato abierta y alguien más lo agregó
+  // o importó mientras tanto), esa fila se descarta en silencio en vez de tumbar con un error
   // de llave duplicada TODO el resto del archivo, que sí eran válidos.
   const { data, error } = await sb.from("ssoma_seguimiento_diario_registros")
-    .upsert(filas, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
+    .upsert(filas, { onConflict: "nro_lpn,cod_alternat,semana", ignoreDuplicates: true }).select("id");
   btn.disabled = false; btn.textContent = originalLabel;
   if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
 
@@ -7163,7 +7167,10 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
 
     // Clave Nro LPN + Cod Alternat (no solo el LPN): un bulto multi-SKU trae varias
     // filas con el mismo LPN y distinto producto — todas se guardan, no solo la primera.
-    const clavesSd = new Set(sdRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
+    // Para Seguimiento Diario la clave lleva además la Semana: un mismo LPN+Cod Alternat
+    // puede reaparecer en una semana distinta (a veces cambia de Proceso/Ubicación, a
+    // veces simplemente sigue sin finalizar) — no es un duplicado real de esa semana nueva.
+    const clavesSd = new Set(sdRegistros.map(r => r.nroLpn + "|||" + r.codAlternat + "|||" + r.semana));
     const clavesBpo = new Set(bpoRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
     let ignoradasSinLpn = 0, duplicadas = 0, yaEnOtroModulo = 0;
     const filas = [];
@@ -7185,7 +7192,9 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       const nroLpn = String(row[hoja.cols.nroLpn] || "").trim();
       if(!nroLpn){ ignoradasSinLpn++; return; }
       const codAlternat = String(row[hoja.cols.codAlternat] || "").trim();
-      const clave = nroLpn + "|||" + codAlternat;
+      const semanaFila = String(row[hoja.cols.sem] || "").trim();
+      const clave = nroLpn + "|||" + codAlternat; // sin semana: para cruzar con Bultos Perdidos/Sin Ubicación y con la zona de hoy
+      const claveSd = clave + "|||" + semanaFila; // con semana: para la unicidad real de Seguimiento Diario
       const ubicacionFila = idxUbicacion !== -1 ? String(row[idxUbicacion] || "").trim() : "";
       if(ubicacionFila){
         const claveZona = procesoRaw + "|||" + ubicacionFila;
@@ -7193,22 +7202,22 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         clavesPorProcesoUbicacionHoy.get(claveZona).add(clave);
       }
       if(clavesBpo.has(clave)){ yaEnOtroModulo++; return; }
-      if(clavesSd.has(clave)){
+      if(clavesSd.has(claveSd)){
         duplicadas++;
         if(ubicacionFila){
-          const existente = sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat);
-          if(existente && !existente.ubicacion) porBackfillear.set(clave, { nroLpn, codAlternat, ubicacion: ubicacionFila });
+          const existente = sdRegistros.find(r => r.nroLpn === nroLpn && r.codAlternat === codAlternat && r.semana === semanaFila);
+          if(existente && !existente.ubicacion) porBackfillear.set(claveSd, { nroLpn, codAlternat, semana: semanaFila, ubicacion: ubicacionFila });
         }
         return;
       }
-      clavesSd.add(clave);
+      clavesSd.add(claveSd);
       const cantidad = parseFloat(row[hoja.cols.cantidad]);
       const valTot = parseFloat(row[hoja.cols.valTot]);
       filas.push({
         proceso: procesoRaw,
         responsable: String(row[hoja.cols.responsable] || "").trim(),
         supervisor: String(row[hoja.cols.supervisor] || "").trim(),
-        semana: String(row[hoja.cols.sem] || "").trim(),
+        semana: semanaFila,
         familia: String(row[hoja.cols.familia] || "").trim(),
         nro_lpn: nroLpn,
         producto: String(row[hoja.cols.producto] || "").trim(),
@@ -7234,7 +7243,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
       // guardado era nuevo), "guardadas" contaba lote.length igual, mintiendo en el
       // mensaje de éxito ("Importado: N líneas nuevas" aunque N-por-descartar hayan sido 0).
       const { data, error } = await sb.from("ssoma_seguimiento_diario_registros")
-        .upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
+        .upsert(lote, { onConflict: "nro_lpn,cod_alternat,semana", ignoreDuplicates: true }).select("id");
       if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
       guardadas += (data || []).length;
       statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
@@ -7243,7 +7252,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
     const yaExistianEnServidor = filas.length - guardadas;
     if(guardadas) await importRegistrarLog("seguimiento_diario", file, chequeo.hash, guardadas);
 
-    // Backfill de Ubicación en filas ya cargadas — un update real por LPN+Cod Alternat
+    // Backfill de Ubicación en filas ya cargadas — un update real por LPN+Cod Alternat+Semana
     // (no un upsert, para no arriesgar pisar estado/otros campos de filas ya finalizadas).
     let backfillHechos = 0;
     const pendientesBackfill = [...porBackfillear.values()];
@@ -7258,7 +7267,7 @@ document.getElementById("aic-sd-import-btn").addEventListener("click", async (e)
         await Promise.all(bloque.map(item =>
           sb.from("ssoma_seguimiento_diario_registros")
             .update({ ubicacion: item.ubicacion })
-            .eq("nro_lpn", item.nroLpn).eq("cod_alternat", item.codAlternat)
+            .eq("nro_lpn", item.nroLpn).eq("cod_alternat", item.codAlternat).eq("semana", item.semana)
             .then(({ error }) => { if(error) console.error("No se pudo completar la ubicación de " + item.nroLpn + ":", error.message); })
             .catch(err => console.error("No se pudo completar la ubicación de " + item.nroLpn + " (red):", err.message))
         ));
