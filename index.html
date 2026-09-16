@@ -2060,9 +2060,13 @@
       </div>
 
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:14px;">
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="conc-f-semana"><option value="">Todas</option></select>
+        </div>
         <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
-          <label>Buscar por Cod Alternat</label>
-          <input type="text" id="conc-f-buscar" placeholder="Ej. 142346">
+          <label>Buscar por Cod Alternat o producto</label>
+          <input type="text" id="conc-f-buscar" placeholder="Ej. 142346 o Cefadroxilo">
         </div>
         <button type="button" class="btn btn-ghost" id="conc-export-btn" style="margin-left:auto;">📤 Exportar pendientes</button>
       </div>
@@ -4181,7 +4185,7 @@ function spSemanaDeFecha(d){
 function spPopulateFiltros(){
   const semanas = [...new Set(spData.map(r=>r.semana).filter(Boolean))].sort();
   const subareas = [...new Set(spData.map(r=>r.subarea).filter(Boolean))].sort();
-  [["sp-f-semana", semanas], ["hist-f-semana", semanas], ["sp-f-subarea", subareas], ["hist-f-subarea", subareas]].forEach(([id, vals])=>{
+  [["sp-f-semana", semanas], ["hist-f-semana", semanas], ["conc-f-semana", semanas], ["sp-f-subarea", subareas], ["hist-f-subarea", subareas]].forEach(([id, vals])=>{
     const sel = document.getElementById(id);
     if(!sel) return;
     const current = sel.value;
@@ -4375,6 +4379,7 @@ spLoadData();
 document.getElementById("sp-f-semana").addEventListener("change", spRender);
 document.getElementById("sp-f-subarea").addEventListener("change", spRender);
 document.getElementById("conc-f-buscar").addEventListener("input", spRenderConc);
+document.getElementById("conc-f-semana").addEventListener("change", spRenderConc);
 
 document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
@@ -4441,9 +4446,20 @@ function concFaltanteFila(r){
 }
 
 function spRenderConc(){
+  const fSemana = document.getElementById("conc-f-semana").value;
+  const rows = fSemana ? spData.filter(r => r.semana === fSemana) : spData;
+
   let pendientes = 0, valorConciliado = 0, valorPendiente = 0, unidadesTotal = 0, unidadesEncontradas = 0;
+  // statsPorCodigo se calcula sobre TODO spData (sin el filtro de semana): avisa si un
+  // código ya se concilió en otra semana, más allá de lo que se esté viendo ahora.
   const statsPorCodigo = {}; // cod -> {total, completos} — para avisar en la tarjeta pendiente cuántos de su mismo código ya quedaron completos
   spData.forEach(r=>{
+    const completo = spEstaCompleto(r.id);
+    if(!statsPorCodigo[r.codAlternat]) statsPorCodigo[r.codAlternat] = { total: 0, completos: 0 };
+    statsPorCodigo[r.codAlternat].total++;
+    if(completo) statsPorCodigo[r.codAlternat].completos++;
+  });
+  rows.forEach(r=>{
     const completo = spEstaCompleto(r.id);
     if(!completo){
       pendientes++;
@@ -4454,9 +4470,6 @@ function spRenderConc(){
     valorConciliado += concValorConciliadoRow(r);
     unidadesTotal += Math.abs(r.unajust);
     if(verificaciones[r.id]) unidadesEncontradas += verificaciones[r.id].cantidadEncontrada; // parcial también suma su avance
-    if(!statsPorCodigo[r.codAlternat]) statsPorCodigo[r.codAlternat] = { total: 0, completos: 0 };
-    statsPorCodigo[r.codAlternat].total++;
-    if(completo) statsPorCodigo[r.codAlternat].completos++;
   });
   const porcentajeAvance = unidadesTotal > 0 ? Math.round((unidadesEncontradas / unidadesTotal) * 100) : 0;
   document.getElementById("conc-count").textContent = pendientes + (pendientes===1 ? " pendiente" : " pendientes");
@@ -4467,8 +4480,11 @@ function spRenderConc(){
   document.getElementById("conc-stat-valor").textContent = "S/ " + valorConciliado.toFixed(2);
 
   const fBuscar = document.getElementById("conc-f-buscar").value.trim().toLowerCase();
-  let rowsPendientes = spData.filter(r=> !spEstaCompleto(r.id));
-  if(fBuscar) rowsPendientes = rowsPendientes.filter(r=> (r.codAlternat || "").toLowerCase().includes(fBuscar));
+  let rowsPendientes = rows.filter(r=> !spEstaCompleto(r.id));
+  if(fBuscar){
+    rowsPendientes = rowsPendientes.filter(r=> [r.codAlternat, r.producto, r.desc]
+      .some(campo => (campo || "").toLowerCase().includes(fBuscar)));
+  }
 
   // Se compila por Código alternativo + Semana: varios reportes del mismo código en la
   // misma semana (ej. lunes 20 + martes 30) se ven en una sola tarjeta con el total
