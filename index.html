@@ -5879,6 +5879,9 @@ async function opkEliminarRegistro(tabla, id, btn){
     bpoChkRender("perdidos");
     bpoChkRender("sin_ubicacion");
     bpoRender();
+  }else if(tabla === "ssoma_inbound_solicitudes_ot"){
+    sotRegistros = sotRegistros.filter(r => r.id !== id);
+    sotRenderHistorial();
   }else{
     sdRegistros = sdRegistros.filter(r => r.id !== id);
     sdRender();
@@ -8683,6 +8686,7 @@ function sotCardHtml(r, enGrupo){
   const fechaEmisionTxt = r.fechaEmision ? new Date(r.fechaEmision + "T00:00:00").toLocaleDateString("es-PE") : "";
   const cargadoPor = (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "";
   const finalizadoPor = (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "";
+  const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sot" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""}">
       <div class="opk-card-top">
@@ -8715,6 +8719,7 @@ function sotCardHtml(r, enGrupo){
         <div style="margin-top:6px;"><b>Subtotal:</b> ${escapeHtml(r.otSubtotal) || "—"} &nbsp; <b>IGV:</b> ${escapeHtml(r.otIgv) || "—"} &nbsp; <b>Total:</b> ${escapeHtml(r.otTotal) || "—"}</div>
         <div style="margin-top:6px;font-style:italic;">Leído por OCR — el PDF de la OT no trae texto real, revisa contra el documento original si algo no cuadra.</div>
       </div>
+      ${delBtn}
     </div>`;
 }
 /* Varios N° Protocolo bajo la misma O/C vienen del mismo PDF/solicitud — se agrupan
@@ -8764,6 +8769,11 @@ document.getElementById("sot-f-estado").addEventListener("change", sotRenderHist
 document.getElementById("sot-hist-grid").addEventListener("click", (e) => {
   const toggleBtn = e.target.closest(".sot-toggle-detalle");
   const toggleBtnOt = e.target.closest(".sot-toggle-detalle-ot");
+  const delBtn = e.target.closest(".opk-btn-del");
+  if(delBtn){
+    opkEliminarRegistro("ssoma_inbound_solicitudes_ot", Number(delBtn.dataset.id), delBtn);
+    return;
+  }
   if(toggleBtn){
     const detalle = document.getElementById("sot-detalle-" + toggleBtn.dataset.id);
     const abierto = detalle.style.display !== "none";
