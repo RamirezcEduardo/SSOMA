@@ -2746,10 +2746,10 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
 
           <div class="opk-lpn-copy-box" style="margin-top:14px;">
             <div class="opk-lpn-copy-head">
-              <span>📋 N° de O/C pendientes — para copiar</span>
-              <button type="button" class="btn btn-ghost" id="sot-oc-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+              <span>📋 Cod Alternos pendientes — para copiar</span>
+              <button type="button" class="btn btn-ghost" id="sot-cod-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
             </div>
-            <textarea id="sot-oc-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+            <textarea id="sot-cod-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
             <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
               <label class="btn btn-ghost" for="sot-lpn-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;padding:8px 14px;cursor:pointer;">
                 🔗 Vincular LPN (subir reporte WMS)
@@ -8696,6 +8696,28 @@ function sotFiltered(){
     return true;
   });
 }
+/* Bloques de detalle compartidos entre la tarjeta suelta y el encabezado de grupo
+   (mismo O/C) — evita mostrar dos veces el "ver detalle" para lo que en la práctica
+   es un solo pedido, ya que Detalle OT es idéntico entre protocolos de una misma O/C
+   y Detalle Solicitud casi siempre también (salvo F.V, que puede variar por lote). */
+function sotDetalleSolicitudHtml(r, fvHtml){
+  return `
+    <div><b>R.S./N.S.O.:</b> ${escapeHtml(r.rsNso) || "—"} &nbsp; <b>C.R.S:</b> ${escapeHtml(r.crs) || "—"}</div>
+    <div style="margin-top:6px;"><b>F.V:</b> ${fvHtml != null ? fvHtml : (escapeHtml(r.fechaVencimiento) || "—")} &nbsp; <b>Tipo:</b> ${escapeHtml(r.tipoProducto) || "—"} &nbsp; <b>T°:</b> ${escapeHtml(r.temperatura) || "—"}</div>
+    <div style="margin-top:6px;"><b>Observación:</b> ${escapeHtml(r.observacion) || "—"}</div>
+    <div style="margin-top:6px;"><b>Actividad de reacondicionado:</b> ${escapeHtml(r.actividadReacondicionado) || "—"}</div>
+    <div style="margin-top:6px;"><b>Validación:</b> ${escapeHtml(r.validacion) || "—"}</div>`;
+}
+function sotDetalleOtHtml(r){
+  return `
+    <div><b>OT Nro.:</b> ${escapeHtml(r.otNro) || "—"} &nbsp; <b>Fecha:</b> ${escapeHtml(r.otFecha) || "—"} &nbsp; <b>Fecha entrega:</b> ${escapeHtml(r.otFechaEntrega) || "—"}</div>
+    <div style="margin-top:6px;"><b>Proveedor:</b> ${escapeHtml(r.otProveedor) || "—"}</div>
+    <div style="margin-top:6px;"><b>Dirección:</b> ${escapeHtml(r.otDireccion) || "—"}</div>
+    <div style="margin-top:6px;"><b>Lugar de entrega:</b> ${escapeHtml(r.otLugarEntrega) || "—"} &nbsp; <b>Vendedor:</b> ${escapeHtml(r.otVendedor) || "—"}</div>
+    <div style="margin-top:6px;"><b>Moneda:</b> ${escapeHtml(r.otMoneda) || "—"} &nbsp; <b>Cond. pago:</b> ${escapeHtml(r.otCondPago) || "—"}</div>
+    <div style="margin-top:6px;"><b>Subtotal:</b> ${escapeHtml(r.otSubtotal) || "—"} &nbsp; <b>IGV:</b> ${escapeHtml(r.otIgv) || "—"} &nbsp; <b>Total:</b> ${escapeHtml(r.otTotal) || "—"}</div>
+    <div style="margin-top:6px;font-style:italic;">Leído por OCR — el PDF de la OT no trae texto real, revisa contra el documento original si algo no cuadra.</div>`;
+}
 function sotCardHtml(r, enGrupo){
   const done = r.estado === "finalizado";
   const cantidadTxt = r.cantidad === null ? "" : " · Qty " + r.cantidad;
@@ -8703,6 +8725,20 @@ function sotCardHtml(r, enGrupo){
   const cargadoPor = (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "";
   const finalizadoPor = (usuariosPorId[r.finalizadoPorId] || {}).nombre_completo || "";
   const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="sot" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
+  // Dentro de un grupo (misma O/C), el "ver detalle" queda una sola vez arriba, a nivel
+  // de grupo — mostrarlo repetido en cada protocolo es confuso para lo que en la
+  // práctica es un solo pedido con distinta cantidad/lote entre protocolos.
+  const detalleHtml = enGrupo ? "" : `
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-ghost sot-toggle-detalle" data-id="${r.id}" style="flex:1;">📋 Detalle Solicitud ▾</button>
+        <button type="button" class="btn btn-ghost sot-toggle-detalle-ot" data-id="${r.id}" style="flex:1;">📑 Detalle OT ▾</button>
+      </div>
+      <div class="sot-detalle" id="sot-detalle-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
+        ${sotDetalleSolicitudHtml(r)}
+      </div>
+      <div class="sot-detalle-ot" id="sot-detalle-ot-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
+        ${sotDetalleOtHtml(r)}
+      </div>`;
   return `
     <div class="opk-card ${done ? "done" : ""}">
       <div class="opk-card-top">
@@ -8716,26 +8752,7 @@ function sotCardHtml(r, enGrupo){
           ${done ? `<div class="opk-done-note">✅ Finalizado${finalizadoPor ? " por " + escapeHtml(finalizadoPor) : ""}</div>` : ""}
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button type="button" class="btn btn-ghost sot-toggle-detalle" data-id="${r.id}" style="flex:1;">📋 Detalle Solicitud ▾</button>
-        <button type="button" class="btn btn-ghost sot-toggle-detalle-ot" data-id="${r.id}" style="flex:1;">📑 Detalle OT ▾</button>
-      </div>
-      <div class="sot-detalle" id="sot-detalle-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
-        <div><b>R.S./N.S.O.:</b> ${escapeHtml(r.rsNso) || "—"} &nbsp; <b>C.R.S:</b> ${escapeHtml(r.crs) || "—"}</div>
-        <div style="margin-top:6px;"><b>F.V:</b> ${escapeHtml(r.fechaVencimiento) || "—"} &nbsp; <b>Tipo:</b> ${escapeHtml(r.tipoProducto) || "—"} &nbsp; <b>T°:</b> ${escapeHtml(r.temperatura) || "—"}</div>
-        <div style="margin-top:6px;"><b>Observación:</b> ${escapeHtml(r.observacion) || "—"}</div>
-        <div style="margin-top:6px;"><b>Actividad de reacondicionado:</b> ${escapeHtml(r.actividadReacondicionado) || "—"}</div>
-        <div style="margin-top:6px;"><b>Validación:</b> ${escapeHtml(r.validacion) || "—"}</div>
-      </div>
-      <div class="sot-detalle-ot" id="sot-detalle-ot-${r.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
-        <div><b>OT Nro.:</b> ${escapeHtml(r.otNro) || "—"} &nbsp; <b>Fecha:</b> ${escapeHtml(r.otFecha) || "—"} &nbsp; <b>Fecha entrega:</b> ${escapeHtml(r.otFechaEntrega) || "—"}</div>
-        <div style="margin-top:6px;"><b>Proveedor:</b> ${escapeHtml(r.otProveedor) || "—"}</div>
-        <div style="margin-top:6px;"><b>Dirección:</b> ${escapeHtml(r.otDireccion) || "—"}</div>
-        <div style="margin-top:6px;"><b>Lugar de entrega:</b> ${escapeHtml(r.otLugarEntrega) || "—"} &nbsp; <b>Vendedor:</b> ${escapeHtml(r.otVendedor) || "—"}</div>
-        <div style="margin-top:6px;"><b>Moneda:</b> ${escapeHtml(r.otMoneda) || "—"} &nbsp; <b>Cond. pago:</b> ${escapeHtml(r.otCondPago) || "—"}</div>
-        <div style="margin-top:6px;"><b>Subtotal:</b> ${escapeHtml(r.otSubtotal) || "—"} &nbsp; <b>IGV:</b> ${escapeHtml(r.otIgv) || "—"} &nbsp; <b>Total:</b> ${escapeHtml(r.otTotal) || "—"}</div>
-        <div style="margin-top:6px;font-style:italic;">Leído por OCR — el PDF de la OT no trae texto real, revisa contra el documento original si algo no cuadra.</div>
-      </div>
+      ${detalleHtml}
       ${delBtn}
     </div>`;
 }
@@ -8744,13 +8761,31 @@ function sotCardHtml(r, enGrupo){
    visible entre ellas, igual que el agrupado de LPN multi-SKU en Seguimiento Diario. */
 function sotGrupoHtml(grupo){
   const pend = grupo.filter(r => r.estado === "pendiente").length;
+  const anchorId = grupo[0].id;
+  // Detalle OT es el mismo documento para toda la O/C — se toma de cualquier
+  // protocolo del grupo. F.V sí puede variar de lote a lote, así que si difiere
+  // entre protocolos se lista por protocolo en vez de mostrar solo el primero.
+  const fvUnicos = [...new Set(grupo.map(r => r.fechaVencimiento || ""))];
+  const fvHtml = fvUnicos.length <= 1
+    ? (escapeHtml(fvUnicos[0]) || "—")
+    : grupo.map(r => escapeHtml(r.numeroProtocolo) + ": " + (escapeHtml(r.fechaVencimiento) || "—")).join(" · ");
   return `
     <div class="opk-lpn-group">
       <div class="opk-lpn-group-head">
         <span class="opk-lpn-chip big">O/C ${escapeHtml(grupo[0].ordenCompra)}</span>
         <span class="opk-multi-badge">📋 ${grupo.length} protocolos${pend ? " · " + pend + " pendiente(s)" : " · todos finalizados"}</span>
       </div>
-      <div class="opk-lpn-group-items">
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-ghost sot-grupo-toggle-detalle" data-id="${anchorId}" style="flex:1;">📋 Detalle Solicitud ▾</button>
+        <button type="button" class="btn btn-ghost sot-grupo-toggle-detalle-ot" data-id="${anchorId}" style="flex:1;">📑 Detalle OT ▾</button>
+      </div>
+      <div class="sot-detalle" id="sot-grupo-detalle-${anchorId}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
+        ${sotDetalleSolicitudHtml(grupo[0], fvHtml)}
+      </div>
+      <div class="sot-detalle-ot" id="sot-grupo-detalle-ot-${anchorId}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-soft);">
+        ${sotDetalleOtHtml(grupo[0])}
+      </div>
+      <div class="opk-lpn-group-items" style="margin-top:12px;">
         ${grupo.map(r => sotCardHtml(r, true)).join("")}
       </div>
     </div>`;
@@ -8773,11 +8808,11 @@ function sotRenderHistorial(){
   document.getElementById("sot-stat-finalizadas").textContent = sotRegistros.filter(r => r.estado === "finalizado").length;
   const ultima = sotRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
   document.getElementById("sot-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleString("es-PE") : "—";
-  const ocPendUnicas = [...new Set(sotRegistros.filter(r => r.estado === "pendiente" && r.ordenCompra).map(r => r.ordenCompra))];
-  document.getElementById("sot-oc-text").value = ocPendUnicas.join(",");
-  const btnOcCopiar = document.getElementById("sot-oc-copiar");
-  btnOcCopiar.textContent = `Copiar (${ocPendUnicas.length})`;
-  btnOcCopiar.classList.remove("copiado");
+  const codPendUnicos = [...new Set(sotRegistros.filter(r => r.estado === "pendiente" && r.codProducto).map(r => r.codProducto))];
+  document.getElementById("sot-cod-text").value = codPendUnicos.join(",");
+  const btnCodCopiar = document.getElementById("sot-cod-copiar");
+  btnCodCopiar.textContent = `Copiar (${codPendUnicos.length})`;
+  btnCodCopiar.classList.remove("copiado");
   const grid = document.getElementById("sot-hist-grid");
   if(!filtradas.length){
     grid.innerHTML = `<div class="opk-empty">Sin solicitudes${sotRegistros.length ? " con ese filtro" : " todavía — súbelas desde 📄 Subir PDF"}.</div>`;
@@ -8791,6 +8826,8 @@ document.getElementById("sot-f-estado").addEventListener("change", sotRenderHist
 document.getElementById("sot-hist-grid").addEventListener("click", (e) => {
   const toggleBtn = e.target.closest(".sot-toggle-detalle");
   const toggleBtnOt = e.target.closest(".sot-toggle-detalle-ot");
+  const grupoToggleBtn = e.target.closest(".sot-grupo-toggle-detalle");
+  const grupoToggleBtnOt = e.target.closest(".sot-grupo-toggle-detalle-ot");
   const delBtn = e.target.closest(".opk-btn-del");
   if(delBtn){
     opkEliminarRegistro("ssoma_inbound_solicitudes_ot", Number(delBtn.dataset.id), delBtn);
@@ -8808,6 +8845,20 @@ document.getElementById("sot-hist-grid").addEventListener("click", (e) => {
     const abierto = detalle.style.display !== "none";
     detalle.style.display = abierto ? "none" : "block";
     toggleBtnOt.textContent = abierto ? "📑 Detalle OT ▾" : "📑 Detalle OT ▴";
+    return;
+  }
+  if(grupoToggleBtn){
+    const detalle = document.getElementById("sot-grupo-detalle-" + grupoToggleBtn.dataset.id);
+    const abierto = detalle.style.display !== "none";
+    detalle.style.display = abierto ? "none" : "block";
+    grupoToggleBtn.textContent = abierto ? "📋 Detalle Solicitud ▾" : "📋 Detalle Solicitud ▴";
+    return;
+  }
+  if(grupoToggleBtnOt){
+    const detalle = document.getElementById("sot-grupo-detalle-ot-" + grupoToggleBtnOt.dataset.id);
+    const abierto = detalle.style.display !== "none";
+    detalle.style.display = abierto ? "none" : "block";
+    grupoToggleBtnOt.textContent = abierto ? "📑 Detalle OT ▾" : "📑 Detalle OT ▴";
   }
 });
 const SOT_COLUMNAS_EXPORT = [
@@ -8834,9 +8885,9 @@ const SOT_COLUMNAS_EXPORT = [
 document.getElementById("sot-export-btn").addEventListener("click", () => {
   descargarCsv("inbound_solicitudes_ot.csv", SOT_COLUMNAS_EXPORT, sotFiltered());
 });
-document.getElementById("sot-oc-copiar").addEventListener("click", async (e) => {
-  const btn = document.getElementById("sot-oc-copiar");
-  const textarea = document.getElementById("sot-oc-text");
+document.getElementById("sot-cod-copiar").addEventListener("click", async (e) => {
+  const btn = document.getElementById("sot-cod-copiar");
+  const textarea = document.getElementById("sot-cod-text");
   const texto = textarea.value;
   const originalLabel = btn.textContent;
   let copiado = false;
