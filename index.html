@@ -2074,6 +2074,10 @@
           <label>Semana</label>
           <select id="conc-f-semana"><option value="">Todas</option></select>
         </div>
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Sub Área</label>
+          <select id="conc-f-subarea"><option value="">Todas</option></select>
+        </div>
         <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
           <label>Buscar por Cod Alternat o producto</label>
           <input type="text" id="conc-f-buscar" placeholder="Ej. 142346 o Cefadroxilo">
@@ -4444,7 +4448,7 @@ function spSemanaDeFecha(d){
 function spPopulateFiltros(){
   const semanas = [...new Set(spData.map(r=>r.semana).filter(Boolean))].sort();
   const subareas = [...new Set(spData.map(r=>r.subarea).filter(Boolean))].sort();
-  [["sp-f-semana", semanas], ["hist-f-semana", semanas], ["conc-f-semana", semanas], ["sp-f-subarea", subareas], ["hist-f-subarea", subareas]].forEach(([id, vals])=>{
+  [["sp-f-semana", semanas], ["hist-f-semana", semanas], ["conc-f-semana", semanas], ["sp-f-subarea", subareas], ["hist-f-subarea", subareas], ["conc-f-subarea", subareas]].forEach(([id, vals])=>{
     const sel = document.getElementById(id);
     if(!sel) return;
     const current = sel.value;
@@ -4640,6 +4644,7 @@ document.getElementById("sp-f-semana").addEventListener("change", spRender);
 document.getElementById("sp-f-subarea").addEventListener("change", spRender);
 document.getElementById("conc-f-buscar").addEventListener("input", spRenderConc);
 document.getElementById("conc-f-semana").addEventListener("change", spRenderConc);
+document.getElementById("conc-f-subarea").addEventListener("change", spRenderConc);
 
 document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
@@ -4707,7 +4712,8 @@ function concFaltanteFila(r){
 
 function spRenderConc(){
   const fSemana = document.getElementById("conc-f-semana").value;
-  const rows = fSemana ? spData.filter(r => r.semana === fSemana) : spData;
+  const fSubarea = document.getElementById("conc-f-subarea").value;
+  const rows = spData.filter(r => (!fSemana || r.semana === fSemana) && (!fSubarea || r.subarea === fSubarea));
 
   let pendientes = 0, valorConciliado = 0, valorPendiente = 0, unidadesTotal = 0, unidadesEncontradas = 0;
   // statsPorCodigo se calcula sobre TODO spData (sin el filtro de semana): avisa si un
