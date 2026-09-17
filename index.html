@@ -2781,9 +2781,33 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
       </div>
 
       <div id="inbound-recepcion-tab-programacion-contenedores" style="display:none;">
+        <div class="section-head" style="margin-top:18px;">
+          <h2 class="section-title" style="font-size:15px;">Programación de Contenedores</h2>
+          <span class="count-pill" id="pc-hist-count">0 entregas</span>
+        </div>
+        <p class="section-desc">Lo que COMEX programó para la semana, agrupado por día — marca si recibiste la totalidad o fue parcial.</p>
+
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-top:10px;margin-bottom:6px;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;">
+            <div class="field" style="flex:1;min-width:200px;margin-bottom:0;"><label>Buscar</label><input type="text" id="pc-f-buscar" placeholder="Proveedor, BL, OC Hija, Agencia…"></div>
+            <div class="field" style="min-width:150px;margin-bottom:0;"><label>Estado</label><select id="pc-f-estado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="recibido">Recibido</option></select></div>
+            <div class="field" style="min-width:170px;margin-bottom:0;"><label>Vía</label><select id="pc-f-via"><option value="">Todas</option><option value="MARITIMO">🚢 Marítimo</option><option value="AEREO">✈️ Aéreo</option><option value="TRASLADO VIRTUAL">🚚 Traslado virtual</option></select></div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="pc-copiar-link-btn">🔗 Copiar link para COMEX</button>
+        </div>
+
+        <div class="stats-row" style="margin-top:12px;">
+          <div class="stat-card"><div class="stat-label">Entregas</div><div class="stat-value" id="pc-stat-total">0</div></div>
+          <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" id="pc-stat-pendientes" style="color:var(--red);">0</div></div>
+          <div class="stat-card"><div class="stat-label">Contenedores programados</div><div class="stat-value" id="pc-stat-contenedores" style="font-size:20px;">0</div></div>
+          <div class="stat-card"><div class="stat-label">Pallets programados</div><div class="stat-value" id="pc-stat-pallets" style="font-size:20px;">0</div></div>
+        </div>
+
+        <div id="pc-dias-grid" style="margin-top:18px;"></div>
+
         <div class="help-tip" style="margin-top:18px;max-width:680px;">
-          <span class="ic">🚧</span>
-          <div>Esta vista está en construcción. Pronto vas a poder programar y hacer seguimiento a la recepción de contenedores desde acá.</div>
+          <span class="ic">📌</span>
+          <div>Esta programación la carga directo el equipo de COMEX desde su propio link — no hace falta subir ningún Excel.</div>
         </div>
       </div>
     </section>
@@ -3278,6 +3302,35 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
   </div>
 </div>
 
+<div class="modal-overlay" id="pc-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-head">
+      <h3>Marcar recepción</h3>
+      <button class="modal-close" id="pc-modal-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mrow"><b>Proveedor</b><span id="pc-modal-proveedor"></span></div>
+      <div class="mrow"><b>BL / OC Hija</b><span id="pc-modal-bl"></span></div>
+      <div class="mrow"><b>Programado</b><span id="pc-modal-programado"></span></div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>¿Recibieron la totalidad programada?</label>
+        <div class="toggle-group" id="pc-cantidad-toggle">
+          <button type="button" class="toggle-btn" id="pc-btn-completo" data-val="completo">Sí, completo</button>
+          <button type="button" class="toggle-btn" id="pc-btn-parcial" data-val="parcial">No, fue parcial</button>
+        </div>
+      </div>
+      <div class="field" id="pc-cantidad-wrap" style="display:none;">
+        <label>Cantidad recibida</label>
+        <input type="number" id="pc-cantidad-recibida" min="0" step="1">
+        <div class="hint" id="pc-cantidad-hint"></div>
+      </div>
+
+      <span class="login-error" id="pc-modal-error"></span>
+      <button type="button" class="btn btn-primary" id="pc-guardar-btn" style="width:100%;margin-top:6px;">Guardar recepción</button>
+    </div>
+  </div>
+</div>
 
 <!-- Exportar a CSV: modal genérico reutilizado por Auditoría/Conciliación/Historial de
      Shortpick, Bultos Perdidos y Sin Ubicación. Exporta lo que ya está filtrado en la
@@ -4176,6 +4229,7 @@ function irAVista(view){
     cargarSuministrosSSOMA();
   } else if(view === "inbound-recepcion-importados"){
     sotLoadRegistros();
+    pcLoadRegistros();
   }
 }
 document.querySelectorAll(".navitem").forEach(btn=>{
@@ -5921,6 +5975,9 @@ async function opkEliminarRegistro(tabla, id, btn){
   }else if(tabla === "ssoma_inbound_solicitudes_ot"){
     sotRegistros = sotRegistros.filter(r => r.id !== id);
     sotRenderHistorial();
+  }else if(tabla === "ssoma_inbound_programacion_contenedores"){
+    pcRegistros = pcRegistros.filter(r => r.id !== id);
+    pcRender();
   }else{
     sdRegistros = sdRegistros.filter(r => r.id !== id);
     sdRender();
@@ -9020,6 +9077,223 @@ document.getElementById("sot-lpn-file").addEventListener("change", async (e) => 
   e.target.value = "";
 });
 sotLoadRegistros();
+
+/* ---- Inbound → Programación de Contenedores ----
+   Lo que COMEX carga desde programacion-comex.html (sin login) — acá el operador lo ve
+   agrupado por día y marca si recibió la totalidad programada o fue parcial, mismo
+   patrón que la Conciliación de Shortpick (sin tope: puede llegar más de lo programado). */
+let pcRegistros = [];
+const PC_VIA_ICONOS = { "MARITIMO": "🚢", "AEREO": "✈️", "TRASLADO VIRTUAL": "🚚" };
+function pcViaIcon(via){ return PC_VIA_ICONOS[via] || "📦"; }
+
+async function pcLoadRegistros(){
+  const { data, error } = await sbSelectAll("ssoma_inbound_programacion_contenedores", "*", q => q.order("fecha_entrega", { ascending: true }));
+  if(error){ console.error("No se pudo cargar la Programación de Contenedores:", error.message); return; }
+  pcRegistros = (data || []).map(r => ({
+    id: r.id, registradoPorDni: r.registrado_por_dni, registradoPorCorreo: r.registrado_por_correo, registradoPorArea: r.registrado_por_area,
+    via: r.via || "", bl: r.bl || "", ocHija: r.oc_hija || "", proveedor: r.proveedor || "", linea: r.linea || "",
+    eta: r.eta, sobrestadia: r.sobrestadia, agencia: r.agencia || "", lpns: r.lpns,
+    tipoCarga: r.tipo_carga, tipoContenedor: r.tipo_contenedor || "", cantidad: Number(r.cantidad),
+    fechaEntrega: r.fecha_entrega, estado: r.estado, cantidadRecibida: r.cantidad_recibida,
+    recibidoEn: r.recibido_en, recibidoPorId: r.recibido_por_id, createdAt: r.created_at,
+  }));
+  pcRender();
+}
+
+function pcFiltered(){
+  const q = document.getElementById("pc-f-buscar").value.trim().toLowerCase();
+  const estado = document.getElementById("pc-f-estado").value;
+  const via = document.getElementById("pc-f-via").value;
+  return pcRegistros.filter(r => {
+    if(estado && r.estado !== estado) return false;
+    if(via && r.via !== via) return false;
+    if(q && ![r.proveedor, r.bl, r.ocHija, r.agencia, r.linea].some(c => String(c || "").toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function pcAgruparPorFecha(rows){
+  const grupos = [];
+  const indice = {};
+  rows.forEach(r => {
+    const clave = r.fechaEntrega || "__sin_fecha";
+    if(!(clave in indice)){ indice[clave] = grupos.length; grupos.push({ fecha: r.fechaEntrega, filas: [] }); }
+    grupos[indice[clave]].filas.push(r);
+  });
+  return grupos;
+}
+
+function pcCardHtml(r){
+  const done = r.estado !== "pendiente";
+  const cargadoPor = r.registradoPorArea ? `${escapeHtml(r.registradoPorArea)} (${escapeHtml(r.registradoPorCorreo)})` : escapeHtml(r.registradoPorCorreo);
+  const recibidoPor = (usuariosPorId[r.recibidoPorId] || {}).nombre_completo || "";
+  const tipoTxt = r.tipoCarga === "contenedor" ? `📦 Contenedor${r.tipoContenedor ? " " + escapeHtml(r.tipoContenedor) : ""}` : "🧱 Carga suelta";
+  const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="pc" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
+  return `
+    <div class="opk-card ${done ? "done" : ""}">
+      <div class="opk-card-top">
+        <div class="opk-check-big">${r.estado === "recibido" ? "✓" : r.estado === "parcial" ? "½" : ""}</div>
+        <div class="opk-card-body">
+          <span class="opk-lpn-chip">${pcViaIcon(r.via)} ${escapeHtml(r.via || "—")}</span><span class="opk-proceso-badge">${tipoTxt}</span>
+          <div class="opk-prod-name">${escapeHtml(r.proveedor) || "Proveedor no indicado"}</div>
+          <div class="opk-sub">BL ${escapeHtml(r.bl) || "—"} · OC ${escapeHtml(r.ocHija) || "—"} · Cant. programada ${r.cantidad}</div>
+          <div class="opk-sub">${r.agencia ? "🏢 " + escapeHtml(r.agencia) + " · " : ""}${r.lpns ? "LPN " + r.lpns : ""}</div>
+          <div class="opk-sub">👤 Programado por ${cargadoPor}</div>
+          ${done ? `<div class="opk-done-note">${r.estado === "recibido" ? "✅ Recibido completo" : "⚠️ Recibido parcial"} (${r.cantidadRecibida} de ${r.cantidad})${recibidoPor ? " · " + escapeHtml(recibidoPor) : ""}</div>` : ""}
+        </div>
+      </div>
+      <button type="button" class="btn ${done ? "btn-ghost" : "btn-primary"} pc-marcar-btn" data-id="${r.id}" style="margin-top:10px;width:100%;">${done ? "✏️ Editar recepción" : "✓ Marcar recepción"}</button>
+      ${delBtn}
+    </div>`;
+}
+
+function pcFmtFechaGrupo(fecha){
+  if(!fecha) return "Sin fecha";
+  const d = new Date(fecha + "T00:00:00");
+  return d.toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "short" }).replace(/^\w/, c => c.toUpperCase());
+}
+
+function pcGrupoHtml(grupo){
+  const pend = grupo.filas.filter(r => r.estado === "pendiente").length;
+  const cont = grupo.filas.filter(r => r.tipoCarga === "contenedor").reduce((a,r) => a + r.cantidad, 0);
+  const pallets = grupo.filas.filter(r => r.tipoCarga === "carga_suelta").reduce((a,r) => a + r.cantidad, 0);
+  return `
+    <div class="opk-lpn-group">
+      <div class="opk-lpn-group-head">
+        <span class="opk-lpn-chip big">📅 ${escapeHtml(pcFmtFechaGrupo(grupo.fecha))}</span>
+        <span class="opk-multi-badge">${cont ? "📦 " + cont + " cont." : ""}${cont && pallets ? " · " : ""}${pallets ? "🧱 " + pallets + " pallets" : ""}${pend ? " · " + pend + " pendiente(s)" : " · todo recibido"}</span>
+      </div>
+      <div class="opk-lpn-group-items">
+        ${grupo.filas.map(r => pcCardHtml(r)).join("")}
+      </div>
+    </div>`;
+}
+
+function pcRender(){
+  const filtradas = pcFiltered();
+  document.getElementById("pc-hist-count").textContent = filtradas.length + " entrega(s)";
+  document.getElementById("pc-stat-total").textContent = pcRegistros.length;
+  document.getElementById("pc-stat-pendientes").textContent = pcRegistros.filter(r => r.estado === "pendiente").length;
+  document.getElementById("pc-stat-contenedores").textContent = pcRegistros.filter(r => r.tipoCarga === "contenedor").reduce((a,r) => a + r.cantidad, 0);
+  document.getElementById("pc-stat-pallets").textContent = pcRegistros.filter(r => r.tipoCarga === "carga_suelta").reduce((a,r) => a + r.cantidad, 0);
+  const grid = document.getElementById("pc-dias-grid");
+  if(!filtradas.length){
+    grid.innerHTML = `<div class="opk-empty">Sin entregas${pcRegistros.length ? " con ese filtro" : " todavía — comparte el link con COMEX para que empiecen a programar"}.</div>`;
+    return;
+  }
+  const grupos = pcAgruparPorFecha(filtradas);
+  grid.innerHTML = grupos.map(g => pcGrupoHtml(g)).join("");
+}
+document.getElementById("pc-f-buscar").addEventListener("input", pcRender);
+document.getElementById("pc-f-estado").addEventListener("change", pcRender);
+document.getElementById("pc-f-via").addEventListener("change", pcRender);
+
+document.getElementById("pc-copiar-link-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("pc-copiar-link-btn");
+  const originalLabel = btn.textContent;
+  const link = location.origin + location.pathname.replace(/[^/]*$/, "") + "programacion-comex.html";
+  let copiado = false;
+  try{
+    await navigator.clipboard.writeText(link);
+    copiado = true;
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = link;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try{ copiado = document.execCommand("copy"); }catch(e2){ copiado = false; }
+    document.body.removeChild(ta);
+  }
+  btn.textContent = copiado ? "✓ Link copiado" : "No se pudo copiar";
+  setTimeout(() => { btn.textContent = originalLabel; }, 2000);
+});
+
+document.getElementById("pc-dias-grid").addEventListener("click", (e) => {
+  const marcarBtn = e.target.closest(".pc-marcar-btn");
+  const delBtn = e.target.closest(".opk-btn-del");
+  if(delBtn){
+    opkEliminarRegistro("ssoma_inbound_programacion_contenedores", Number(delBtn.dataset.id), delBtn);
+    return;
+  }
+  if(marcarBtn) pcAbrirModal(Number(marcarBtn.dataset.id));
+});
+
+let pcCurrentId = null;
+function pcAbrirModal(id){
+  const r = pcRegistros.find(x => x.id === id);
+  if(!r) return;
+  pcCurrentId = id;
+  document.getElementById("pc-modal-proveedor").textContent = r.proveedor || "—";
+  document.getElementById("pc-modal-bl").textContent = (r.bl || "—") + " / " + (r.ocHija || "—");
+  const tipoTxt = r.tipoCarga === "contenedor" ? `Contenedor${r.tipoContenedor ? " " + r.tipoContenedor : ""}` : "Carga suelta";
+  document.getElementById("pc-modal-programado").textContent = `${r.cantidad} — ${tipoTxt} (${pcViaIcon(r.via)} ${r.via || "—"})`;
+  document.getElementById("pc-cantidad-hint").textContent = "Se programaron " + r.cantidad + " — si llegó más, ingresa la cantidad real";
+  document.getElementById("pc-modal-error").textContent = "";
+  document.querySelectorAll("#pc-modal .toggle-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("pc-cantidad-wrap").style.display = "none";
+  document.getElementById("pc-cantidad-recibida").value = r.cantidadRecibida != null ? r.cantidadRecibida : "";
+  if(r.estado === "recibido"){ document.getElementById("pc-btn-completo").classList.add("active"); }
+  else if(r.estado === "parcial"){ document.getElementById("pc-btn-parcial").classList.add("active"); document.getElementById("pc-cantidad-wrap").style.display = "block"; }
+  document.getElementById("pc-modal").classList.add("show");
+}
+function pcCloseModal(){
+  document.getElementById("pc-modal").classList.remove("show");
+  pcCurrentId = null;
+}
+document.getElementById("pc-modal-close").addEventListener("click", pcCloseModal);
+document.getElementById("pc-modal").addEventListener("click", (e) => { if(e.target.id === "pc-modal") pcCloseModal(); });
+document.querySelectorAll("#pc-modal .toggle-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#pc-cantidad-toggle .toggle-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("pc-cantidad-wrap").style.display = btn.dataset.val === "parcial" ? "block" : "none";
+  });
+});
+
+document.getElementById("pc-guardar-btn").addEventListener("click", async () => {
+  const errorEl = document.getElementById("pc-modal-error");
+  errorEl.textContent = "";
+  if(pcCurrentId == null) return;
+  const r = pcRegistros.find(x => x.id === pcCurrentId);
+  if(!r) return;
+
+  const activeBtn = document.querySelector("#pc-cantidad-toggle .toggle-btn.active");
+  if(!activeBtn){
+    errorEl.textContent = "Indica si recibieron la totalidad programada o fue parcial.";
+    return;
+  }
+  let cantidadRecibida = r.cantidad;
+  if(activeBtn.dataset.val === "parcial"){
+    cantidadRecibida = parseInt(document.getElementById("pc-cantidad-recibida").value, 10);
+    if(isNaN(cantidadRecibida) || cantidadRecibida < 0){
+      errorEl.textContent = "Ingresa una cantidad recibida válida.";
+      return;
+    }
+  }
+  const estado = cantidadRecibida >= r.cantidad ? "recibido" : "parcial";
+
+  const btn = document.getElementById("pc-guardar-btn");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Guardando…";
+
+  const { error } = await sb.from("ssoma_inbound_programacion_contenedores").update({
+    estado, cantidad_recibida: cantidadRecibida, recibido_en: new Date().toISOString(),
+    recibido_por_id: miUsuario ? miUsuario.id : null,
+  }).eq("id", pcCurrentId);
+
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+
+  if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+
+  r.estado = estado; r.cantidadRecibida = cantidadRecibida; r.recibidoPorId = miUsuario ? miUsuario.id : null;
+  pcCloseModal();
+  pcRender();
+});
 
 /* Pestañas "Pendientes / Finalizadas" de la bandeja del coordinador y de "Mis Tareas",
    para no mezclar lo activo con lo ya cerrado en una sola lista larga. */
