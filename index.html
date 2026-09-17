@@ -4882,17 +4882,27 @@ function concFilasGrupo(clave){
 function concCalcularReparto(filas, totalEncontrado){
   const ordenadas = [...filas].sort((a,b)=> (a.fechaModif||a.fecha).localeCompare(b.fechaModif||b.fecha));
   let leftover = Math.max(0, totalEncontrado || 0);
-  return ordenadas.map(r=>{
+  const resultado = ordenadas.map(r=>{
     const cantWms = Math.abs(r.unajust);
     const v = verificaciones[r.id];
     const existingFound = v ? v.cantidadEncontrada : 0;
-    const restante = cantWms - existingFound;
+    const restante = Math.max(0, cantWms - existingFound);
     const alloc = Math.min(restante, leftover);
     leftover -= alloc;
     const newFound = existingFound + alloc;
     const newEstado = newFound >= cantWms ? "completo" : "parcial";
     return { fila: r, cantWms, existingFound, restante, alloc, newFound, newEstado };
   });
+  // Hay casos donde encuentran más de lo que el WMS reportaba como faltante (contaron mal,
+  // o apareció más stock del que constaba) — ese excedente se suma a la última fila del
+  // grupo en vez de perderse en silencio.
+  if(leftover > 0 && resultado.length){
+    const ultima = resultado[resultado.length - 1];
+    ultima.alloc += leftover;
+    ultima.newFound += leftover;
+    ultima.newEstado = "completo";
+  }
+  return resultado;
 }
 
 /* Vista previa en vivo de cómo se repartiría lo ingresado — se actualiza al tocar el
@@ -4941,8 +4951,8 @@ function concAbrirModalGrupo(clave){
     ? [...filas].sort((a,b)=> (a.fechaModif||a.fecha).localeCompare(b.fechaModif||b.fecha))
         .map(r=> `${escapeHtml(r.fechaModif || r.fecha)}: ${concFaltanteFila(r)} pend. de ${Math.abs(r.unajust)}`).join(" · ")
     : "";
-  document.getElementById("conc-cantidad-hint").textContent = "Máximo " + totalFaltante + " unidades";
-  document.getElementById("conc-cantidad-encontrada").max = totalFaltante;
+  document.getElementById("conc-cantidad-hint").textContent = "El WMS reportó " + totalFaltante + " unidad" + (totalFaltante===1?"":"es") + " faltante" + (totalFaltante===1?"":"s") + " — si encontraste más, ingresa la cantidad real";
+  document.getElementById("conc-cantidad-encontrada").removeAttribute("max");
   document.getElementById("conc-modal-error").textContent = "";
   document.getElementById("conc-foto").value = "";
   document.getElementById("conc-ubicacion-encontrada").value = "";
@@ -5002,8 +5012,8 @@ document.getElementById("conc-guardar-btn").addEventListener("click", async ()=>
   let totalEncontrado = totalFaltante;
   if(activeCantidadBtn.dataset.val === "parcial"){
     totalEncontrado = parseInt(document.getElementById("conc-cantidad-encontrada").value, 10);
-    if(isNaN(totalEncontrado) || totalEncontrado < 0 || totalEncontrado > totalFaltante){
-      errorEl.textContent = `Ingresa una cantidad encontrada válida (entre 0 y ${totalFaltante}).`;
+    if(isNaN(totalEncontrado) || totalEncontrado < 0){
+      errorEl.textContent = "Ingresa una cantidad encontrada válida.";
       return;
     }
   }
