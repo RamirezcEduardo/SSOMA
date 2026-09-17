@@ -83,8 +83,9 @@
   .via-row select{flex:1;}
   .field input:focus, .field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint);}
 
-  .id-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  @media (max-width:560px){ .id-grid{grid-template-columns:1fr;} }
+  .id-grid{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px;}
+  @media (max-width:640px){ .id-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:400px){ .id-grid{grid-template-columns:1fr;} }
 
   .entregas-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
   .entregas-head h2{font-size:15px;font-weight:800;margin:0;}
@@ -161,6 +162,10 @@
       <div class="card-title">Quién registra</div>
       <div class="id-grid">
         <div class="field">
+          <label>Nombre <span class="req">*</span></label>
+          <input id="f-nombre" placeholder="Jenny Rojas" required>
+        </div>
+        <div class="field">
           <label>DNI <span class="req">*</span></label>
           <input class="mono" id="f-dni" inputmode="numeric" placeholder="12345678" required>
         </div>
@@ -197,6 +202,7 @@
     <div class="icon">✅</div>
     <h2>¡Programación registrada!</h2>
     <p>Se cargaron las entregas de la semana. El equipo de recepción ya las puede ver en su agenda diaria.</p>
+    <p id="thanks-nota-correo" style="font-size:12px;color:var(--muted);"></p>
     <button type="button" class="btn-ghost" id="registrar-mas-btn">+ Registrar más entregas</button>
   </div>
 </main>
@@ -228,14 +234,15 @@ function cargarIdentidad(){
   try{
     const guardada = JSON.parse(localStorage.getItem(ID_KEY) || "null");
     if(guardada){
+      document.getElementById("f-nombre").value = guardada.nombre || "";
       document.getElementById("f-dni").value = guardada.dni || "";
       document.getElementById("f-correo").value = guardada.correo || "";
       document.getElementById("f-area").value = guardada.area || "";
     }
   }catch(e){}
 }
-function guardarIdentidad(dni, correo, area){
-  try{ localStorage.setItem(ID_KEY, JSON.stringify({ dni, correo, area })); }catch(e){}
+function guardarIdentidad(nombre, dni, correo, area){
+  try{ localStorage.setItem(ID_KEY, JSON.stringify({ nombre, dni, correo, area })); }catch(e){}
 }
 cargarIdentidad();
 
@@ -346,11 +353,12 @@ document.getElementById("prog-form").addEventListener("submit", async (e) => {
   const errorEl = document.getElementById("form-error");
   errorEl.textContent = "";
 
+  const nombre = document.getElementById("f-nombre").value.trim();
   const dni = document.getElementById("f-dni").value.trim();
   const correo = document.getElementById("f-correo").value.trim();
   const area = document.getElementById("f-area").value.trim();
-  if(!dni || !correo || !area){
-    errorEl.textContent = "Completa DNI, correo y área.";
+  if(!nombre || !dni || !correo || !area){
+    errorEl.textContent = "Completa nombre, DNI, correo y área.";
     return;
   }
   if(!/^\d{8}$/.test(dni)){
@@ -378,6 +386,7 @@ document.getElementById("prog-form").addEventListener("submit", async (e) => {
   btn.textContent = "Enviando...";
 
   const filas = entregas.map(en => ({
+    registrado_por_nombre: nombre,
     registrado_por_dni: dni,
     registrado_por_correo: correo,
     registrado_por_area: area,
@@ -406,14 +415,34 @@ document.getElementById("prog-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  guardarIdentidad(dni, correo, area);
+  guardarIdentidad(nombre, dni, correo, area);
   document.getElementById("prog-form").style.display = "none";
   document.getElementById("thanks-screen").hidden = false;
+
+  // El correo de confirmación (con el Excel adjunto) es un extra, no crítico: si falla,
+  // la programación ya quedó guardada igual — solo se avisa con una nota distinta.
+  const notaEl = document.getElementById("thanks-nota-correo");
+  try{
+    const { error: fnError } = await sb.functions.invoke("enviar-programacion-comex", {
+      body: {
+        nombre, dni, correo, area,
+        entregas: entregas.map(en => ({
+          tipo: en.tipo, tipoContenedor: en.tipoContenedor, cantidad: en.cantidad, fecha: en.fecha,
+          via: en.via, bl: en.bl, ocHija: en.ocHija, proveedor: en.proveedor, linea: en.linea,
+          eta: en.eta, sobrestadia: en.sobrestadia, agencia: en.agencia, lpns: en.lpns,
+        })),
+      },
+    });
+    notaEl.textContent = fnError ? "No pudimos enviarte el correo de confirmación, pero tu programación ya quedó registrada." : `Te enviamos una copia con el Excel adjunto a ${correo}.`;
+  }catch(e){
+    notaEl.textContent = "No pudimos enviarte el correo de confirmación, pero tu programación ya quedó registrada.";
+  }
 });
 
 document.getElementById("registrar-mas-btn").addEventListener("click", () => {
   entregas = [nuevaEntregaVacia()];
   render();
+  document.getElementById("thanks-nota-correo").textContent = "";
   document.getElementById("thanks-screen").hidden = true;
   document.getElementById("prog-form").style.display = "block";
   window.scrollTo({ top: 0, behavior: "smooth" });

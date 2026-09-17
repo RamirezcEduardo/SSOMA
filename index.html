@@ -9090,7 +9090,7 @@ async function pcLoadRegistros(){
   const { data, error } = await sbSelectAll("ssoma_inbound_programacion_contenedores", "*", q => q.order("fecha_entrega", { ascending: true }));
   if(error){ console.error("No se pudo cargar la Programación de Contenedores:", error.message); return; }
   pcRegistros = (data || []).map(r => ({
-    id: r.id, registradoPorDni: r.registrado_por_dni, registradoPorCorreo: r.registrado_por_correo, registradoPorArea: r.registrado_por_area,
+    id: r.id, registradoPorNombre: r.registrado_por_nombre, registradoPorDni: r.registrado_por_dni, registradoPorCorreo: r.registrado_por_correo, registradoPorArea: r.registrado_por_area,
     via: r.via || "", bl: r.bl || "", ocHija: r.oc_hija || "", proveedor: r.proveedor || "", linea: r.linea || "",
     eta: r.eta, sobrestadia: r.sobrestadia, agencia: r.agencia || "", lpns: r.lpns,
     tipoCarga: r.tipo_carga, tipoContenedor: r.tipo_contenedor || "", cantidad: Number(r.cantidad),
@@ -9125,7 +9125,7 @@ function pcAgruparPorFecha(rows){
 
 function pcCardHtml(r){
   const done = r.estado !== "pendiente";
-  const cargadoPor = r.registradoPorArea ? `${escapeHtml(r.registradoPorArea)} (${escapeHtml(r.registradoPorCorreo)})` : escapeHtml(r.registradoPorCorreo);
+  const cargadoPor = `${escapeHtml(r.registradoPorNombre) || "COMEX"}${r.registradoPorArea ? " · " + escapeHtml(r.registradoPorArea) : ""}`;
   const recibidoPor = (usuariosPorId[r.recibidoPorId] || {}).nombre_completo || "";
   const tipoTxt = r.tipoCarga === "contenedor" ? `📦 Contenedor${r.tipoContenedor ? " " + escapeHtml(r.tipoContenedor) : ""}` : "🧱 Carga suelta";
   const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="pc" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";

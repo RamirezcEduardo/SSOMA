@@ -8,3 +8,6 @@ mobile/android/build/
 mobile/android/.gradle/
 mobile/android/local.properties
 mobile/android/*.keystore
+
+# Artefactos locales del CLI de Supabase
+supabase/.temp/
