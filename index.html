@@ -2750,6 +2750,13 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
               <button type="button" class="btn btn-ghost" id="sot-oc-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
             </div>
             <textarea id="sot-oc-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
+              <label class="btn btn-ghost" for="sot-lpn-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;padding:8px 14px;cursor:pointer;">
+                🔗 Vincular LPN (subir reporte WMS)
+                <input type="file" id="sot-lpn-file" accept=".xlsx,.xls,.csv" hidden>
+              </label>
+              <span id="sot-lpn-status" style="font-size:12.5px;display:none;"></span>
+            </div>
           </div>
 
           <div class="opk-grid" id="sot-hist-grid" style="margin-top:18px;"></div>
@@ -8676,6 +8683,7 @@ async function sotLoadRegistros(){
     otLugarEntrega: r.ot_lugar_entrega || "", otMoneda: r.ot_moneda || "", otCondPago: r.ot_cond_pago || "",
     otSubtotal: r.ot_subtotal || "", otIgv: r.ot_igv || "", otTotal: r.ot_total || "",
     otItems: r.ot_items || [], archivoOrigenOt: r.archivo_origen_ot || "",
+    lpnVinculados: r.lpn_vinculados || "", lpnVinculadoEn: r.lpn_vinculado_en,
   }));
   sotRenderHistorial();
 }
@@ -8704,6 +8712,7 @@ function sotCardHtml(r, enGrupo){
           <div class="opk-prod-name">${escapeHtml(r.producto)}</div>
           <div class="opk-sub">${enGrupo ? "" : "O/C " + escapeHtml(r.ordenCompra) + " · "}Cod ${escapeHtml(r.codProducto)}${r.lote ? " · Lote " + escapeHtml(r.lote) : ""}${cantidadTxt}</div>
           <div class="opk-sub">${fechaEmisionTxt ? "📅 " + fechaEmisionTxt : ""}${cargadoPor ? " · 👤 Cargado por " + escapeHtml(cargadoPor) : ""}</div>
+          ${r.lpnVinculados ? `<div class="opk-sub">🔗 LPN: ${escapeHtml(r.lpnVinculados)}</div>` : ""}
           ${done ? `<div class="opk-done-note">✅ Finalizado${finalizadoPor ? " por " + escapeHtml(finalizadoPor) : ""}</div>` : ""}
         </div>
       </div>
@@ -8807,6 +8816,7 @@ const SOT_COLUMNAS_EXPORT = [
   { header: "Proveedor", get: r => r.proveedor },
   { header: "Cod", get: r => r.codProducto },
   { header: "Producto", get: r => r.producto },
+  { header: "LPN vinculado", get: r => r.lpnVinculados },
   { header: "Lote", get: r => r.lote },
   { header: "F.V", get: r => r.fechaVencimiento },
   { header: "Qty", get: r => r.cantidad ?? "" },
@@ -8843,6 +8853,74 @@ document.getElementById("sot-oc-copiar").addEventListener("click", async (e) => 
   btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
   btn.classList.toggle("copiado", copiado);
   setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
+});
+/* El WMS siempre le agrega un prefijo de 3 letras al N° de O/C (ej. "IMP1000413918"
+   o "UVF1000413918" para nuestra O/C "1000413918") — se le quita antes de comparar. */
+function sotQuitarPrefijoOc(ocRaw){
+  return String(ocRaw || "").trim().replace(/^[A-Za-z]{3}/, "").trim();
+}
+document.getElementById("sot-lpn-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById("sot-lpn-status");
+  statusEl.style.display = "block";
+  statusEl.style.color = "var(--muted)";
+  statusEl.textContent = "Leyendo archivo…";
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, { nroLpn: ["Nro LPN"], nroOc: ["Nro OC"], codAlternat: ["Cod Alternat"] });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Nro LPN, Nro OC y Cod Alternat. Revisa que sea el reporte del WMS tal cual.`);
+
+    // Clave estricta O/C (sin el prefijo del WMS) + Cod Alternat — nunca solo O/C, porque
+    // una misma O/C puede traer varios Cod Alternat distintos y eso traería LPN de un
+    // producto que no es el que estamos vinculando.
+    const lpnsPorOcYCod = new Map();
+    hoja.rows.forEach(row => {
+      const lpn = String(row[hoja.cols.nroLpn] || "").trim();
+      const ocRaw = String(row[hoja.cols.nroOc] || "").trim();
+      const cod = String(row[hoja.cols.codAlternat] || "").trim();
+      if(!lpn || !ocRaw || !cod) return;
+      const clave = sotQuitarPrefijoOc(ocRaw) + "|||" + cod;
+      if(!lpnsPorOcYCod.has(clave)) lpnsPorOcYCod.set(clave, new Set());
+      lpnsPorOcYCod.get(clave).add(lpn);
+    });
+
+    // Combinaciones únicas O/C + Cod Producto que ya tenemos cargadas (de todas las
+    // solicitudes, no solo pendientes — no hay razón para no completar el dato aunque
+    // ya esté "finalizado").
+    const combosUnicos = new Map();
+    sotRegistros.forEach(r => {
+      if(!r.ordenCompra || !r.codProducto) return;
+      const clave = r.ordenCompra + "|||" + r.codProducto;
+      if(!combosUnicos.has(clave)) combosUnicos.set(clave, { ordenCompra: r.ordenCompra, codProducto: r.codProducto });
+    });
+
+    let vinculadas = 0, lpnTotal = 0, sinCoincidencia = 0;
+    statusEl.textContent = "Vinculando…";
+    for(const { ordenCompra, codProducto } of combosUnicos.values()){
+      const set = lpnsPorOcYCod.get(ordenCompra + "|||" + codProducto);
+      if(!set || !set.size){ sinCoincidencia++; continue; }
+      const lpns = [...set].sort().join(",");
+      const { error } = await sb.from("ssoma_inbound_solicitudes_ot")
+        .update({ lpn_vinculados: lpns, lpn_vinculado_en: new Date().toISOString(), lpn_vinculado_por_id: miUsuario ? miUsuario.id : null })
+        .eq("orden_compra", ordenCompra).eq("cod_producto", codProducto);
+      if(error){ console.error("No se pudo vincular O/C " + ordenCompra + " / Cod " + codProducto + ":", error.message); continue; }
+      sotRegistros.forEach(r => {
+        if(r.ordenCompra === ordenCompra && r.codProducto === codProducto){ r.lpnVinculados = lpns; }
+      });
+      vinculadas++;
+      lpnTotal += set.size;
+    }
+    statusEl.style.color = vinculadas ? "var(--green)" : "var(--red)";
+    statusEl.textContent = vinculadas
+      ? `✅ ${vinculadas} O/C+Cod vinculada(s) con ${lpnTotal} LPN en total${sinCoincidencia ? " · " + sinCoincidencia + " sin coincidencia en este archivo" : ""}.`
+      : "No encontré en este archivo ninguna O/C + Cod Alternat de las que tenemos cargadas.";
+    sotRenderHistorial();
+  }catch(err){
+    statusEl.style.color = "var(--red)";
+    statusEl.textContent = "❌ " + err.message;
+  }
+  e.target.value = "";
 });
 sotLoadRegistros();
 
