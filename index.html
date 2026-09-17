@@ -2744,6 +2744,14 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
             <div class="stat-card"><div class="stat-label">Última carga</div><div class="stat-value" id="sot-stat-ultima-carga" style="font-size:15px;">—</div></div>
           </div>
 
+          <div class="opk-lpn-copy-box" style="margin-top:14px;">
+            <div class="opk-lpn-copy-head">
+              <span>📋 N° de O/C pendientes — para copiar</span>
+              <button type="button" class="btn btn-ghost" id="sot-oc-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+            </div>
+            <textarea id="sot-oc-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+          </div>
+
           <div class="opk-grid" id="sot-hist-grid" style="margin-top:18px;"></div>
 
           <div class="help-tip" style="margin-top:18px;max-width:680px;">
@@ -8756,6 +8764,11 @@ function sotRenderHistorial(){
   document.getElementById("sot-stat-finalizadas").textContent = sotRegistros.filter(r => r.estado === "finalizado").length;
   const ultima = sotRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
   document.getElementById("sot-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleString("es-PE") : "—";
+  const ocPendUnicas = [...new Set(sotRegistros.filter(r => r.estado === "pendiente" && r.ordenCompra).map(r => r.ordenCompra))];
+  document.getElementById("sot-oc-text").value = ocPendUnicas.join(",");
+  const btnOcCopiar = document.getElementById("sot-oc-copiar");
+  btnOcCopiar.textContent = `Copiar (${ocPendUnicas.length})`;
+  btnOcCopiar.classList.remove("copiado");
   const grid = document.getElementById("sot-hist-grid");
   if(!filtradas.length){
     grid.innerHTML = `<div class="opk-empty">Sin solicitudes${sotRegistros.length ? " con ese filtro" : " todavía — súbelas desde 📄 Subir PDF"}.</div>`;
@@ -8810,6 +8823,26 @@ const SOT_COLUMNAS_EXPORT = [
 ];
 document.getElementById("sot-export-btn").addEventListener("click", () => {
   descargarCsv("inbound_solicitudes_ot.csv", SOT_COLUMNAS_EXPORT, sotFiltered());
+});
+document.getElementById("sot-oc-copiar").addEventListener("click", async (e) => {
+  const btn = document.getElementById("sot-oc-copiar");
+  const textarea = document.getElementById("sot-oc-text");
+  const texto = textarea.value;
+  const originalLabel = btn.textContent;
+  let copiado = false;
+  try{
+    await navigator.clipboard.writeText(texto);
+    copiado = true;
+  }catch(e){
+    textarea.removeAttribute("readonly");
+    textarea.focus();
+    textarea.select();
+    try{ copiado = document.execCommand("copy"); }catch(e2){ copiado = false; }
+    textarea.setAttribute("readonly", "readonly");
+  }
+  btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
+  btn.classList.toggle("copiado", copiado);
+  setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
 });
 sotLoadRegistros();
 
