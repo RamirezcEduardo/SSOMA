@@ -2759,6 +2759,14 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
             </div>
           </div>
 
+          <div class="opk-lpn-copy-box" style="margin-top:14px;">
+            <div class="opk-lpn-copy-head">
+              <span>📋 LPN vinculados pendientes — para copiar</span>
+              <button type="button" class="btn btn-ghost" id="sot-lpnvinc-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+            </div>
+            <textarea id="sot-lpnvinc-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+          </div>
+
           <div class="opk-grid" id="sot-hist-grid" style="margin-top:18px;"></div>
 
           <div class="help-tip" style="margin-top:18px;max-width:680px;">
@@ -8816,6 +8824,16 @@ function sotRenderHistorial(){
   const btnCodCopiar = document.getElementById("sot-cod-copiar");
   btnCodCopiar.textContent = `Copiar (${codPendUnicos.length})`;
   btnCodCopiar.classList.remove("copiado");
+  const lpnVincPendUnicos = [...new Set(
+    sotRegistros.filter(r => r.estado === "pendiente" && r.lpnVinculados)
+      .flatMap(r => r.lpnVinculados.split(","))
+      .map(lpn => lpn.trim())
+      .filter(Boolean)
+  )];
+  document.getElementById("sot-lpnvinc-text").value = lpnVincPendUnicos.join(",");
+  const btnLpnVincCopiar = document.getElementById("sot-lpnvinc-copiar");
+  btnLpnVincCopiar.textContent = `Copiar (${lpnVincPendUnicos.length})`;
+  btnLpnVincCopiar.classList.remove("copiado");
   const grid = document.getElementById("sot-hist-grid");
   if(!filtradas.length){
     grid.innerHTML = `<div class="opk-empty">Sin solicitudes${sotRegistros.length ? " con ese filtro" : " todavía — súbelas desde 📄 Subir PDF"}.</div>`;
@@ -8888,9 +8906,9 @@ const SOT_COLUMNAS_EXPORT = [
 document.getElementById("sot-export-btn").addEventListener("click", () => {
   descargarCsv("inbound_solicitudes_ot.csv", SOT_COLUMNAS_EXPORT, sotFiltered());
 });
-document.getElementById("sot-cod-copiar").addEventListener("click", async (e) => {
-  const btn = document.getElementById("sot-cod-copiar");
-  const textarea = document.getElementById("sot-cod-text");
+async function sotCopiarTextarea(btnId, textareaId){
+  const btn = document.getElementById(btnId);
+  const textarea = document.getElementById(textareaId);
   const texto = textarea.value;
   const originalLabel = btn.textContent;
   let copiado = false;
@@ -8907,7 +8925,9 @@ document.getElementById("sot-cod-copiar").addEventListener("click", async (e) =>
   btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
   btn.classList.toggle("copiado", copiado);
   setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
-});
+}
+document.getElementById("sot-cod-copiar").addEventListener("click", () => sotCopiarTextarea("sot-cod-copiar", "sot-cod-text"));
+document.getElementById("sot-lpnvinc-copiar").addEventListener("click", () => sotCopiarTextarea("sot-lpnvinc-copiar", "sot-lpnvinc-text"));
 /* El WMS siempre le agrega un prefijo de 3 letras al N° de O/C (ej. "IMP1000413918"
    o "UVF1000413918" para nuestra O/C "1000413918") — se le quita antes de comparar. */
 function sotQuitarPrefijoOc(ocRaw){
