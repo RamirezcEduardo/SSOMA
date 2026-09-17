@@ -8770,10 +8770,12 @@ function sotGrupoHtml(grupo){
     ? (escapeHtml(fvUnicos[0]) || "—")
     : grupo.map(r => escapeHtml(r.numeroProtocolo) + ": " + (escapeHtml(r.fechaVencimiento) || "—")).join(" · ");
   const ocHtml = grupo[0].ordenCompra ? "O/C " + escapeHtml(grupo[0].ordenCompra) : "Sin O/C";
+  const otNroHtml = grupo[0].otNro ? `<span class="opk-lpn-chip big">OT ${escapeHtml(grupo[0].otNro)}</span>` : "";
   return `
     <div class="opk-lpn-group">
       <div class="opk-lpn-group-head">
         <span class="opk-lpn-chip big">${ocHtml}</span>
+        ${otNroHtml}
         <span class="opk-multi-badge">📋 ${grupo.length} protocolo${grupo.length === 1 ? "" : "s"}${pend ? " · " + pend + " pendiente(s)" : " · todos finalizados"}</span>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;">
