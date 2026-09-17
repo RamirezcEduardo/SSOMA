@@ -122,11 +122,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (!RESEND_API_KEY) {
+      console.error("Falta el secreto RESEND_API_KEY (Edge Functions → Secrets del proyecto).");
       return new Response(JSON.stringify({ error: "Falta configurar el secreto RESEND_API_KEY en Edge Functions." }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
     }
     const bodyJson = await req.json();
     const { correo, nombre, dni, area, entregas } = bodyJson as { correo: string; nombre?: string; dni?: string; area?: string; entregas: Entrega[] };
     if (!correo || !Array.isArray(entregas) || !entregas.length) {
+      console.error("Faltan datos en el body:", JSON.stringify(bodyJson));
       return new Response(JSON.stringify({ error: "Faltan datos: correo y al menos una entrega." }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -148,11 +150,14 @@ Deno.serve(async (req: Request) => {
 
     const resendData = await resendResp.json();
     if (!resendResp.ok) {
+      console.error("Resend rechazó el envío:", resendResp.status, JSON.stringify(resendData));
       return new Response(JSON.stringify({ error: "Resend rechazó el envío", detalle: resendData }), { status: 502, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    console.log("Correo enviado:", resendData.id, "->", correo);
     return new Response(JSON.stringify({ ok: true, id: resendData.id }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (err) {
+    console.error("Excepción no controlada:", err instanceof Error ? err.stack : String(err));
     return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });
