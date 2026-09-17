@@ -4916,8 +4916,28 @@ function spRenderHistorial(){
         <span>${escapeHtml(ubicacionTexto)}</span>
         ${v.fotoNombre ? `<span class="evidencia-chip">📎 ${escapeHtml(v.fotoNombre)}</span>` : ""}
       </div>
+      ${esAdmin() ? `<div class="conc-card-actions"><button type="button" class="btn btn-ghost hist-deshacer-btn" data-id="${r.id}" style="color:var(--red);">↩️ Deshacer</button></div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">No hay verificaciones que coincidan con el filtro.</div>`;
+
+  list.querySelectorAll(".hist-deshacer-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> histDeshacerVerificacion(Number(btn.dataset.id), btn));
+  });
+}
+
+/* Deshacer una verificación (solo admin): borra el registro de ssoma_sp_verificaciones,
+   así la fila vuelve a aparecer como pendiente en Conciliación — para cuando alguien la
+   marcó completa/parcial por error. */
+async function histDeshacerVerificacion(id, btn){
+  if(!esAdmin()){ alert("Solo un administrador puede deshacer una verificación."); return; }
+  if(!confirm("¿Deshacer esta verificación? Vuelve a quedar pendiente en Conciliación.")) return;
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_sp_verificaciones").delete().eq("registro_id", id);
+  if(error){ alert("No se pudo deshacer: " + error.message); btn.disabled = false; return; }
+  delete verificaciones[id];
+  spRender();
+  spRenderConc();
+  spRenderHistorial();
 }
 
 let concCurrentClave = null;
