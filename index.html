@@ -8769,11 +8769,12 @@ function sotGrupoHtml(grupo){
   const fvHtml = fvUnicos.length <= 1
     ? (escapeHtml(fvUnicos[0]) || "—")
     : grupo.map(r => escapeHtml(r.numeroProtocolo) + ": " + (escapeHtml(r.fechaVencimiento) || "—")).join(" · ");
+  const ocHtml = grupo[0].ordenCompra ? "O/C " + escapeHtml(grupo[0].ordenCompra) : "Sin O/C";
   return `
     <div class="opk-lpn-group">
       <div class="opk-lpn-group-head">
-        <span class="opk-lpn-chip big">O/C ${escapeHtml(grupo[0].ordenCompra)}</span>
-        <span class="opk-multi-badge">📋 ${grupo.length} protocolos${pend ? " · " + pend + " pendiente(s)" : " · todos finalizados"}</span>
+        <span class="opk-lpn-chip big">${ocHtml}</span>
+        <span class="opk-multi-badge">📋 ${grupo.length} protocolo${grupo.length === 1 ? "" : "s"}${pend ? " · " + pend + " pendiente(s)" : " · todos finalizados"}</span>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button type="button" class="btn btn-ghost sot-grupo-toggle-detalle" data-id="${anchorId}" style="flex:1;">📋 Detalle Solicitud ▾</button>
@@ -8819,7 +8820,7 @@ function sotRenderHistorial(){
     return;
   }
   const grupos = sotAgruparPorOC(filtradas);
-  grid.innerHTML = grupos.map(g => g.length > 1 ? sotGrupoHtml(g) : sotCardHtml(g[0])).join("");
+  grid.innerHTML = grupos.map(g => sotGrupoHtml(g)).join("");
 }
 document.getElementById("sot-f-buscar").addEventListener("input", sotRenderHistorial);
 document.getElementById("sot-f-estado").addEventListener("change", sotRenderHistorial);
