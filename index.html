@@ -8966,9 +8966,16 @@ document.getElementById("sot-lpn-file").addEventListener("change", async (e) => 
       lpnTotal += set.size;
     }
     statusEl.style.color = vinculadas ? "var(--green)" : "var(--red)";
-    statusEl.textContent = vinculadas
-      ? `✅ ${vinculadas} O/C+Cod vinculada(s) con ${lpnTotal} LPN en total${sinCoincidencia ? " · " + sinCoincidencia + " sin coincidencia en este archivo" : ""}.`
-      : "No encontré en este archivo ninguna O/C + Cod Alternat de las que tenemos cargadas.";
+    if(vinculadas){
+      statusEl.textContent = `✅ ${vinculadas} O/C+Cod vinculada(s) con ${lpnTotal} LPN en total${sinCoincidencia ? " · " + sinCoincidencia + " sin coincidencia en este archivo" : ""}.`;
+    }else{
+      // Diagnóstico: si no calzó nada, se listan un par de combinaciones de cada lado
+      // (las que buscábamos vs. las que trajo el archivo) para poder revisar a simple
+      // vista si el problema es de formato (mayúsculas, ceros a la izquierda, etc.).
+      const buscadas = [...combosUnicos.keys()].slice(0, 3).join(" · ");
+      const enArchivo = [...lpnsPorOcYCod.keys()].slice(0, 3).join(" · ");
+      statusEl.textContent = `No encontré en este archivo ninguna O/C + Cod Alternat de las que tenemos cargadas. Buscábamos (ej.): ${buscadas || "—"}. El archivo trae (ej.): ${enArchivo || "—"}.`;
+    }
     sotRenderHistorial();
   }catch(err){
     statusEl.style.color = "var(--red)";
