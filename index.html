@@ -2073,6 +2073,10 @@
           <label>Sub Área</label>
           <select id="conc-f-subarea"><option value="">Todas</option></select>
         </div>
+        <div class="field" style="min-width:170px;margin-bottom:0;">
+          <label>Fecha de carga</label>
+          <input type="date" id="conc-f-fecha-carga">
+        </div>
         <div class="field" style="min-width:220px;flex:1;margin-bottom:0;">
           <label>Buscar por Cod Alternat o producto</label>
           <input type="text" id="conc-f-buscar" placeholder="Ej. 142346 o Cefadroxilo">
@@ -4352,6 +4356,15 @@ function spFmtFechaHora(d){
   const h=String(d.getHours()).padStart(2,"0"), mi=String(d.getMinutes()).padStart(2,"0"), se=String(d.getSeconds()).padStart(2,"0");
   return `${y}-${mo}-${da} ${h}:${mi}:${se}`;
 }
+/* "Fecha de carga" = created_at (cuándo se importó a Supabase), no confundir con "fecha"/
+   "fechaModif" que son del propio WMS. Se usa en Conciliación para filtrar/mostrar cuándo
+   y quién subió cada registro. */
+function spFmtCarga(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? "—" : d.toLocaleString("es-PE", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+function spCargadoPorNombre(id){ return (usuariosPorId[id] || {}).nombre_completo || "—"; }
 /* Semana ISO ("SEM 34") a partir de una fecha, igual que la numeración de semana estándar. */
 function spSemanaDeFecha(d){
   const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -4564,6 +4577,7 @@ document.getElementById("sp-f-subarea").addEventListener("change", spRender);
 document.getElementById("conc-f-buscar").addEventListener("input", spRenderConc);
 document.getElementById("conc-f-semana").addEventListener("change", spRenderConc);
 document.getElementById("conc-f-subarea").addEventListener("change", spRenderConc);
+document.getElementById("conc-f-fecha-carga").addEventListener("change", spRenderConc);
 
 document.getElementById("sp-summary-toggle").addEventListener("click", (e)=>{
   const btn = e.currentTarget;
@@ -4632,7 +4646,9 @@ function concFaltanteFila(r){
 function spRenderConc(){
   const fSemana = document.getElementById("conc-f-semana").value;
   const fSubarea = document.getElementById("conc-f-subarea").value;
-  const rows = spData.filter(r => (!fSemana || r.semana === fSemana) && (!fSubarea || r.subarea === fSubarea));
+  const fFechaCarga = document.getElementById("conc-f-fecha-carga").value;
+  const rows = spData.filter(r => (!fSemana || r.semana === fSemana) && (!fSubarea || r.subarea === fSubarea)
+    && (!fFechaCarga || (r.createdAt || "").slice(0, 10) === fFechaCarga));
 
   let pendientes = 0, valorConciliado = 0, valorPendiente = 0, unidadesTotal = 0, unidadesEncontradas = 0;
   // statsPorCodigo se calcula sobre TODO spData (sin el filtro de semana): avisa si un
@@ -4697,13 +4713,22 @@ function spRenderConc(){
     const hayParcial = filas.some(r=> verificaciones[r.id]);
     const badge = hayParcial ? '<span class="estado-badge parcial">Parcial</span>' : '<span class="estado-badge pendiente">Pendiente</span>';
 
+    const filaMasReciente = [...filas].sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0))[0];
+    const creadoresDistintos = new Set(filas.map(r=>r.creadoPorId)).size;
+    const fechaCargaTexto = filas.length>1 ? `${spFmtCarga(filaMasReciente.createdAt)} (más reciente)` : spFmtCarga(filaMasReciente.createdAt);
+    const cargadoPorTexto = creadoresDistintos>1 ? "Varios" : spCargadoPorNombre(filaMasReciente.creadoPorId);
+
     const detalle = [...filas].sort((a,b)=> (a.fechaModif||a.fecha).localeCompare(b.fechaModif||b.fecha)).map(r=>{
       const v = verificaciones[r.id];
       const cantWms = Math.abs(r.unajust);
       const estadoTxt = v
         ? `${cantWms - v.cantidadEncontrada} pendiente de ${cantWms} <span style="color:var(--muted);font-weight:400;">(ya se encontró ${v.cantidadEncontrada})</span>`
         : `${cantWms} unidades reportadas`;
-      return `<div class="cg-item"><b>${escapeHtml(r.fechaModif || r.fecha)}</b><span>${estadoTxt}</span></div>`;
+      const delBtn = esAdmin() ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" style="padding:3px 8px;font-size:11px;color:var(--red);flex-shrink:0;">🗑️ Eliminar</button>` : "";
+      return `<div class="cg-item" style="grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span><b style="display:inline;text-transform:none;font-size:13px;color:var(--text);">${escapeHtml(r.fechaModif || r.fecha)}</b> — ${estadoTxt} <span style="color:var(--muted);">· Cargado ${spFmtCarga(r.createdAt)} por ${escapeHtml(spCargadoPorNombre(r.creadoPorId))}</span></span>
+        ${delBtn}
+      </div>`;
     }).join("");
 
     let nota = "";
@@ -4724,6 +4749,8 @@ function spRenderConc(){
         <div class="cg-item"><b>Ubicación</b><span>${escapeHtml(ubicacionTexto)}</span></div>
         <div class="cg-item"><b>Semana</b><span>${escapeHtml(primero.semana || "—")}</span></div>
         <div class="cg-item"><b>Total faltante</b><span style="font-weight:700;">${totalFaltante} unidades${filas.length>1 ? ` (${filas.length} reportes)` : ""}</span></div>
+        <div class="cg-item"><b>Fecha de carga</b><span>${escapeHtml(fechaCargaTexto)}</span></div>
+        <div class="cg-item"><b>Cargado por</b><span>${escapeHtml(cargadoPorTexto)}</span></div>
       </div>
       <details class="sd-grupo-productos">
         <summary>Ver detalle — ${filas.length} reporte${filas.length===1?"":"s"} de esta semana</summary>
@@ -4738,6 +4765,9 @@ function spRenderConc(){
 
   list.querySelectorAll(".conc-verificar-btn").forEach(btn=>{
     btn.addEventListener("click", ()=> concAbrirModalGrupo(btn.dataset.clave));
+  });
+  list.querySelectorAll(".opk-btn-del").forEach(btn=>{
+    btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_sp_registros", Number(btn.dataset.id), btn));
   });
 }
 
@@ -5248,6 +5278,12 @@ async function opkEliminarRegistro(tabla, id, btn){
   }else if(tabla === "ssoma_inbound_programacion_contenedores"){
     pcRegistros = pcRegistros.filter(r => r.id !== id);
     pcRender();
+  }else if(tabla === "ssoma_sp_registros"){
+    spData = spData.filter(r => r.id !== id);
+    delete verificaciones[id];
+    spRender();
+    spRenderConc();
+    spRenderHistorial();
   }else{
     sdRegistros = sdRegistros.filter(r => r.id !== id);
     sdRender();
