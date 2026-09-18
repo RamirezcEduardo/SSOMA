@@ -2410,7 +2410,10 @@
         </div>
       </div>
 
-      <h3 style="font-size:14px;font-weight:800;color:#16A34A;margin:22px 0 8px;">🟢 SKUs en pallets que coinciden con un faltante de Bolsa LATAM</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:22px;">
+        <h3 style="font-size:14px;font-weight:800;color:#16A34A;margin:0;">🟢 SKUs en pallets que coinciden con un faltante de Bolsa LATAM</h3>
+        <button type="button" class="btn btn-ghost" id="pallets-match-export-btn" style="padding:6px 10px;font-size:11px;">📤 Exportar detalle a retirar</button>
+      </div>
       <div class="table-wrap" id="pallets-match-wrap">
         <table class="data-table" id="pallets-match-table">
           <thead><tr><th>SKU</th><th>Producto</th><th>Cant. en pallets</th><th>Cant. faltante</th><th>Cant. amortizable</th><th>Valor en pallets (S/)</th><th>Monto faltante (S/)</th><th>Monto amortizable (S/)</th></tr></thead>
@@ -5675,6 +5678,7 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
    ese stock físico es candidato a amortizar/disputar ese faltante — se propone el mínimo
    entre lo que hay en el pallet y lo que falta, tanto en unidades como en soles. */
 let palletsLineas = [];
+let palletsMatchesActual = [];
 
 async function palletsLoad(){
   const { data, error } = await sb.from("ssoma_pallets_sobrantes").select("*").order("sku", { ascending: true });
@@ -5732,6 +5736,7 @@ function palletsRender(){
     }
   });
   matches.sort((a,b)=> b.montoAmortizable - a.montoAmortizable);
+  palletsMatchesActual = matches;
 
   const montoAmortizableTotal = matches.reduce((s,m)=> s + m.montoAmortizable, 0);
   document.getElementById("pallets-stat-matches").textContent = matches.length;
@@ -5765,6 +5770,50 @@ document.getElementById("pallets-sinmatch-toggle").addEventListener("click", (e)
   const btn = e.currentTarget;
   const expanded = btn.getAttribute("aria-expanded") === "true";
   btn.setAttribute("aria-expanded", String(!expanded));
+});
+
+/* Detalle de retiro: cada match es un SKU (agregado), pero para ir físicamente a
+   retirar hay que saber DE QUÉ LPN/pallet puntual sacar la mercadería. Se reparte
+   la "cantidad amortizable" del SKU entre sus líneas BUENO reales, empezando por la
+   de mayor cantidad (para tocar menos pallets distintos) — se retira todo de una
+   línea antes de pasar a la siguiente, hasta completar lo amortizable. Las líneas
+   que no hace falta tocar no aparecen en el detalle. */
+function palletsDetalleRetiroFilas(){
+  const filas = [];
+  palletsMatchesActual.forEach(m=>{
+    let restante = m.cantAmortizable;
+    if(restante <= 0) return;
+    const lineasSku = palletsLineas.filter(r => r.sku === m.sku && palletsEsBueno(r))
+      .sort((a,b)=> b.cantidad - a.cantidad);
+    for(const linea of lineasSku){
+      if(restante <= 0) break;
+      const aRetirar = Math.min(restante, linea.cantidad);
+      if(aRetirar <= 0) continue;
+      filas.push({
+        sku: m.sku, producto: m.producto, pallet: linea.pallet, lpn: linea.lpn,
+        cantidadDisponible: linea.cantidad, cantidadARetirar: aRetirar,
+      });
+      restante -= aRetirar;
+    }
+  });
+  return filas;
+}
+const PALLETS_RETIRO_COLUMNAS = [
+  { header: "SKU", get: r => r.sku },
+  { header: "Producto", get: r => r.producto },
+  { header: "Pallet", get: r => r.pallet },
+  { header: "LPN", get: r => r.lpn },
+  { header: "Cantidad disponible en esa línea", get: r => r.cantidadDisponible },
+  { header: "Cantidad a retirar", get: r => r.cantidadARetirar },
+];
+document.getElementById("pallets-match-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Pallets — detalle a retirar",
+    obtenerFilas: () => palletsDetalleRetiroFilas(),
+    campoFecha: () => null,
+    columnas: PALLETS_RETIRO_COLUMNAS,
+    nombreArchivo: "pallets_detalle_retiro.csv",
+  });
 });
 
 document.getElementById("pallets-file").addEventListener("change", ()=>{
