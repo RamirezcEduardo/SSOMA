@@ -1408,11 +1408,12 @@
       <button type="button" class="navgroup-header" id="navgroup-privado-toggle" aria-expanded="false" style="margin-top:10px;display:none;">
         <span class="navgroup-icon">🔒</span>
         <span class="navgroup-title">Privado</span>
-        <span class="navgroup-count">1</span>
+        <span class="navgroup-count">2</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-privado-body" style="display:none;">
         <button class="navitem" data-view="sp-encontrados-privado"><span class="dot" style="background:#111827;"></span><span class="label">Historial de Encontrados</span></button>
+        <button class="navitem" data-view="pallets-vs-bolsa"><span class="dot" style="background:#111827;"></span><span class="label">Pallets vs Bolsa LATAM</span></button>
       </div>
     </div>
     <div class="sidebar-account" id="sidebar-account" style="display:none;">
@@ -2362,6 +2363,68 @@
       </div>
     </section>
 
+    <!-- Cruce Pallets sobrantes (físico, sin contar en WMS) vs Bolsa LATAM (faltante) —
+         apartado privado, solo visible para PRIVADO_USUARIO_ID (ver esUsuarioPrivado()). -->
+    <section class="panel" id="panel-pallets-vs-bolsa">
+      <div class="section-head">
+        <h2 class="section-title">🔒 Pallets vs Bolsa LATAM</h2>
+      </div>
+      <p class="section-desc">Cruza el stock físico que tienes en pallets (sobrante, sin contar en el WMS) contra los productos en <b style="color:var(--red);">faltante neto</b> de Bolsa LATAM. Si un SKU coincide, ese stock físico podría usarse para amortizar o disputar lo que el auditor está cobrando de ese producto.</p>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Importar pallets sobrantes</div>
+            <div class="import-card-sub">Sube el reporte de pallets (columnas LPN, SKU, DESCRIPCION, CANT, PALLET, Valor total, STATUS, ESTADO, valor unitario). Cada línea se guarda por su LPN — reimportar no duplica lo ya cargado.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="pallets-import-btn" disabled>Importar</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="pallets-file" id="pallets-drop">
+            <input type="file" id="pallets-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">🧱</span>
+            <span class="import-drop-title">Reporte de pallets</span>
+            <span class="import-drop-hint" id="pallets-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="pallets-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="stats-row" style="margin-top:18px;">
+        <div class="stat-card">
+          <div class="stat-label">Valor total en pallets</div>
+          <div class="stat-value" id="pallets-stat-valor">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">SKUs con match en faltante</div>
+          <div class="stat-value" id="pallets-stat-matches" style="color:#16A34A;">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monto amortizable</div>
+          <div class="stat-value" id="pallets-stat-amortizable" style="color:#16A34A;">S/ 0</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:14px;font-weight:800;color:#16A34A;margin:22px 0 8px;">🟢 SKUs en pallets que coinciden con un faltante de Bolsa LATAM</h3>
+      <div class="table-wrap" id="pallets-match-wrap">
+        <table class="data-table" id="pallets-match-table">
+          <thead><tr><th>SKU</th><th>Producto</th><th>Cant. en pallets</th><th>Cant. faltante</th><th>Cant. amortizable</th><th>Valor en pallets (S/)</th><th>Monto faltante (S/)</th><th>Monto amortizable (S/)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <button type="button" class="section-subhead collapsible-toggle" id="pallets-sinmatch-toggle" aria-expanded="false">
+        SKUs en pallets sin match en faltante · <span id="pallets-sinmatch-count">0</span>
+        <span class="collapsible-chevron">⌄</span>
+      </button>
+      <div class="table-wrap collapsible-body" id="pallets-sinmatch-wrap">
+        <table class="data-table" id="pallets-sinmatch-table">
+          <thead><tr><th>SKU</th><th>Producto</th><th>Cantidad</th><th>Valor (S/)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- INVENTARIO · CONTROL DE BOLSA -->
     <section class="panel" id="panel-inventario-bolsa">
       <div class="section-head">
@@ -2369,8 +2432,8 @@
       </div>
 
       <div class="tab-bar" id="bolsa-tabs">
-        <button type="button" class="tab-btn active" data-tab="latam">Bolsa LATAM</button>
-        <button type="button" class="tab-btn" data-tab="ciclico">Inventario Cíclico</button>
+        <button type="button" class="tab-btn active" data-tab="latam">🌎 Bolsa LATAM</button>
+        <button type="button" class="tab-btn" data-tab="ciclico">🔄 Inventario Cíclico</button>
       </div>
 
       <div id="bolsa-tab-latam">
@@ -4204,6 +4267,8 @@ function irAVista(view){
   } else if(view === "inbound-recepcion-importados"){
     sotLoadRegistros();
     pcLoadRegistros();
+  } else if(view === "pallets-vs-bolsa"){
+    palletsLoad();
   }
 }
 document.querySelectorAll(".navitem").forEach(btn=>{
@@ -5574,6 +5639,178 @@ document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=
   }finally{
     btn.textContent = originalLabel;
     btn.disabled = !document.getElementById("bolsa-file").files[0];
+  }
+});
+
+/* ============ Pallets vs Bolsa LATAM (apartado privado) ============
+   Cruza el stock físico sobrante en pallets (no contado en el WMS) contra el neto de
+   Bolsa LATAM agrupado por SKU (bolsaLatamAgrupar, misma función que arma Top Críticos/
+   Sobrantes): si un SKU de pallets coincide con un producto en faltante neto (monto <0),
+   ese stock físico es candidato a amortizar/disputar ese faltante — se propone el mínimo
+   entre lo que hay en el pallet y lo que falta, tanto en unidades como en soles. */
+let palletsLineas = [];
+
+async function palletsLoad(){
+  const { data, error } = await sb.from("ssoma_pallets_sobrantes").select("*").order("sku", { ascending: true });
+  if(error){ console.error("No se pudo cargar Pallets:", error.message); return; }
+  palletsLineas = (data || []).map(r => ({
+    id: r.id, lpn: r.lpn, sku: r.sku, barra: r.barra, descripcion: r.descripcion,
+    lote: r.lote, cantidad: Number(r.cantidad) || 0, pallet: r.pallet,
+    valorTotal: Number(r.valor_total) || 0, status: r.status, estado: r.estado,
+    valorUnitario: Number(r.valor_unitario) || 0,
+  }));
+  palletsRender();
+}
+
+function palletsAgrupar(){
+  const map = new Map();
+  palletsLineas.forEach(r=>{
+    if(!map.has(r.sku)) map.set(r.sku, { sku: r.sku, descripcion: r.descripcion || "", cantidad: 0, valor: 0 });
+    const g = map.get(r.sku);
+    g.cantidad += r.cantidad;
+    g.valor += r.valorTotal;
+    if(!g.descripcion && r.descripcion) g.descripcion = r.descripcion;
+  });
+  return [...map.values()];
+}
+
+function palletsRender(){
+  const grupos = palletsAgrupar();
+  const valorTotalPallets = grupos.reduce((s,g)=> s + g.valor, 0);
+  document.getElementById("pallets-stat-valor").textContent = "S/ " + valorTotalPallets.toFixed(2);
+
+  // Neto por SKU de TODO lo cargado en Bolsa LATAM (sin los filtros de esa pestaña) —
+  // el cruce siempre se hace contra el acumulado completo, no contra lo que esté
+  // filtrado en pantalla en ese momento.
+  const criticosPorSku = new Map(bolsaLatamAgrupar(bolsaLatamLineas).filter(g=> g.monto < -0.005).map(g=>[g.codAlternat, g]));
+
+  const matches = [];
+  const sinMatch = [];
+  grupos.forEach(g=>{
+    const critico = criticosPorSku.get(g.sku);
+    if(critico){
+      const cantAmortizable = Math.min(g.cantidad, Math.abs(critico.cantidad));
+      const montoAmortizable = Math.min(g.valor, Math.abs(critico.monto));
+      matches.push({ ...g, producto: critico.producto || g.descripcion, cantFaltante: Math.abs(critico.cantidad), montoFaltante: Math.abs(critico.monto), cantAmortizable, montoAmortizable });
+    }else{
+      sinMatch.push(g);
+    }
+  });
+  matches.sort((a,b)=> b.montoAmortizable - a.montoAmortizable);
+
+  const montoAmortizableTotal = matches.reduce((s,m)=> s + m.montoAmortizable, 0);
+  document.getElementById("pallets-stat-matches").textContent = matches.length;
+  document.getElementById("pallets-stat-amortizable").textContent = "S/ " + montoAmortizableTotal.toFixed(2);
+
+  const matchBody = document.querySelector("#pallets-match-table tbody");
+  matchBody.innerHTML = matches.length ? matches.map(m => `
+    <tr>
+      <td>${escapeHtml(m.sku)}</td>
+      <td>${escapeHtml(m.producto || "—")}</td>
+      <td style="text-align:right;font-family:Consolas,'Courier New',monospace;">${m.cantidad.toLocaleString("es-PE")}</td>
+      <td style="text-align:right;color:var(--red);">${m.cantFaltante.toLocaleString("es-PE")}</td>
+      <td style="text-align:right;font-weight:700;color:#16A34A;">${m.cantAmortizable.toLocaleString("es-PE")}</td>
+      <td style="text-align:right;">${m.valor.toFixed(2)}</td>
+      <td style="text-align:right;color:var(--red);">${m.montoFaltante.toFixed(2)}</td>
+      <td style="text-align:right;font-weight:700;color:#16A34A;">${m.montoAmortizable.toFixed(2)}</td>
+    </tr>`).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Ningún SKU de pallets coincide con un faltante de Bolsa LATAM.</td></tr>`;
+
+  document.getElementById("pallets-sinmatch-count").textContent = sinMatch.length;
+  const sinMatchBody = document.querySelector("#pallets-sinmatch-table tbody");
+  sinMatchBody.innerHTML = sinMatch.length ? sinMatch.map(g => `
+    <tr>
+      <td>${escapeHtml(g.sku)}</td>
+      <td>${escapeHtml(g.descripcion || "—")}</td>
+      <td style="text-align:right;">${g.cantidad.toLocaleString("es-PE")}</td>
+      <td style="text-align:right;">${g.valor.toFixed(2)}</td>
+    </tr>`).join("") : `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px;">—</td></tr>`;
+}
+
+document.getElementById("pallets-sinmatch-toggle").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!expanded));
+});
+
+document.getElementById("pallets-file").addEventListener("change", ()=>{
+  const f = document.getElementById("pallets-file").files[0];
+  document.getElementById("pallets-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("pallets-drop").classList.toggle("filled", !!f);
+  document.getElementById("pallets-import-btn").disabled = !f;
+});
+
+document.getElementById("pallets-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const file = document.getElementById("pallets-file").files[0];
+  if(!file) return;
+  const statusEl = document.getElementById("pallets-import-status");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Leyendo archivo…";
+  statusEl.style.display = "none";
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      lpn: ["LPN"], sku: ["SKU"], barra: ["BARRA"], descripcion: ["DESCRIPCION", "DESCRIPCIÓN"],
+      lote: ["LOTE"], cantidad: ["CANT", "CANTIDAD"], pallet: ["PALLET"],
+      valorTotal: ["Valor total", "VALOR TOTAL"], status: ["STATUS"], estado: ["ESTADO"],
+      valorUnitario: ["valor unitario", "VALOR UNITARIO"],
+    });
+    if(!hoja){
+      throw new Error('No se encontró una hoja con las columnas esperadas (LPN, SKU, DESCRIPCION, CANT, PALLET, Valor total, STATUS, ESTADO, valor unitario).');
+    }
+
+    btn.textContent = "Procesando filas…";
+    const filas = [];
+    let ignoradasSinLpn = 0;
+    hoja.rows.forEach(row=>{
+      const lpn = String(row[hoja.cols.lpn] || "").trim();
+      if(!lpn){ ignoradasSinLpn++; return; }
+      filas.push({
+        lpn, sku: String(row[hoja.cols.sku] || "").trim(),
+        barra: String(row[hoja.cols.barra] || "").trim(),
+        descripcion: String(row[hoja.cols.descripcion] || "").trim(),
+        lote: String(row[hoja.cols.lote] || "").trim(),
+        cantidad: Number(row[hoja.cols.cantidad]) || 0,
+        pallet: String(row[hoja.cols.pallet] || "").trim(),
+        valor_total: Number(row[hoja.cols.valorTotal]) || 0,
+        status: String(row[hoja.cols.status] || "").trim(),
+        estado: String(row[hoja.cols.estado] || "").trim(),
+        valor_unitario: Number(row[hoja.cols.valorUnitario]) || 0,
+        archivo_origen: file.name,
+        creado_por_id: miUsuario ? miUsuario.id : null,
+      });
+    });
+    if(!filas.length) throw new Error("El archivo no trajo filas válidas (todas sin LPN).");
+
+    btn.textContent = "Guardando en Supabase…";
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { data, error } = await sb.from("ssoma_pallets_sobrantes")
+        .upsert(lote, { onConflict: "lpn", ignoreDuplicates: true }).select("id");
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += (data || []).length;
+    }
+
+    await palletsLoad();
+
+    const yaExistian = filas.length - guardadas;
+    let msg = `✅ Importado: ${guardadas} líneas nuevas de la hoja "${hoja.sheetName}".`;
+    if(yaExistian > 0) msg += ` ${yaExistian} ya estaban cargadas de antes (no se duplicaron).`;
+    if(ignoradasSinLpn) msg += ` ${ignoradasSinLpn} filas sin LPN fueron ignoradas.`;
+    statusEl.textContent = msg;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("pallets-file").files[0];
   }
 });
 
