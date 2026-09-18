@@ -2362,14 +2362,119 @@
       </div>
     </section>
 
-    <!-- INVENTARIO · CONTROL DE BOLSA (en actualización — nuevo flujo pendiente) -->
+    <!-- INVENTARIO · CONTROL DE BOLSA -->
     <section class="panel" id="panel-inventario-bolsa">
       <div class="section-head">
         <h2 class="section-title">Inventario — Control de Bolsa</h2>
       </div>
-      <div class="help-tip" style="max-width:680px;">
-        <span class="ic">🛠️</span>
-        <div>Esta sección está en actualización — se está preparando un nuevo flujo. Vuelve a revisar más adelante.</div>
+
+      <div class="tab-bar" id="bolsa-tabs">
+        <button type="button" class="tab-btn active" data-tab="latam">Bolsa LATAM</button>
+        <button type="button" class="tab-btn" data-tab="ciclico">Inventario Cíclico</button>
+      </div>
+
+      <div id="bolsa-tab-latam">
+      <p class="section-desc">Sube el reporte del auditor LATAM (ya viene filtrado a lo que "Afecta"). El neto se acumula por Código Alterno con todo lo cargado hasta ahora — <b style="color:var(--red);">negativo es faltante</b> (te lo cobran), <b style="color:#16A34A;">positivo es sobrante</b> (revisar, puede ser mercadería no despachada).</p>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Importar reporte Bolsa LATAM</div>
+            <div class="import-card-sub">Sube el Excel del auditor (hoja con FECHA, PRD_LVL_NUMBER, PRD_NAME_FULL, CANTIDAD, COSTO_UNIT, Cant Reversada, monto reversado, etc.) — cada transacción se guarda y se acumula con lo ya cargado, sin duplicar filas repetidas.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="bolsa-import-btn" disabled>Importar</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="bolsa-file" id="bolsa-drop">
+            <input type="file" id="bolsa-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📊</span>
+            <span class="import-drop-title">Reporte Bolsa LATAM</span>
+            <span class="import-drop-hint" id="bolsa-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="bolsa-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="stats-row stats-row-4" style="margin-top:18px;">
+        <div class="stat-card">
+          <div class="stat-label">Neto total</div>
+          <div class="stat-value" id="bolsa-stat-neto">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Productos en faltante</div>
+          <div class="stat-value" id="bolsa-stat-criticos" style="color:var(--red);">0</div>
+          <div class="stat-sublabel" id="bolsa-stat-criticos-monto">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Productos en sobrante</div>
+          <div class="stat-value" id="bolsa-stat-sobrantes" style="color:#16A34A;">0</div>
+          <div class="stat-sublabel" id="bolsa-stat-sobrantes-monto">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Transacciones cargadas</div>
+          <div class="stat-value" id="bolsa-stat-transacciones">0</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:18px;">
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Mes</label>
+          <select id="bolsa-f-mes"><option value="">Todos</option></select>
+        </div>
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Semana</label>
+          <select id="bolsa-f-semana"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:150px;margin-bottom:0;">
+          <label>Familia</label>
+          <select id="bolsa-f-familia"><option value="">Todas</option></select>
+        </div>
+        <div class="field" style="min-width:150px;margin-bottom:0;">
+          <label>Motivo OP</label>
+          <select id="bolsa-f-motivo"><option value="">Todos</option></select>
+        </div>
+        <div class="field" style="min-width:130px;margin-bottom:0;">
+          <label>Observación</label>
+          <select id="bolsa-f-observacion">
+            <option value="">Todas</option>
+            <option value="Sistema">Sistema</option>
+            <option value="Manual">Manual</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:200px;flex:1;margin-bottom:0;">
+          <label>Buscar por código o producto</label>
+          <input type="text" id="bolsa-f-buscar" placeholder="Ej. 100380 o Allegra">
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:22px;">
+        <h3 style="font-size:14px;font-weight:800;color:var(--red);margin:0;">🔴 Top Críticos — faltante neto</h3>
+        <button type="button" class="btn btn-ghost" id="bolsa-criticos-export-btn" style="padding:6px 10px;font-size:11px;">📤 Exportar</button>
+      </div>
+      <div class="table-wrap" id="bolsa-criticos-wrap" style="margin-top:8px;">
+        <table class="data-table" id="bolsa-criticos-table">
+          <thead><tr><th>#</th><th>Código</th><th>Producto</th><th>Familia</th><th>Cant. neta</th><th>Monto neto (S/)</th><th># Trans.</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:26px;">
+        <h3 style="font-size:14px;font-weight:800;color:#16A34A;margin:0;">🟢 Top Sobrantes — revisar posible mercadería no despachada</h3>
+        <button type="button" class="btn btn-ghost" id="bolsa-sobrantes-export-btn" style="padding:6px 10px;font-size:11px;">📤 Exportar</button>
+      </div>
+      <div class="table-wrap" id="bolsa-sobrantes-wrap" style="margin-top:8px;">
+        <table class="data-table" id="bolsa-sobrantes-table">
+          <thead><tr><th>#</th><th>Código</th><th>Producto</th><th>Familia</th><th>Cant. neta</th><th>Monto neto (S/)</th><th># Trans.</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      </div>
+
+      <div id="bolsa-tab-ciclico" style="display:none;">
+        <div class="help-tip" style="max-width:680px;">
+          <span class="ic">🛠️</span>
+          <div>Esta sección está en actualización — se está preparando un nuevo flujo. Vuelve a revisar más adelante.</div>
+        </div>
       </div>
     </section>
 
@@ -5212,6 +5317,265 @@ function bolsaReadWorkbook(file){
     if(esCsv) reader.readAsText(file, "UTF-8"); else reader.readAsArrayBuffer(file);
   });
 }
+
+/* ============ Bolsa LATAM ============
+   Fuente: reporte del auditor LATAM (ya viene filtrado a "Gestión = Afecta", una sola
+   hoja, no dos como el flujo viejo). Cada fila es una transacción real del WMS;
+   "Cant Reversada" = -CANTIDAD y "monto reversado" = Cant Reversada * costo, ya
+   calculados por el auditor. NEGATIVO acumulado por Código Alterno = faltante (te lo
+   cobran); POSITIVO = sobrante (revisar, puede ser mercadería no despachada). El neto
+   se acumula con TODO lo cargado hasta ahora, sumando cada vez que se importa un
+   archivo nuevo — fila_hash (fecha+código+trans_ref+trans_user+cantidad) evita
+   duplicar una misma transacción si el mismo periodo se vuelve a subir después. */
+let bolsaLatamLineas = [];
+let bolsaLatamCriticosActual = [];
+let bolsaLatamSobrantesActual = [];
+
+async function bolsaLatamLoad(){
+  const { data, error } = await sbSelectAll("ssoma_bolsa_latam_lineas", "*", q => q.order("fecha", { ascending: false }));
+  if(error){ console.error("No se pudo cargar Bolsa LATAM:", error.message); return; }
+  bolsaLatamLineas = (data || []).map(r => ({
+    id: r.id, fecha: r.fecha, codAlternat: r.cod_alternat, producto: r.producto,
+    cantidad: Number(r.cantidad) || 0, costoUnit: Number(r.costo_unit) || 0,
+    transRef: r.trans_ref, transUser: r.trans_user, familia: r.familia,
+    ubicacion: r.ubicacion, area: r.area, origen: r.origen, tipo: r.tipo,
+    motivoOp: r.motivo_op, mes: r.mes, semana: r.semana, observacion: r.observacion,
+    gestion: r.gestion, cantReversada: Number(r.cant_reversada) || 0, montoReversado: Number(r.monto_reversado) || 0,
+    creadoPorId: r.creado_por_id, createdAt: r.created_at,
+  }));
+  bolsaLatamPopulateFiltros();
+  bolsaLatamRender();
+}
+bolsaLatamLoad();
+
+function bolsaLatamPopulateFiltros(){
+  const campos = [
+    ["bolsa-f-mes", [...new Set(bolsaLatamLineas.map(r=>r.mes).filter(Boolean))]],
+    ["bolsa-f-semana", [...new Set(bolsaLatamLineas.map(r=>r.semana).filter(Boolean))].sort()],
+    ["bolsa-f-familia", [...new Set(bolsaLatamLineas.map(r=>r.familia).filter(Boolean))].sort()],
+    ["bolsa-f-motivo", [...new Set(bolsaLatamLineas.map(r=>r.motivoOp).filter(Boolean))].sort()],
+  ];
+  campos.forEach(([id, vals])=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const current = sel.value;
+    const defaultOption = sel.options[0];
+    sel.innerHTML = "";
+    sel.appendChild(defaultOption);
+    vals.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+    if(vals.includes(current)) sel.value = current;
+  });
+}
+
+function bolsaLatamFiltradas(){
+  const fMes = document.getElementById("bolsa-f-mes").value;
+  const fSemana = document.getElementById("bolsa-f-semana").value;
+  const fFamilia = document.getElementById("bolsa-f-familia").value;
+  const fMotivo = document.getElementById("bolsa-f-motivo").value;
+  const fObs = document.getElementById("bolsa-f-observacion").value;
+  const fBuscar = document.getElementById("bolsa-f-buscar").value.trim().toLowerCase();
+  return bolsaLatamLineas.filter(r =>
+    (!fMes || r.mes === fMes) &&
+    (!fSemana || r.semana === fSemana) &&
+    (!fFamilia || r.familia === fFamilia) &&
+    (!fMotivo || r.motivoOp === fMotivo) &&
+    (!fObs || r.observacion === fObs) &&
+    (!fBuscar || [r.codAlternat, r.producto].some(c => (c || "").toLowerCase().includes(fBuscar)))
+  );
+}
+
+/* Neto acumulado por Código Alterno — el mismo producto puede traer varias
+   transacciones (correcciones, conteos cíclicos) que se van compensando; lo que
+   importa para saber cuánto se cobra es la SUMA de Cant Reversada/monto reversado
+   de todas sus filas, no cada fila suelta. */
+function bolsaLatamAgrupar(rows){
+  const map = new Map();
+  rows.forEach(r=>{
+    if(!map.has(r.codAlternat)) map.set(r.codAlternat, { codAlternat: r.codAlternat, producto: "", familia: "", cantidad: 0, monto: 0, n: 0 });
+    const g = map.get(r.codAlternat);
+    g.cantidad += r.cantReversada;
+    g.monto += r.montoReversado;
+    g.n++;
+    if(!g.producto && r.producto) g.producto = r.producto;
+    if(!g.familia && r.familia) g.familia = r.familia;
+  });
+  return [...map.values()];
+}
+
+function bolsaLatamFilaHtml(g, i){
+  const color = g.monto < 0 ? "var(--red)" : (g.monto > 0 ? "#16A34A" : "");
+  return `
+    <tr>
+      <td>${i+1}</td>
+      <td>${escapeHtml(g.codAlternat)}</td>
+      <td>${escapeHtml(g.producto || "—")}</td>
+      <td>${escapeHtml(g.familia || "—")}</td>
+      <td style="text-align:right;font-family:Consolas,'Courier New',monospace;">${g.cantidad.toLocaleString("es-PE")}</td>
+      <td style="text-align:right;font-weight:700;color:${color};">${g.monto.toFixed(2)}</td>
+      <td style="text-align:right;">${g.n}</td>
+    </tr>`;
+}
+
+function bolsaLatamRender(){
+  const rows = bolsaLatamFiltradas();
+  document.getElementById("bolsa-stat-transacciones").textContent = rows.length.toLocaleString("es-PE");
+
+  const grupos = bolsaLatamAgrupar(rows);
+  const netoTotal = grupos.reduce((s,g)=> s + g.monto, 0);
+  bolsaLatamCriticosActual = grupos.filter(g => g.monto < -0.005).sort((a,b)=> a.monto - b.monto);
+  bolsaLatamSobrantesActual = grupos.filter(g => g.monto > 0.005).sort((a,b)=> b.monto - a.monto);
+  const montoCriticos = bolsaLatamCriticosActual.reduce((s,g)=> s + g.monto, 0);
+  const montoSobrantes = bolsaLatamSobrantesActual.reduce((s,g)=> s + g.monto, 0);
+
+  const netoEl = document.getElementById("bolsa-stat-neto");
+  netoEl.textContent = "S/ " + netoTotal.toFixed(2);
+  netoEl.style.color = netoTotal < 0 ? "var(--red)" : (netoTotal > 0 ? "#16A34A" : "");
+  document.getElementById("bolsa-stat-criticos").textContent = bolsaLatamCriticosActual.length;
+  document.getElementById("bolsa-stat-criticos-monto").textContent = "S/ " + montoCriticos.toFixed(2);
+  document.getElementById("bolsa-stat-sobrantes").textContent = bolsaLatamSobrantesActual.length;
+  document.getElementById("bolsa-stat-sobrantes-monto").textContent = "S/ " + montoSobrantes.toFixed(2);
+
+  const criticosBody = document.querySelector("#bolsa-criticos-table tbody");
+  criticosBody.innerHTML = bolsaLatamCriticosActual.length
+    ? bolsaLatamCriticosActual.slice(0, 50).map(bolsaLatamFilaHtml).join("")
+    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Sin productos en faltante para este filtro.</td></tr>`;
+
+  const sobrantesBody = document.querySelector("#bolsa-sobrantes-table tbody");
+  sobrantesBody.innerHTML = bolsaLatamSobrantesActual.length
+    ? bolsaLatamSobrantesActual.slice(0, 50).map(bolsaLatamFilaHtml).join("")
+    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Sin productos en sobrante para este filtro.</td></tr>`;
+}
+
+["bolsa-f-mes","bolsa-f-semana","bolsa-f-familia","bolsa-f-motivo","bolsa-f-observacion"].forEach(id=>{
+  document.getElementById(id).addEventListener("change", bolsaLatamRender);
+});
+document.getElementById("bolsa-f-buscar").addEventListener("input", bolsaLatamRender);
+
+const BOLSA_LATAM_COLUMNAS = [
+  { header: "Código Alterno", get: g => g.codAlternat },
+  { header: "Producto", get: g => g.producto },
+  { header: "Familia", get: g => g.familia },
+  { header: "Cantidad neta", get: g => g.cantidad },
+  { header: "Monto neto (S/)", get: g => g.monto.toFixed(2) },
+  { header: "# Transacciones", get: g => g.n },
+];
+document.getElementById("bolsa-criticos-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bolsa LATAM — Top Críticos (faltante)",
+    obtenerFilas: () => bolsaLatamCriticosActual,
+    campoFecha: () => null,
+    columnas: BOLSA_LATAM_COLUMNAS,
+    nombreArchivo: "bolsa_latam_criticos.csv",
+  });
+});
+document.getElementById("bolsa-sobrantes-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bolsa LATAM — Top Sobrantes",
+    obtenerFilas: () => bolsaLatamSobrantesActual,
+    campoFecha: () => null,
+    columnas: BOLSA_LATAM_COLUMNAS,
+    nombreArchivo: "bolsa_latam_sobrantes.csv",
+  });
+});
+
+document.getElementById("bolsa-file").addEventListener("change", ()=>{
+  const f = document.getElementById("bolsa-file").files[0];
+  document.getElementById("bolsa-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("bolsa-drop").classList.toggle("filled", !!f);
+  document.getElementById("bolsa-import-btn").disabled = !f;
+});
+
+document.getElementById("bolsa-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const file = document.getElementById("bolsa-file").files[0];
+  if(!file) return;
+  const statusEl = document.getElementById("bolsa-import-status");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Leyendo archivo…";
+  statusEl.style.display = "none";
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      fecha: ["FECHA"], cod: ["PRD_LVL_NUMBER"], producto: ["PRD_NAME_FULL"],
+      cantidad: ["CANTIDAD"], costo: ["COSTO_UNIT"], transRef: ["TRANS_REF"], transUser: ["TRANS_USER"],
+      familia: ["FAMILIA"], ubicacion: ["UBICACIÓN", "UBICACION"], area: ["AREA"], origen: ["ORIGEN"],
+      tipo: ["TIPO"], motivo: ["MOTIVO OP"], mes: ["MES"], semana: ["SEMANA"],
+      observacion: ["Observación", "Observacion"], gestion: ["Gestión", "Gestion"],
+      cantRev: ["Cant Reversada"], montoRev: ["monto reversado"],
+    });
+    if(!hoja){
+      throw new Error('No se encontró una hoja con las columnas esperadas (FECHA, PRD_LVL_NUMBER, CANTIDAD, Cant Reversada, monto reversado, etc.) — revisa que sea el archivo del auditor LATAM.');
+    }
+
+    btn.textContent = "Procesando filas…";
+    const filas = [];
+    let ignoradasSinCodigo = 0;
+    hoja.rows.forEach(row=>{
+      const cod = String(row[hoja.cols.cod] || "").trim();
+      if(!cod){ ignoradasSinCodigo++; return; }
+      const fecha = wmsParseFecha(row[hoja.cols.fecha]);
+      const fechaIso = fecha ? fecha.toISOString().slice(0, 10) : "";
+      const transRef = String(row[hoja.cols.transRef] || "").trim();
+      const transUser = String(row[hoja.cols.transUser] || "").trim();
+      const cantidad = Number(row[hoja.cols.cantidad]) || 0;
+      const cantReversada = Number(row[hoja.cols.cantRev]) || 0;
+      const montoReversado = Number(row[hoja.cols.montoRev]) || 0;
+      const filaHash = [fechaIso, cod, transRef, transUser, cantidad, cantReversada].join("|");
+      filas.push({
+        fecha: fechaIso || null, cod_alternat: cod,
+        producto: String(row[hoja.cols.producto] || "").trim(),
+        cantidad, costo_unit: Number(row[hoja.cols.costo]) || 0,
+        trans_ref: transRef, trans_user: transUser,
+        familia: String(row[hoja.cols.familia] || "").trim(),
+        ubicacion: String(row[hoja.cols.ubicacion] || "").trim(),
+        area: String(row[hoja.cols.area] || "").trim(),
+        origen: String(row[hoja.cols.origen] || "").trim(),
+        tipo: String(row[hoja.cols.tipo] || "").trim(),
+        motivo_op: String(row[hoja.cols.motivo] || "").trim(),
+        mes: String(row[hoja.cols.mes] || "").trim(),
+        semana: String(row[hoja.cols.semana] || "").trim(),
+        observacion: String(row[hoja.cols.observacion] || "").trim(),
+        gestion: String(row[hoja.cols.gestion] || "").trim(),
+        cant_reversada: cantReversada, monto_reversado: montoReversado,
+        fila_hash: filaHash, archivo_origen: file.name,
+        creado_por_id: miUsuario ? miUsuario.id : null,
+      });
+    });
+    if(!filas.length) throw new Error("El archivo no trajo filas válidas (todas sin Código Alterno).");
+
+    btn.textContent = "Guardando en Supabase…";
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { data, error } = await sb.from("ssoma_bolsa_latam_lineas")
+        .upsert(lote, { onConflict: "fila_hash", ignoreDuplicates: true }).select("id");
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += (data || []).length;
+      statusEl.style.display = "block";
+      statusEl.textContent = `Guardando en Supabase… ${guardadas}/${filas.length}`;
+    }
+
+    await bolsaLatamLoad();
+
+    const yaExistian = filas.length - guardadas;
+    let msg = `✅ Importado: ${guardadas} transacciones nuevas de la hoja "${hoja.sheetName}".`;
+    if(yaExistian > 0) msg += ` ${yaExistian} ya estaban cargadas de antes (no se duplicaron).`;
+    if(ignoradasSinCodigo) msg += ` ${ignoradasSinCodigo} filas sin Código Alterno fueron ignoradas.`;
+    statusEl.textContent = msg;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("bolsa-file").files[0];
+  }
+});
 
 /* ============ Bultos Pendientes de Operación ============
    Fuente: reporte "Pendientes de Operación" (hoja "Bultos Pendientes", encabezado
@@ -8553,6 +8917,10 @@ document.addEventListener("click", (e)=>{
   else if(barra.id === "bpo-tabs"){
     bpoTabActivo = btn.dataset.tab === "sin-ubicacion" ? "sin_ubicacion" : "perdidos";
     bpoRender();
+  }
+  else if(barra.id === "bolsa-tabs"){
+    document.getElementById("bolsa-tab-latam").style.display = btn.dataset.tab === "latam" ? "" : "none";
+    document.getElementById("bolsa-tab-ciclico").style.display = btn.dataset.tab === "ciclico" ? "" : "none";
   }
   else if(barra.id === "inbound-recepcion-tabs"){
     document.getElementById("inbound-recepcion-tab-solicitudes-ot").style.display = btn.dataset.tab === "solicitudes-ot" ? "" : "none";
