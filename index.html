@@ -5730,7 +5730,7 @@ function palletsRender(){
     if(critico){
       const cantAmortizable = Math.min(g.cantidad, Math.abs(critico.cantidad));
       const montoAmortizable = Math.min(g.valor, Math.abs(critico.monto));
-      matches.push({ ...g, producto: critico.producto || g.descripcion, cantFaltante: Math.abs(critico.cantidad), montoFaltante: Math.abs(critico.monto), cantAmortizable, montoAmortizable });
+      matches.push({ ...g, producto: critico.producto || g.descripcion, familia: critico.familia || "", cantFaltante: Math.abs(critico.cantidad), montoFaltante: Math.abs(critico.monto), cantAmortizable, montoAmortizable });
     }else{
       sinMatch.push(g);
     }
@@ -5790,8 +5790,9 @@ function palletsDetalleRetiroFilas(){
       const aRetirar = Math.min(restante, linea.cantidad);
       if(aRetirar <= 0) continue;
       filas.push({
-        sku: m.sku, producto: m.producto, pallet: linea.pallet, lpn: linea.lpn,
-        cantidadDisponible: linea.cantidad, cantidadARetirar: aRetirar,
+        sku: m.sku, producto: m.producto, familia: m.familia, pallet: linea.pallet, lpn: linea.lpn,
+        lote: linea.lote, cantidadDisponible: linea.cantidad, cantidadARetirar: aRetirar,
+        montoARetirar: aRetirar * linea.valorUnitario,
       });
       restante -= aRetirar;
     }
@@ -5801,10 +5802,13 @@ function palletsDetalleRetiroFilas(){
 const PALLETS_RETIRO_COLUMNAS = [
   { header: "SKU", get: r => r.sku },
   { header: "Producto", get: r => r.producto },
+  { header: "Familia", get: r => r.familia },
   { header: "Pallet", get: r => r.pallet },
   { header: "LPN", get: r => r.lpn },
+  { header: "Lote", get: r => r.lote },
   { header: "Cantidad disponible en esa línea", get: r => r.cantidadDisponible },
   { header: "Cantidad a retirar", get: r => r.cantidadARetirar },
+  { header: "Monto a retirar (S/)", get: r => r.montoARetirar.toFixed(2) },
 ];
 document.getElementById("pallets-match-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
