@@ -2437,7 +2437,7 @@
       </div>
 
       <div id="bolsa-tab-latam">
-      <p class="section-desc">Sube el reporte del auditor LATAM (ya viene filtrado a lo que "Afecta"). El neto se acumula por Código Alterno con todo lo cargado hasta ahora — <b style="color:var(--red);">negativo es faltante</b> (te lo cobran), <b style="color:#16A34A;">positivo es sobrante</b> (revisar, puede ser mercadería no despachada).</p>
+      <p class="section-desc">Sube el reporte del auditor LATAM (ya viene filtrado a lo que "Afecta"). El neto se acumula por Código Alterno con todo lo cargado hasta ahora — <b style="color:var(--red);">negativo es faltante</b> (te lo cobran), <b style="color:#16A34A;">positivo es sobrante</b> (revisar, puede ser mercadería no despachada). <b>Lo que realmente se cobra es el "Neto real" de arriba</b> (faltante menos sobrante de todo el portafolio) — las tablas de abajo son para priorizar qué producto atacar primero, sus montos sumados por separado NO son lo que se cobra.</p>
 
       <div class="import-card">
         <div class="import-card-head">
@@ -2459,19 +2459,17 @@
       </div>
 
       <div class="stats-row stats-row-4" style="margin-top:18px;">
-        <div class="stat-card">
-          <div class="stat-label">Neto total</div>
+        <div class="stat-card" style="border:1.5px solid var(--border);">
+          <div class="stat-label">💰 Neto real — esto es lo que te cobran</div>
           <div class="stat-value" id="bolsa-stat-neto">S/ 0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Productos en faltante</div>
           <div class="stat-value" id="bolsa-stat-criticos" style="color:var(--red);">0</div>
-          <div class="stat-sublabel" id="bolsa-stat-criticos-monto">S/ 0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Productos en sobrante</div>
           <div class="stat-value" id="bolsa-stat-sobrantes" style="color:#16A34A;">0</div>
-          <div class="stat-sublabel" id="bolsa-stat-sobrantes-monto">S/ 0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Transacciones cargadas</div>
@@ -2511,7 +2509,7 @@
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:22px;">
-        <h3 style="font-size:14px;font-weight:800;color:var(--red);margin:0;">🔴 Top Críticos — faltante neto</h3>
+        <h3 style="font-size:14px;font-weight:800;color:var(--red);margin:0;">🔴 Top Críticos — por producto, para priorizar (no sumar como total a pagar)</h3>
         <button type="button" class="btn btn-ghost" id="bolsa-criticos-export-btn" style="padding:6px 10px;font-size:11px;">📤 Exportar</button>
       </div>
       <div class="table-wrap" id="bolsa-criticos-wrap" style="margin-top:8px;">
@@ -5489,16 +5487,12 @@ function bolsaLatamRender(){
   const netoTotal = grupos.reduce((s,g)=> s + g.monto, 0);
   bolsaLatamCriticosActual = grupos.filter(g => g.monto < -0.005).sort((a,b)=> a.monto - b.monto);
   bolsaLatamSobrantesActual = grupos.filter(g => g.monto > 0.005).sort((a,b)=> b.monto - a.monto);
-  const montoCriticos = bolsaLatamCriticosActual.reduce((s,g)=> s + g.monto, 0);
-  const montoSobrantes = bolsaLatamSobrantesActual.reduce((s,g)=> s + g.monto, 0);
 
   const netoEl = document.getElementById("bolsa-stat-neto");
   netoEl.textContent = "S/ " + netoTotal.toFixed(2);
   netoEl.style.color = netoTotal < 0 ? "var(--red)" : (netoTotal > 0 ? "#16A34A" : "");
   document.getElementById("bolsa-stat-criticos").textContent = bolsaLatamCriticosActual.length;
-  document.getElementById("bolsa-stat-criticos-monto").textContent = "S/ " + montoCriticos.toFixed(2);
   document.getElementById("bolsa-stat-sobrantes").textContent = bolsaLatamSobrantesActual.length;
-  document.getElementById("bolsa-stat-sobrantes-monto").textContent = "S/ " + montoSobrantes.toFixed(2);
 
   const criticosBody = document.querySelector("#bolsa-criticos-table tbody");
   criticosBody.innerHTML = bolsaLatamCriticosActual.length
