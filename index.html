@@ -5393,6 +5393,8 @@ function bolsaReadWorkbook(file){
 let bolsaLatamLineas = [];
 let bolsaLatamCriticosActual = [];
 let bolsaLatamSobrantesActual = [];
+let bolsaLatamMontoSobranteActual = 0;
+let bolsaLatamNetoTotalActual = 0;
 
 async function bolsaLatamLoad(){
   const { data, error } = await sbSelectAll("ssoma_bolsa_latam_lineas", "*", q => q.order("fecha", { ascending: false }));
@@ -5487,6 +5489,8 @@ function bolsaLatamRender(){
   const netoTotal = grupos.reduce((s,g)=> s + g.monto, 0);
   bolsaLatamCriticosActual = grupos.filter(g => g.monto < -0.005).sort((a,b)=> a.monto - b.monto);
   bolsaLatamSobrantesActual = grupos.filter(g => g.monto > 0.005).sort((a,b)=> b.monto - a.monto);
+  bolsaLatamMontoSobranteActual = bolsaLatamSobrantesActual.reduce((s,g)=> s + g.monto, 0);
+  bolsaLatamNetoTotalActual = netoTotal;
 
   const netoEl = document.getElementById("bolsa-stat-neto");
   netoEl.textContent = "S/ " + netoTotal.toFixed(2);
@@ -5494,9 +5498,24 @@ function bolsaLatamRender(){
   document.getElementById("bolsa-stat-criticos").textContent = bolsaLatamCriticosActual.length;
   document.getElementById("bolsa-stat-sobrantes").textContent = bolsaLatamSobrantesActual.length;
 
+  /* Cada fila crítica se queda con su monto real (no se le "regala" el sobrante de un
+     producto distinto) — pero al pie de la tabla se agrega el ajuste por el sobrante
+     de TODOS los demás productos, para que el total de la hoja sí cuadre con el Neto
+     real que de verdad se cobra (ver conversación: opción A, no prorratear). */
+  const filasAjuste = `
+    <tr style="border-top:2px solid var(--border);font-weight:700;">
+      <td colspan="5" style="text-align:right;">Ajuste por sobrante de otros productos</td>
+      <td style="text-align:right;color:#16A34A;">${bolsaLatamMontoSobranteActual.toFixed(2)}</td>
+      <td></td>
+    </tr>
+    <tr style="font-weight:800;">
+      <td colspan="5" style="text-align:right;">Total (= Neto real)</td>
+      <td style="text-align:right;color:${netoTotal<0?"var(--red)":"#16A34A"};">${netoTotal.toFixed(2)}</td>
+      <td></td>
+    </tr>`;
   const criticosBody = document.querySelector("#bolsa-criticos-table tbody");
   criticosBody.innerHTML = bolsaLatamCriticosActual.length
-    ? bolsaLatamCriticosActual.slice(0, 50).map(bolsaLatamFilaHtml).join("")
+    ? bolsaLatamCriticosActual.slice(0, 50).map(bolsaLatamFilaHtml).join("") + filasAjuste
     : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Sin productos en faltante para este filtro.</td></tr>`;
 
   const sobrantesBody = document.querySelector("#bolsa-sobrantes-table tbody");
@@ -5521,7 +5540,15 @@ const BOLSA_LATAM_COLUMNAS = [
 document.getElementById("bolsa-criticos-export-btn").addEventListener("click", ()=>{
   abrirExportModal({
     titulo: "Bolsa LATAM — Top Críticos (faltante)",
-    obtenerFilas: () => bolsaLatamCriticosActual,
+    // Cada código mantiene su monto real (no se le reparte el sobrante de otro
+    // producto) — se agrega UNA sola fila de ajuste al final, para que si sumas
+    // toda la columna "Monto neto" en Excel te dé el Neto real (lo que se cobra).
+    // Ojo: no se agrega también una fila de "Total" aparte, porque sumaría dos
+    // veces el mismo número si alguien hace un autosum de toda la columna.
+    obtenerFilas: () => [
+      ...bolsaLatamCriticosActual,
+      { codAlternat: "", producto: "AJUSTE POR SOBRANTE DE OTROS PRODUCTOS (súmalo con lo de arriba = Neto real)", familia: "", cantidad: "", monto: bolsaLatamMontoSobranteActual, n: "" },
+    ],
     campoFecha: () => null,
     columnas: BOLSA_LATAM_COLUMNAS,
     nombreArchivo: "bolsa_latam_criticos.csv",
