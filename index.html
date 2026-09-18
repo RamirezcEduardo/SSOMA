@@ -2390,9 +2390,9 @@
         <div class="import-status" id="pallets-import-status" style="display:none;"></div>
       </div>
 
-      <div class="stats-row" style="margin-top:18px;">
+      <div class="stats-row stats-row-4" style="margin-top:18px;">
         <div class="stat-card">
-          <div class="stat-label">Valor total en pallets</div>
+          <div class="stat-label">Valor en pallets (solo BUENO)</div>
           <div class="stat-value" id="pallets-stat-valor">S/ 0</div>
         </div>
         <div class="stat-card">
@@ -2402,6 +2402,11 @@
         <div class="stat-card">
           <div class="stat-label">Monto amortizable</div>
           <div class="stat-value" id="pallets-stat-amortizable" style="color:#16A34A;">S/ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Excluido por AVERIA</div>
+          <div class="stat-value" id="pallets-stat-averia" style="color:var(--muted);">0</div>
+          <div class="stat-sublabel" id="pallets-stat-averia-valor">S/ 0</div>
         </div>
       </div>
 
@@ -5683,9 +5688,14 @@ async function palletsLoad(){
   palletsRender();
 }
 
+/* Solo STATUS "BUENO" cuenta como stock real para amortizar un faltante — lo que
+   está en AVERIA no es mercadería utilizable/vendible, así que no debe inflar el
+   sobrante disponible para compensar nada. */
+function palletsEsBueno(r){ return (r.status || "").trim().toUpperCase() === "BUENO"; }
+
 function palletsAgrupar(){
   const map = new Map();
-  palletsLineas.forEach(r=>{
+  palletsLineas.filter(palletsEsBueno).forEach(r=>{
     if(!map.has(r.sku)) map.set(r.sku, { sku: r.sku, descripcion: r.descripcion || "", cantidad: 0, valor: 0 });
     const g = map.get(r.sku);
     g.cantidad += r.cantidad;
@@ -5699,6 +5709,10 @@ function palletsRender(){
   const grupos = palletsAgrupar();
   const valorTotalPallets = grupos.reduce((s,g)=> s + g.valor, 0);
   document.getElementById("pallets-stat-valor").textContent = "S/ " + valorTotalPallets.toFixed(2);
+
+  const lineasAveria = palletsLineas.filter(r => !palletsEsBueno(r));
+  document.getElementById("pallets-stat-averia").textContent = lineasAveria.length;
+  document.getElementById("pallets-stat-averia-valor").textContent = "S/ " + lineasAveria.reduce((s,r)=> s + r.valorTotal, 0).toFixed(2);
 
   // Neto por SKU de TODO lo cargado en Bolsa LATAM (sin los filtros de esa pestaña) —
   // el cruce siempre se hace contra el acumulado completo, no contra lo que esté
