@@ -2082,7 +2082,8 @@
           <label>Buscar por Cod Alternat o producto</label>
           <input type="text" id="conc-f-buscar" placeholder="Ej. 142346 o Cefadroxilo">
         </div>
-        <button type="button" class="btn btn-ghost" id="conc-export-btn" style="margin-left:auto;">📤 Exportar pendientes</button>
+        <button type="button" class="btn btn-ghost" id="conc-regularizar-btn" style="margin-left:auto;color:var(--red);">➖ Regularizar manual</button>
+        <button type="button" class="btn btn-ghost" id="conc-export-btn">📤 Exportar pendientes</button>
       </div>
 
       <div class="conc-card-list" id="conc-list" style="margin-top:10px;"></div>
@@ -3449,6 +3450,25 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="conc-regularizar-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>➖ Regularizar manual</h3>
+      <button class="modal-close" id="conc-regularizar-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" style="margin-bottom:14px;">Para cuando un pendiente se resolvió administrativamente (no se encontró físicamente, pero ya no corresponde seguir cobrándolo). Marca TODAS las filas pendientes de esos códigos como "Regularizado manual" — no se borran, quedan en Historial y se pueden deshacer.</p>
+      <div class="field">
+        <label>Código Alterno a regularizar (sepáralos con coma)</label>
+        <textarea id="conc-regularizar-codigos" rows="4" placeholder="Ej. 142346, 137479, 108801"></textarea>
+      </div>
+      <span class="login-error" id="conc-regularizar-error"></span>
+      <div id="conc-regularizar-resultado" style="font-size:12.5px;color:var(--muted);margin-top:6px;"></div>
+      <button type="button" class="btn btn-primary" id="conc-regularizar-confirmar" style="width:100%;margin-top:6px;background:var(--red);border-color:var(--red);">Regularizar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="sd-quitar-modal">
   <div class="modal-box" style="max-width:460px;">
     <div class="modal-head">
@@ -4778,11 +4798,12 @@ document.getElementById("sp-detail-toggle").addEventListener("click", (e)=>{
    avance visible, hasta que se termine de encontrar. */
 function spEstaCompleto(id){
   const v = verificaciones[id];
-  return !!(v && v.estado === "completo");
+  return !!(v && (v.estado === "completo" || v.estado === "regularizado_manual"));
 }
 function concEstadoBadge(v){
   if(!v) return '<span class="estado-badge pendiente">Pendiente</span>';
   if(v.estado === "completo") return '<span class="estado-badge finalizado">Completo</span>';
+  if(v.estado === "regularizado_manual") return '<span class="estado-badge finalizado">Regularizado manual</span>';
   return '<span class="estado-badge parcial">Parcial</span>';
 }
 
@@ -5274,6 +5295,72 @@ document.getElementById("conc-export-btn").addEventListener("click", ()=>{
     columnas: SP_COLUMNAS_CONCILIACION,
     nombreArchivo: "shortpick_conciliacion_pendientes.csv",
   });
+});
+
+/* ---- Regularizar manual (Shortpick) ----
+   Mismo concepto que "Quitar LPN manualmente" en Seguimiento Diario, pero por Código
+   Alterno (la clave real de Shortpick): para cuando un pendiente se resolvió
+   administrativamente sin encontrarlo físicamente. Se guarda como una verificación
+   más (estado "regularizado_manual", cantidad_encontrada 0) — no se borra el
+   registro, queda visible en Historial y es indistinguible de "completo" para efectos
+   de sacarlo de Conciliación. */
+function concAbrirModalRegularizar(){
+  document.getElementById("conc-regularizar-codigos").value = "";
+  document.getElementById("conc-regularizar-error").textContent = "";
+  document.getElementById("conc-regularizar-resultado").textContent = "";
+  document.getElementById("conc-regularizar-modal").classList.add("show");
+}
+function concCerrarModalRegularizar(){
+  document.getElementById("conc-regularizar-modal").classList.remove("show");
+}
+document.getElementById("conc-regularizar-btn").addEventListener("click", concAbrirModalRegularizar);
+document.getElementById("conc-regularizar-close").addEventListener("click", concCerrarModalRegularizar);
+document.getElementById("conc-regularizar-modal").addEventListener("click", (e)=>{ if(e.target.id === "conc-regularizar-modal") concCerrarModalRegularizar(); });
+
+document.getElementById("conc-regularizar-confirmar").addEventListener("click", async ()=>{
+  const errorEl = document.getElementById("conc-regularizar-error");
+  const resultadoEl = document.getElementById("conc-regularizar-resultado");
+  errorEl.textContent = ""; resultadoEl.textContent = "";
+  const raw = document.getElementById("conc-regularizar-codigos").value;
+  const codigos = [...new Set(raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean))];
+  if(!codigos.length){ errorEl.textContent = "Escribe al menos un Código Alterno."; return; }
+
+  const codigosSet = new Set(codigos);
+  const filas = spData.filter(r => !spEstaCompleto(r.id) && codigosSet.has(r.codAlternat));
+  if(!filas.length){ errorEl.textContent = "Ninguno de esos códigos tiene pendientes ahora mismo (revisa que estén bien escritos)."; return; }
+
+  const encontrados = new Set(filas.map(r => r.codAlternat));
+  const noEncontrados = codigos.filter(c => !encontrados.has(c));
+
+  if(!confirm(`¿Regularizar ${filas.length} fila(s) pendiente(s) de ${encontrados.size} código(s)? Quedan como "Regularizado manual" en Historial.`)) return;
+
+  const btn = document.getElementById("conc-regularizar-confirmar");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Regularizando…";
+  const ahoraIso = new Date().toISOString();
+  const actorId = miUsuario ? miUsuario.id : null;
+  const resultados = await Promise.all(filas.map(r =>
+    sb.from("ssoma_sp_verificaciones")
+      .upsert({ registro_id: r.id, estado: "regularizado_manual", cantidad_encontrada: 0, otra_ubicacion: false, verificado_por_id: actorId, fecha: ahoraIso }, { onConflict: "registro_id" })
+      .then(({ error }) => ({ id: r.id, error }))
+      .catch(err => ({ id: r.id, error: err }))
+  ));
+  btn.disabled = false; btn.textContent = originalLabel;
+  const conError = resultados.filter(r => r.error);
+  const exitosos = new Set(resultados.filter(r => !r.error).map(r => r.id));
+  filas.forEach(r => {
+    if(exitosos.has(r.id)){
+      verificaciones[r.id] = { estado: "regularizado_manual", cantidadEncontrada: 0, otraUbicacion: false, ubicacionEncontrada: "", fotoNombre: "", foto: null, fecha: spFmtFechaHora(new Date(ahoraIso)) };
+    }
+  });
+  spRenderConc();
+  spRenderHistorial();
+
+  let msg = `✅ ${exitosos.size} fila(s) regularizada(s).`;
+  if(noEncontrados.length) msg += ` ${noEncontrados.length} código(s) sin pendientes: ${noEncontrados.join(", ")}.`;
+  if(conError.length) msg += ` ⚠ ${conError.length} no se pudieron guardar (revisa conexión e intenta de nuevo).`;
+  resultadoEl.textContent = msg;
+  if(!conError.length) setTimeout(concCerrarModalRegularizar, 2500);
 });
 const SP_COLUMNAS_HISTORIAL = [
   ...SP_COLUMNAS_CONCILIACION,
