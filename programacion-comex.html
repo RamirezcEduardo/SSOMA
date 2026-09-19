@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programación de Contenedores · COMEX</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#E31E24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prog. Contenedores">
+<script>
+(function(){
+  var saved = null;
+  try{ saved = localStorage.getItem("ssoma-theme"); }catch(e){}
+  var theme = saved || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  if(theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F4F6;
+    --panel:#FFFFFF;
+    --panel-alt:#FAFAFB;
+    --border:#E5E7EB;
+    --text:#1A1D23;
+    --muted:#8B92A0;
+    --red:#E31E24;
+    --red-dark:#B9151A;
+    --red-tint:#FDECEC;
+    --blue:#2563EB;
+    --blue-tint:#EAF1FE;
+    --amber:#B45309;
+    --amber-tint:#FEF3E2;
+    --amber-line:#F0B429;
+    --green:#15803D;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#111318; --panel:#1B1E25; --panel-alt:#20242C; --border:#2C313B;
+    --text:#E8EAED; --muted:#8B92A0;
+    --red:#FF5A5F; --red-dark:#E31E24; --red-tint:#3A1418;
+    --blue:#7AA2F7; --blue-tint:#16233D;
+    --amber:#F0B429; --amber-tint:#3A2A10; --amber-line:#F0B429;
+    --green:#4ADE80;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .15s ease,color .15s ease;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+
+  .topbar-red{height:5px;background:var(--red);}
+  header.top{background:var(--panel);border-bottom:1px solid var(--border);padding:20px;}
+  .header-inner{max-width:720px;margin:0 auto;display:flex;gap:12px;align-items:center;}
+  .header-bar{width:4px;border-radius:2px;background:var(--red);align-self:stretch;}
+  .eyebrow{font-size:10.5px;letter-spacing:.1em;color:var(--red);text-transform:uppercase;font-weight:700;margin-bottom:3px;}
+  h1.title{font-weight:800;font-size:20px;letter-spacing:-.01em;margin:2px 0 0;}
+  .header-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .theme-toggle{margin-left:auto;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:15px;}
+  .theme-toggle:hover{background:var(--border);}
+
+  main{max-width:720px;margin:0 auto;padding:20px 16px 90px;}
+
+  .intro-card{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--muted);line-height:1.6;box-shadow:var(--shadow);}
+  .intro-card b{color:var(--text);}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px;}
+
+  .field{margin-bottom:0;}
+  .field label{display:block;font-size:11.5px;font-weight:600;margin-bottom:5px;color:var(--muted);}
+  .field label .req{color:var(--red);}
+  .field input, .field select{
+    width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    font-family:'Inter',sans-serif;font-size:13.5px;padding:9px 10px;border-radius:8px;outline:none;
+  }
+  .field input.mono{font-family:'IBM Plex Mono',monospace;}
+  .via-row{display:flex;align-items:center;gap:8px;}
+  .via-icon{flex-shrink:0;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;font-size:16px;}
+  .via-row select{flex:1;}
+  .field input:focus, .field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint);}
+
+  .id-grid{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px;}
+  @media (max-width:640px){ .id-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:400px){ .id-grid{grid-template-columns:1fr;} }
+
+  .entregas-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .entregas-head h2{font-size:15px;font-weight:800;margin:0;}
+  .entregas-count{font-size:11.5px;color:var(--muted);}
+
+  .entrega-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;box-shadow:var(--shadow);overflow:hidden;border-left:4px solid var(--blue);}
+  .entrega-card.carga-suelta{border-left-color:var(--amber);}
+  .entrega-top{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel-alt);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .tipo-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0;}
+  .tipo-btn{padding:6px 12px;font-size:12px;font-weight:700;background:var(--panel);color:var(--muted);cursor:pointer;border:none;font-family:inherit;}
+  .tipo-btn.active.contenedor{background:var(--blue-tint);color:var(--blue);}
+  .tipo-btn.active.suelta{background:var(--amber-tint);color:var(--amber);}
+  .entrega-num{font-size:11px;color:var(--muted);font-weight:700;}
+  .quitar-btn{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:6px 8px;border-radius:6px;font-family:inherit;}
+  .quitar-btn:hover{background:var(--red-tint);color:var(--red);}
+
+  .entrega-body{padding:14px;display:flex;flex-direction:column;gap:12px;}
+  .qty-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .qty-row.suelta-row{grid-template-columns:1fr 1fr;}
+  @media (max-width:480px){ .qty-row{grid-template-columns:1fr 1fr;} }
+
+  .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 12px;padding-top:12px;border-top:1px dashed var(--border);}
+  @media (max-width:640px){ .detail-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:420px){ .detail-grid{grid-template-columns:1fr;} }
+
+  .add-btn{width:100%;padding:13px;border:1.5px dashed var(--border);border-radius:10px;background:var(--panel-alt);color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:22px;}
+  .add-btn:hover{border-color:var(--blue);background:var(--blue-tint);}
+
+  .form-error{font-size:12px;color:var(--red);text-align:center;display:block;margin-bottom:10px;}
+
+  .summary-bar{position:sticky;bottom:12px;display:flex;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;box-shadow:0 4px 16px rgba(16,24,40,.12);margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+  .summary-chip{display:flex;flex-direction:column;gap:1px;}
+  .summary-chip .n{font-size:16px;font-weight:800;font-family:'IBM Plex Mono',monospace;}
+  .summary-chip .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .summary-chip.contenedor .n{color:var(--blue);}
+  .summary-chip.suelta .n{color:var(--amber);}
+  .summary-divider{width:1px;background:var(--border);align-self:stretch;}
+  .btn-primary{margin-left:auto;background:var(--red);color:#fff;border:none;font-weight:700;font-size:13.5px;padding:12px 20px;border-radius:9px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .btn-primary:hover{background:var(--red-dark);}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  @media (max-width:480px){ .btn-primary{margin-left:0;width:100%;order:10;} }
+
+  .thanks{text-align:center;padding:60px 20px;}
+  .thanks .icon{font-size:40px;margin-bottom:14px;}
+  .thanks h2{font-size:20px;margin:0 0 8px;}
+  .thanks p{color:var(--muted);font-size:13.5px;max-width:420px;margin:0 auto 20px;line-height:1.6;}
+  .btn-ghost{background:var(--panel);border:1px solid var(--border);color:var(--text);font-weight:700;font-size:13px;padding:11px 20px;border-radius:9px;cursor:pointer;font-family:inherit;}
+  .btn-ghost:hover{background:var(--panel-alt);}
+  [hidden]{display:none!important;}
+</style>
+</head>
+<body>
+
+<div class="topbar-red"></div>
+<header class="top">
+  <div class="header-inner">
+    <div class="header-bar"></div>
+    <div>
+      <div class="eyebrow">Adecco · Inbound</div>
+      <h1 class="title">Programación de Contenedores</h1>
+      <div class="header-sub">Para el equipo de COMEX — carga la semana completa en un solo envío</div>
+    </div>
+    <button type="button" class="theme-toggle" id="theme-toggle-btn" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
+  </div>
+</header>
+
+<main>
+  <div class="intro-card">
+    Registra acá la programación de llegadas de <b>toda la semana</b> de una sola vez — agrega una entrega por cada contenedor o pallet que llegue, indicando el día exacto. Con esto alimentamos directo la programación de recepción, sin necesidad de mandar el Excel.
+  </div>
+
+  <form id="prog-form">
+    <div class="card">
+      <div class="card-title">Quién registra</div>
+      <div class="id-grid">
+        <div class="field">
+          <label>Nombre <span class="req">*</span></label>
+          <input id="f-nombre" placeholder="Jenny Rojas" required>
+        </div>
+        <div class="field">
+          <label>DNI <span class="req">*</span></label>
+          <input class="mono" id="f-dni" inputmode="numeric" placeholder="12345678" required>
+        </div>
+        <div class="field">
+          <label>Correo <span class="req">*</span></label>
+          <input type="email" id="f-correo" placeholder="nombre@empresa.pe" required>
+        </div>
+        <div class="field">
+          <label>Área <span class="req">*</span></label>
+          <input id="f-area" placeholder="ComEx Importaciones" required>
+        </div>
+      </div>
+    </div>
+
+    <div class="entregas-head">
+      <h2>Entregas de la semana</h2>
+      <span class="entregas-count" id="entregas-count">0 entregas cargadas</span>
+    </div>
+
+    <div id="entregas-list"></div>
+
+    <button type="button" class="add-btn" id="add-entrega-btn">+ Agregar otra entrega</button>
+
+    <div class="summary-bar">
+      <div class="summary-chip contenedor"><span class="n mono" id="sum-contenedores">0</span><span class="lbl">Contenedores</span></div>
+      <div class="summary-divider"></div>
+      <div class="summary-chip suelta"><span class="n mono" id="sum-pallets">0</span><span class="lbl">Pallets</span></div>
+      <button type="submit" class="btn-primary" id="enviar-btn">Enviar programación de la semana</button>
+    </div>
+    <span class="form-error" id="form-error"></span>
+  </form>
+
+  <div class="thanks" id="thanks-screen" hidden>
+    <div class="icon">✅</div>
+    <h2>¡Programación registrada!</h2>
+    <p>Se cargaron las entregas de la semana. El equipo de recepción ya las puede ver en su agenda diaria.</p>
+    <p id="thanks-nota-correo" style="font-size:12px;color:var(--muted);"></p>
+    <button type="button" class="btn-ghost" id="registrar-mas-btn">+ Registrar más entregas</button>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL = "https://zlukrktpjffiycarpduc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_QFLNZihxZRqdvyc-GSRZPw_Q-rkA6No";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---- Tema claro/oscuro ---- */
+const THEME_KEY = "ssoma-theme";
+function applyTheme(theme){
+  if(theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  else document.documentElement.removeAttribute("data-theme");
+  document.getElementById("theme-toggle-btn").textContent = theme === "dark" ? "☀️" : "🌙";
+}
+document.getElementById("theme-toggle-btn").addEventListener("click", ()=>{
+  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  applyTheme(next);
+});
+applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+
+/* ---- Identidad de quien registra: se recuerda en este navegador para no repetirla
+   cada vez que vuelvan a cargar más entregas durante la semana. ---- */
+const ID_KEY = "comex-identidad";
+function cargarIdentidad(){
+  try{
+    const guardada = JSON.parse(localStorage.getItem(ID_KEY) || "null");
+    if(guardada){
+      document.getElementById("f-nombre").value = guardada.nombre || "";
+      document.getElementById("f-dni").value = guardada.dni || "";
+      document.getElementById("f-correo").value = guardada.correo || "";
+      document.getElementById("f-area").value = guardada.area || "";
+    }
+  }catch(e){}
+}
+function guardarIdentidad(nombre, dni, correo, area){
+  try{ localStorage.setItem(ID_KEY, JSON.stringify({ nombre, dni, correo, area })); }catch(e){}
+}
+cargarIdentidad();
+
+const VIA_OPCIONES = [
+  { v:"MARITIMO", icon:"🚢" },
+  { v:"AEREO", icon:"✈️" },
+  { v:"TRASLADO VIRTUAL", icon:"🚚" },
+];
+function viaIcon(v){ return (VIA_OPCIONES.find(o => o.v === v) || {}).icon || ""; }
+const CONT_TIPOS = ["20'","40'","40' HC"];
+
+function nuevaEntregaVacia(){
+  return { tipo:"contenedor", tipoContenedor:"40' HC", cantidad:1, fecha:"", via:"MARITIMO", bl:"", ocHija:"", proveedor:"", linea:"", eta:"", sobrestadia:"", agencia:"", lpns:"" };
+}
+let entregas = [nuevaEntregaVacia()];
+
+function render(){
+  const list = document.getElementById("entregas-list");
+  list.innerHTML = entregas.map((en, i) => `
+    <div class="entrega-card ${en.tipo === 'carga_suelta' ? 'carga-suelta' : ''}" data-i="${i}">
+      <div class="entrega-top">
+        <span class="entrega-num">#${i+1}</span>
+        <div class="tipo-toggle">
+          <button type="button" class="tipo-btn contenedor ${en.tipo === 'contenedor' ? 'active contenedor' : ''}" data-i="${i}" data-tipo="contenedor">📦 Contenedor</button>
+          <button type="button" class="tipo-btn suelta ${en.tipo === 'carga_suelta' ? 'active suelta' : ''}" data-i="${i}" data-tipo="carga_suelta">🧱 Carga suelta</button>
+        </div>
+        ${entregas.length > 1 ? `<button type="button" class="quitar-btn" data-i="${i}">🗑️ Quitar</button>` : ""}
+      </div>
+      <div class="entrega-body">
+        ${en.tipo === 'contenedor' ? `
+        <div class="qty-row">
+          <div class="field"><label>Tipo de contenedor</label>
+            <select data-field="tipoContenedor" data-i="${i}">
+              ${CONT_TIPOS.map(t => `<option ${t===en.tipoContenedor?'selected':''}>${t}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field"><label>Cantidad <span class="req">*</span></label><input class="mono" type="number" min="1" data-field="cantidad" data-i="${i}" value="${en.cantidad}"></div>
+          <div class="field"><label>Fecha de entrega <span class="req">*</span></label><input class="mono" type="date" data-field="fecha" data-i="${i}" value="${en.fecha}"></div>
+        </div>` : `
+        <div class="qty-row suelta-row">
+          <div class="field"><label>Cantidad de pallets <span class="req">*</span></label><input class="mono" type="number" min="1" data-field="cantidad" data-i="${i}" value="${en.cantidad}"></div>
+          <div class="field"><label>Fecha de entrega <span class="req">*</span></label><input class="mono" type="date" data-field="fecha" data-i="${i}" value="${en.fecha}"></div>
+        </div>`}
+        <div class="detail-grid">
+          <div class="field"><label>Vía</label>
+            <div class="via-row">
+              <span class="via-icon">${viaIcon(en.via)}</span>
+              <select data-field="via" data-i="${i}">${VIA_OPCIONES.map(o => `<option value="${o.v}" ${o.v===en.via?'selected':''}>${o.icon} ${o.v}</option>`).join("")}</select>
+            </div>
+          </div>
+          <div class="field"><label>BL</label><input class="mono" data-field="bl" data-i="${i}" value="${en.bl}"></div>
+          <div class="field"><label>OC Hija</label><input class="mono" data-field="ocHija" data-i="${i}" value="${en.ocHija}"></div>
+          <div class="field"><label>Proveedor</label><input data-field="proveedor" data-i="${i}" value="${en.proveedor}"></div>
+          <div class="field"><label>Línea</label><input data-field="linea" data-i="${i}" value="${en.linea}"></div>
+          <div class="field"><label>ETA</label><input class="mono" type="date" data-field="eta" data-i="${i}" value="${en.eta}"></div>
+          <div class="field"><label>Sobrestadía</label><input class="mono" type="date" data-field="sobrestadia" data-i="${i}" value="${en.sobrestadia}"></div>
+          <div class="field"><label>Agencia</label><input data-field="agencia" data-i="${i}" value="${en.agencia}"></div>
+          <div class="field"><label>LPNs</label><input class="mono" type="number" data-field="lpns" data-i="${i}" value="${en.lpns}"></div>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  document.getElementById("entregas-count").textContent = `${entregas.length} entrega${entregas.length === 1 ? '' : 's'} cargada${entregas.length === 1 ? '' : 's'}`;
+
+  const totalCont = entregas.filter(e => e.tipo === 'contenedor').reduce((a,e) => a + (Number(e.cantidad)||0), 0);
+  const totalPallets = entregas.filter(e => e.tipo === 'carga_suelta').reduce((a,e) => a + (Number(e.cantidad)||0), 0);
+  document.getElementById("sum-contenedores").textContent = totalCont;
+  document.getElementById("sum-pallets").textContent = totalPallets;
+
+  list.querySelectorAll(".tipo-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      entregas[Number(btn.dataset.i)].tipo = btn.dataset.tipo;
+      render();
+    });
+  });
+  list.querySelectorAll(".quitar-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      entregas.splice(Number(btn.dataset.i), 1);
+      render();
+    });
+  });
+  list.querySelectorAll("[data-field]").forEach(el => {
+    el.addEventListener("input", () => {
+      entregas[Number(el.dataset.i)][el.dataset.field] = el.value;
+      if(el.dataset.field === "via"){
+        el.parentElement.querySelector(".via-icon").textContent = viaIcon(el.value);
+      }
+      if(el.dataset.field === "cantidad" || el.dataset.field === "tipo"){
+        const totalCont2 = entregas.filter(e => e.tipo === 'contenedor').reduce((a,e) => a + (Number(e.cantidad)||0), 0);
+        const totalPallets2 = entregas.filter(e => e.tipo === 'carga_suelta').reduce((a,e) => a + (Number(e.cantidad)||0), 0);
+        document.getElementById("sum-contenedores").textContent = totalCont2;
+        document.getElementById("sum-pallets").textContent = totalPallets2;
+      }
+    });
+  });
+}
+render();
+
+document.getElementById("add-entrega-btn").addEventListener("click", () => {
+  entregas.push(nuevaEntregaVacia());
+  render();
+  document.getElementById("entregas-list").lastElementChild.scrollIntoView({ behavior:"smooth", block:"center" });
+});
+
+document.getElementById("prog-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById("form-error");
+  errorEl.textContent = "";
+
+  const nombre = document.getElementById("f-nombre").value.trim();
+  const dni = document.getElementById("f-dni").value.trim();
+  const correo = document.getElementById("f-correo").value.trim();
+  const area = document.getElementById("f-area").value.trim();
+  if(!nombre || !dni || !correo || !area){
+    errorEl.textContent = "Completa nombre, DNI, correo y área.";
+    return;
+  }
+  if(!/^\d{8}$/.test(dni)){
+    errorEl.textContent = "El DNI debe tener 8 dígitos.";
+    return;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)){
+    errorEl.textContent = "Ingresa un correo válido.";
+    return;
+  }
+  if(!entregas.length){
+    errorEl.textContent = "Agrega al menos una entrega.";
+    return;
+  }
+  for(let i = 0; i < entregas.length; i++){
+    const en = entregas[i];
+    if(!en.fecha || !en.cantidad || Number(en.cantidad) <= 0){
+      errorEl.textContent = `La entrega #${i+1} necesita fecha de entrega y cantidad.`;
+      return;
+    }
+  }
+
+  const btn = document.getElementById("enviar-btn");
+  btn.disabled = true;
+  btn.textContent = "Enviando...";
+
+  const filas = entregas.map(en => ({
+    registrado_por_nombre: nombre,
+    registrado_por_dni: dni,
+    registrado_por_correo: correo,
+    registrado_por_area: area,
+    via: en.via || null,
+    bl: en.bl.trim() || null,
+    oc_hija: en.ocHija.trim() || null,
+    proveedor: en.proveedor.trim() || null,
+    linea: en.linea.trim() || null,
+    eta: en.eta || null,
+    sobrestadia: en.sobrestadia || null,
+    agencia: en.agencia.trim() || null,
+    lpns: en.lpns ? Number(en.lpns) : null,
+    tipo_carga: en.tipo,
+    tipo_contenedor: en.tipo === "contenedor" ? en.tipoContenedor : null,
+    cantidad: Number(en.cantidad),
+    fecha_entrega: en.fecha,
+  }));
+
+  const { error } = await sb.from("ssoma_inbound_programacion_contenedores").insert(filas);
+
+  btn.disabled = false;
+  btn.textContent = "Enviar programación de la semana";
+
+  if(error){
+    errorEl.textContent = "No se pudo enviar la programación. Intenta de nuevo.";
+    return;
+  }
+
+  guardarIdentidad(nombre, dni, correo, area);
+  document.getElementById("prog-form").style.display = "none";
+  document.getElementById("thanks-screen").hidden = false;
+
+  // El correo de confirmación (con el Excel adjunto) es un extra, no crítico: si falla,
+  // la programación ya quedó guardada igual — solo se avisa con una nota distinta.
+  const notaEl = document.getElementById("thanks-nota-correo");
+  try{
+    const { error: fnError } = await sb.functions.invoke("enviar-programacion-comex", {
+      body: {
+        nombre, dni, correo, area,
+        entregas: entregas.map(en => ({
+          tipo: en.tipo, tipoContenedor: en.tipoContenedor, cantidad: en.cantidad, fecha: en.fecha,
+          via: en.via, bl: en.bl, ocHija: en.ocHija, proveedor: en.proveedor, linea: en.linea,
+          eta: en.eta, sobrestadia: en.sobrestadia, agencia: en.agencia, lpns: en.lpns,
+        })),
+      },
+    });
+    notaEl.textContent = fnError ? "No pudimos enviarte el correo de confirmación, pero tu programación ya quedó registrada." : `Te enviamos una copia con el Excel adjunto a ${correo}.`;
+  }catch(e){
+    notaEl.textContent = "No pudimos enviarte el correo de confirmación, pero tu programación ya quedó registrada.";
+  }
+});
+
+document.getElementById("registrar-mas-btn").addEventListener("click", () => {
+  entregas = [nuevaEntregaVacia()];
+  render();
+  document.getElementById("thanks-nota-correo").textContent = "";
+  document.getElementById("thanks-screen").hidden = true;
+  document.getElementById("prog-form").style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+</script>
+</body>
+</html>
