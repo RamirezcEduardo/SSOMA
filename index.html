@@ -1294,21 +1294,53 @@
     .sm-fab{padding:12px 18px;font-size:13px;}
   }
 
-  /* LÍDER DE VIDA — repositorio de inspecciones mensuales: solo se sube el
-     archivo ya llenado (PDF/Excel), no se replica el formulario campo a campo. */
+  /* LÍDER DE VIDA — cuestionario dentro de la app (no un archivo subido). Cada
+     equipo/trabajador es una tarjeta con chips de estado por ítem (en vez de
+     la tabla ancha del Excel original), para llenarlo con el pulgar desde el
+     celular. Al guardar, además del registro, se puede descargar/imprimir el
+     documento final con el mismo contenido del formato oficial. */
   .insp-tipos{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
   .insp-tipos::-webkit-scrollbar{display:none;}
   .insp-tipo-btn{flex-shrink:0;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;color:var(--text-soft);background:var(--panel-alt);border:1px solid var(--border);border-radius:20px;padding:9px 16px;cursor:pointer;white-space:nowrap;}
   .insp-tipo-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
 
-  .insp-file-hint{font-size:11.5px;color:var(--muted);margin-top:5px;}
+  .insp-leyenda{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text-soft);line-height:1.7;}
+  .insp-leyenda b{color:var(--text);font-family:'IBM Plex Mono',monospace;}
+  .insp-leyenda-titulo{font-weight:700;color:var(--text);font-size:12.5px;margin-bottom:6px;}
+
+  .insp-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow);}
+  .insp-card-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;}
+  .insp-card-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--panel-alt);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;margin-top:6px;}
+  .insp-card-campos{flex:1;display:grid;grid-template-columns:1fr;gap:8px;}
+  @media (min-width:520px){ .insp-card-campos{grid-template-columns:2fr 1fr;} }
+  .insp-card-campos input{padding:9px 10px;font-size:13px;}
+  .insp-card-quitar{flex-shrink:0;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 4px;margin-top:2px;}
+  .insp-card-quitar:hover{color:var(--red);}
+
+  .insp-grupo-titulo{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin:10px 0 6px;}
+  .insp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .insp-chip{width:34px;height:34px;border-radius:9px;border:1px solid var(--border-strong);background:var(--panel-alt);color:var(--text-soft);font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12.5px;cursor:pointer;}
+  .insp-chip[data-estado="OK"], .insp-chip[data-estado="B"]{background:var(--green-tint);border-color:var(--green);color:var(--green);}
+  .insp-chip[data-estado="NC"], .insp-chip[data-estado="M"]{background:var(--red-tint);border-color:var(--red);color:var(--red-dark);}
+  .insp-chip[data-estado="RC"]{background:var(--orange-tint);border-color:var(--orange);color:var(--amber-text);}
+  .insp-chip[data-estado="NA"]{background:var(--panel);border-color:var(--border);color:var(--muted);}
+
+  .insp-obs{margin-top:10px;}
+  .insp-obs input{padding:9px 10px;font-size:13px;}
+
+  .insp-add-row{width:100%;border:1px dashed var(--border-strong);background:var(--panel-alt);color:var(--text-soft);border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:20px;}
+  .insp-add-row:hover{border-color:var(--red);color:var(--red);}
 
   .insp-lista{display:flex;flex-direction:column;gap:8px;}
   @media (min-width:680px){ .insp-lista{display:grid;grid-template-columns:1fr 1fr;gap:8px;} }
-  .insp-item-card{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:10px;padding:12px 14px;}
+  .insp-item-card{display:block;width:100%;text-align:left;font-family:inherit;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:10px;padding:12px 14px;cursor:pointer;}
   .insp-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;}
   .insp-item-meta{font-size:12px;color:var(--muted);}
-  .insp-item-acciones{display:flex;gap:8px;margin-top:10px;}
+
+  .insp-firma-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:6px;}
+  @media (min-width:600px){ .insp-firma-grid{grid-template-columns:1fr 1fr;} }
+  .insp-firma-box{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .insp-firma-box h5{margin:0 0 10px;font-size:12.5px;font-weight:700;color:var(--text);}
 </style>
 </head>
 <body>
@@ -1402,11 +1434,12 @@
       <button type="button" class="navgroup-header" id="navgroup-lidervida-toggle" aria-expanded="false" style="margin-top:10px;">
         <span class="navgroup-icon">🦺</span>
         <span class="navgroup-title">Líder de Vida</span>
-        <span class="navgroup-count" id="navgroup-lidervida-count">1</span>
+        <span class="navgroup-count" id="navgroup-lidervida-count">2</span>
         <span class="navgroup-chevron">⌄</span>
       </button>
       <div class="navgroup-body" id="navgroup-lidervida-body">
-        <button class="navitem" data-view="insp-lider-vida"><span class="dot" style="background:#DC2626;"></span><span class="label">Inspecciones mensuales</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="insp-equipos"><span class="dot" style="background:#DC2626;"></span><span class="label">Inspección de Equipos</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="insp-epp"><span class="dot" style="background:#0EA5E9;"></span><span class="label">Inspección de EPP</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -2882,33 +2915,37 @@
       </div>
     </section>
 
-    <!-- LÍDER DE VIDA · INSPECCIONES MENSUALES (sube el archivo ya llenado) -->
-    <section class="panel" id="panel-insp-lider-vida">
+    <!-- LÍDER DE VIDA · INSPECCIÓN DE EQUIPOS (ESTOCA/Cuchillas/Encintador/Coches) -->
+    <section class="panel" id="panel-insp-equipos">
       <div class="section-head">
-        <h2 class="section-title">🦺 Inspecciones — Líder de Vida</h2>
-        <span class="count-pill" id="lv-count">0 archivos</span>
+        <h2 class="section-title">🦺 Inspección de Equipos</h2>
+        <span class="count-pill" id="ie-count">0 inspecciones</span>
       </div>
-      <p class="section-desc">Sube el formato mensual ya llenado (PDF o Excel): EPP, ESTOCA, cuchillas, encintador o coches de acarreo — reemplaza los formatos SSOMA-FR107/108/110/111/112.</p>
+      <p class="section-desc">Inspección mensual de ESTOCA, cuchillas, encintadores y coches de acarreo — reemplaza los formatos SSOMA-FR108/110/111/112. Al guardar queda el registro y puedes descargar el documento final.</p>
 
-      <div class="insp-tipos" id="lv-tipos"></div>
-
-      <div class="sm-cart-box">
-        <div class="field"><label>Cliente</label><input type="text" id="lv-f-cliente" placeholder="Ej. Adecco"></div>
-        <div class="field"><label>Área</label><input type="text" id="lv-f-area" placeholder="Ej. Despacho"></div>
-        <div class="field"><label>Mes que corresponde *</label><input type="month" id="lv-f-mes"></div>
-        <div class="field">
-          <label>Archivo (PDF o Excel) *</label>
-          <input type="file" id="lv-f-archivo" accept=".pdf,.xls,.xlsx">
-          <div class="insp-file-hint" id="lv-file-info">Hasta 8 MB.</div>
-        </div>
-        <div class="field" style="margin-bottom:14px;"><label>Observaciones</label><input type="text" id="lv-f-obs" placeholder="Opcional"></div>
-        <button type="button" class="btn btn-primary sm-enviar-btn" id="lv-btn-enviar" onclick="lvEnviar()">📤 Subir inspección</button>
-      </div>
+      <div class="insp-tipos" id="ie-tipos"></div>
+      <div id="ie-form-cont"></div>
 
       <div class="section-head" style="margin-top:8px;">
-        <h2 class="section-title" style="font-size:16px;">📋 Archivos subidos</h2>
+        <h2 class="section-title" style="font-size:16px;">📋 Inspecciones registradas</h2>
       </div>
-      <div class="insp-lista" id="lv-lista"></div>
+      <div class="insp-lista" id="ie-lista"></div>
+    </section>
+
+    <!-- LÍDER DE VIDA · INSPECCIÓN DE EPP -->
+    <section class="panel" id="panel-insp-epp">
+      <div class="section-head">
+        <h2 class="section-title">🦺 Inspección de EPP</h2>
+        <span class="count-pill" id="iepp-count">0 inspecciones</span>
+      </div>
+      <p class="section-desc">Inspección mensual de EPP por trabajador — reemplaza el formato SSOMA-FR107. Al guardar queda el registro y puedes descargar el documento final.</p>
+
+      <div id="iepp-form-cont"></div>
+
+      <div class="section-head" style="margin-top:8px;">
+        <h2 class="section-title" style="font-size:16px;">📋 Inspecciones registradas</h2>
+      </div>
+      <div class="insp-lista" id="iepp-lista"></div>
     </section>
 
     <!-- DESIGNACIÓN DE TAREAS · VISTA JEFATURA -->
@@ -4345,8 +4382,10 @@ function irAVista(view){
     trLoadTareas();
   } else if(view === "inventario-suministros"){
     cargarSuministrosSSOMA();
-  } else if(view === "insp-lider-vida"){
-    cargarInspLiderVida();
+  } else if(view === "insp-equipos"){
+    cargarInspEquipos();
+  } else if(view === "insp-epp"){
+    cargarInspEpp();
   } else if(view === "inbound-recepcion-importados"){
     sotLoadRegistros();
     pcLoadRegistros();
@@ -12116,158 +12155,620 @@ document.getElementById("sm-fab-btn")?.addEventListener("click", ()=>{
 })();
 
 // ============================================================================
-// LÍDER DE VIDA — repositorio de inspecciones mensuales (tabla ssoma_insp_lider_vida)
+// LÍDER DE VIDA — Inspección de Equipos (ESTOCA/Cuchillas/Encintador/Coches)
 // ----------------------------------------------------------------------------
-// El Líder de Vida llena estos 5 formatos (EPP, ESTOCA, Cuchillas, Encintador,
-// Coches) fuera de la app, en el Excel oficial. Acá solo se SUBE el archivo ya
-// llenado (PDF o Excel) con una metadata mínima — no se replica el formulario
-// campo a campo. El archivo se guarda como data URL base64 en la misma fila,
-// igual que la evidencia fotográfica de RACS.
+// Digitaliza SSOMA-FR108/110/111/112 como CUESTIONARIO dentro de la app: cada
+// equipo es una tarjeta con chips en vez de la tabla ancha del Excel, para
+// llenarlo con el pulgar. Al guardar queda el registro en Supabase, y desde
+// el detalle se puede generar/imprimir el documento final (misma info del
+// formato oficial, para archivar o entregar).
 // ============================================================================
-const LV_TIPOS = {
-  EPP:        { label: 'EPP',               formato: 'SSOMA-FR107' },
-  ESTOCA:     { label: 'ESTOCA',             formato: 'SSOMA-FR108' },
-  CUCHILLAS:  { label: 'Cuchillas',          formato: 'SSOMA-FR110' },
-  ENCINTADOR: { label: 'Encintador',         formato: 'SSOMA-FR111' },
-  COCHES:     { label: 'Coches de acarreo',  formato: 'SSOMA-FR112' }
+function abrirVentanaImpresion(html, titulo){
+  const css = [...document.querySelectorAll('link[rel=stylesheet]')].map(l => `<link rel="stylesheet" href="${l.href}">`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title>${css}<style>
+    body{padding:24px;background:#fff;color:#111;font-family:'Inter',sans-serif;}
+    .insp-doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:12px;margin-bottom:16px;}
+    .insp-doc-table{width:100%;border-collapse:collapse;margin:16px 0;}
+    .insp-doc-table th,.insp-doc-table td{border:1px solid #ccc;padding:6px 8px;font-size:11px;text-align:center;}
+    .insp-doc-table th{background:#f3f4f6;}
+    .insp-doc-firma{display:flex;justify-content:space-between;gap:40px;margin-top:50px;}
+    .insp-doc-firma div{text-align:center;width:100%;border-top:1px solid #000;padding-top:6px;font-size:12px;}
+  </style></head><body>${html}</body></html>`);
+  w.document.close();
+  setTimeout(()=>{ w.focus(); w.print(); }, 400);
+}
+
+const IE_TIPOS = {
+  ESTOCA: { label: 'ESTOCA', formato: 'SSOMA-FR108', leyenda: [
+    ['A','FRENO DE MANO Y APARCAMIENTO, COMBINADOS'],
+    ['B','EMPUÑADURA'],
+    ['C','MANDO DE VALVULAS, ELEVACION, PUNTO MUERTO, DESCENSO'],
+    ['D','BARRA DE TRACCION'],
+    ['E','MUELLE DE RETORNO A VERTICAL'],
+    ['F','CHASIS'],
+    ['G','CONJUNTO HIDRAULICO (SI PRESENTA FUGAS)'],
+    ['H','RUEDAS DIRECTRICES'],
+    ['I','RUEDAS DELANTERAS'],
+    ['J','BARRA DE EMPUJE DE ELEVACION'],
+    ['K','LEVA DE MECANISMO DE ELEVACION'],
+    ['L','SE CUENTA CON LA CINTA DE INSPECCION DEL MES'],
+    ['M','SE CUENTA CON LA TARJETA DE FUERA DE SERVICIO EN CASO SEA NECESARIO USAR']
+  ]},
+  CUCHILLAS: { label: 'Cuchillas', formato: 'SSOMA-FR110', leyenda: [
+    ['A','CONDICIONES GENERALES DE HERRAMIENTAS'],
+    ['B','MANGO EN BUEN ESTADO'],
+    ['C','HERRAMIENTA NO HECHIZA'],
+    ['D','CUCHILLA DE ACERO SK EN BUEN ESTADO (NO OXIDADO, CORTADO, PERFORADO)'],
+    ['E','SEGURO AUTOMATICO RETRÁCTIL EN BUEN ESTADO'],
+    ['F','EL PERSONAL CONOCE LOS RIESGOS AL QUE ESTA EXPUESTO'],
+    ['G','PUNTA METALICA MULTIPROPÓSITO EN BUEN ESTADO'],
+    ['H','MANGO ANTIDESLIZANTE Y CURVADO EN BUEN ESTADO'],
+    ['I','EL PERSONAL CUENTA CON EL EPP REQUERIDO PARA LAS HERRAMIENTAS A USAR'],
+    ['J','ALMACENAMIENTO ADECUADO']
+  ]},
+  ENCINTADOR: { label: 'Encintador', formato: 'SSOMA-FR111', leyenda: [
+    ['A','CONDICIONES GENERALES DE HERRAMIENTAS'],
+    ['B','MANGO ERGONÓMICO EN BUEN ESTADO'],
+    ['C','HERRAMIENTA NO HECHIZA'],
+    ['D','SIERRA DE CORTE EN BUEN ESTADO'],
+    ['E','LENGÚETA DE PRESIÓN EN BUEN ESTADO'],
+    ['F','EL PERSONAL CONOCE LOS RIESGOS AL QUE ESTA EXPUESTO'],
+    ['G','ESTRUCTURA METALICA SIN ÓXIDOS'],
+    ['H','RODILLO DE PRESIÓN EN BUEN ESTADO'],
+    ['I','ALMACENAMIENTO ADECUADO'],
+    ['J','EL PERSONAL CUENTA CON EL EPP REQUERIDO PARA LAS HERRAMIENTAS A USAR']
+  ]},
+  COCHES: { label: 'Coches de acarreo', formato: 'SSOMA-FR112', leyenda: [
+    ['A','FRENO DE LLANTAS'],
+    ['B','MANIJA DE COCHE (EMPUÑADURA)'],
+    ['C','ESTRUCTURA DE EMPUÑADURA'],
+    ['D','CHASIS INFERIOR, MEDIO Y SUPERIOR DE COCHE'],
+    ['E','RUEDAS DIRECTRICES'],
+    ['F','RUEDAS DELANTERAS'],
+    ['G','SE CUENTA CON LA CINTA DE INSPECCION DEL MES'],
+    ['H','SE CUENTA CON LA TARJETA DE FUERA DE SERVICIO EN CASO SEA NECESARIO USAR'],
+    ['I','ESTRUCTURA DE COCHE SIN SUPERFICIES FILOSAS']
+  ]}
 };
-const LV_TAMANO_MAX = 8 * 1024 * 1024; // 8 MB
 
-let lvState = { tipo: 'EPP', archivo: null, registros: [], cargado: false };
+let ieState = { tipo: 'ESTOCA', filas: [], registros: [], cargado: false };
+let ieCounter = 0;
+let ieDetalleActual = null; // { cabecera, lineas } — lo último abierto en el modal, para poder imprimirlo
 
-async function cargarInspLiderVida(){
-  if(!lvState.cargado){
+function ieCiclo(estado){
+  const orden = ['—','OK','NC','NA'];
+  return orden[(orden.indexOf(estado) + 1) % orden.length];
+}
+
+async function cargarInspEquipos(){
+  if(!ieState.cargado){
     try{
-      const { data, error } = await sb.from('ssoma_insp_lider_vida').select('*')
+      const { data, error } = await sb.from('ssoma_insp_equipo_cabecera').select('*')
         .eq('creado_por', currentSession.usuario.nombre).order('id', { ascending: false });
       if(error) throw error;
-      lvState.registros = data || [];
-      lvState.cargado = true;
+      ieState.registros = data || [];
+      ieState.cargado = true;
     }catch(err){
-      console.error('Error cargando inspecciones Líder de Vida:', err);
-      const cont = document.getElementById('lv-lista');
+      console.error('Error cargando inspecciones de equipo:', err);
+      const cont = document.getElementById('ie-lista');
       if(cont) cont.innerHTML = `<div class="sm-empty" style="color:var(--red);">No se pudo cargar: ${escSm(err.message)}<br><small>Si la tabla no existe, ejecuta la migración 0043 en Supabase.</small></div>`;
     }
   }
-  lvRender();
+  if(ieState.filas.length === 0) ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieRender();
 }
 
-function lvRender(){
-  const el = document.getElementById('lv-count');
-  if(el) el.textContent = `${lvState.registros.length} archivo(s)`;
-  lvRenderTipos();
-  lvRenderLista();
+function ieRender(){
+  const el = document.getElementById('ie-count');
+  if(el) el.textContent = `${ieState.registros.length} inspección(es)`;
+  ieRenderTipos();
+  ieRenderForm();
+  ieRenderLista();
 }
 
-function lvRenderTipos(){
-  const cont = document.getElementById('lv-tipos');
+function ieRenderTipos(){
+  const cont = document.getElementById('ie-tipos');
   if(!cont) return;
-  cont.innerHTML = Object.entries(LV_TIPOS).map(([id, cfg]) => `
-    <button type="button" class="insp-tipo-btn${lvState.tipo===id?' active':''}" onclick="lvCambiarTipo('${id}')">${escSm(cfg.label)}</button>
+  cont.innerHTML = Object.entries(IE_TIPOS).map(([id, cfg]) => `
+    <button type="button" class="insp-tipo-btn${ieState.tipo===id?' active':''}" onclick="ieCambiarTipo('${id}')">${escSm(cfg.label)}</button>
   `).join('');
 }
 
-function lvCambiarTipo(tipo){
-  lvState.tipo = tipo;
-  lvRenderTipos();
+function ieCambiarTipo(tipo){
+  ieState.tipo = tipo;
+  ieRender();
 }
 
-document.getElementById('lv-f-archivo')?.addEventListener('change', (e)=>{
-  const file = e.target.files?.[0] || null;
-  const info = document.getElementById('lv-file-info');
-  if(!file){ lvState.archivo = null; if(info) info.textContent = 'Hasta 8 MB.'; return; }
-  if(file.size > LV_TAMANO_MAX){
-    alert('El archivo pesa más de 8 MB. Comprímelo o pide que lo suban desde una compu.');
-    e.target.value = '';
-    lvState.archivo = null;
-    if(info) info.textContent = 'Hasta 8 MB.';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    lvState.archivo = { nombre: file.name, tipo: file.type, tamano: file.size, contenido: reader.result };
-    if(info) info.textContent = `${file.name} · ${lvFormatoTamano(file.size)}`;
-  };
-  reader.onerror = () => alert('No se pudo leer el archivo.');
-  reader.readAsDataURL(file);
-});
+function ieRenderForm(){
+  const cont = document.getElementById('ie-form-cont');
+  if(!cont) return;
+  const cfg = IE_TIPOS[ieState.tipo];
 
-function lvFormatoTamano(bytes){
-  if(bytes < 1024) return `${bytes} B`;
-  if(bytes < 1024*1024) return `${(bytes/1024).toFixed(0)} KB`;
-  return `${(bytes/(1024*1024)).toFixed(1)} MB`;
+  cont.innerHTML = `
+    <div class="insp-leyenda">
+      <div class="insp-leyenda-titulo">Marcar: ✔ Conforme · x No cumple · NA No aplica</div>
+      ${cfg.leyenda.map(([l,t]) => `<div><b>${l}</b> = ${escSm(t)}</div>`).join('')}
+    </div>
+
+    <div class="field"><label>Cliente</label><input type="text" id="ie-f-cliente" placeholder="Ej. Adecco"></div>
+    <div class="field"><label>Área</label><input type="text" id="ie-f-area" placeholder="Ej. Despacho"></div>
+
+    ${ieState.filas.map((f, i) => ieFilaHTML(f, i, cfg)).join('')}
+
+    <button type="button" class="insp-add-row" onclick="ieAgregarFila()">➕ Agregar equipo</button>
+
+    <div class="field"><label>Acciones correctivas</label><textarea id="ie-f-acciones" placeholder="Opcional"></textarea></div>
+    <div class="field"><label>Responsable(s)</label><input type="text" id="ie-f-responsables" placeholder="Opcional"></div>
+    <div class="field"><label>Fecha compromiso</label><input type="date" id="ie-f-fecha-acciones"></div>
+
+    <div class="insp-firma-grid">
+      <div class="insp-firma-box">
+        <h5>Inspeccionado por</h5>
+        <div class="field"><label>Nombres y apellidos *</label><input type="text" id="ie-f-insp-nombre"></div>
+        <div class="field" style="margin-bottom:0;"><label>Cargo</label><input type="text" id="ie-f-insp-cargo"></div>
+      </div>
+      <div class="insp-firma-box">
+        <h5>Revisado por</h5>
+        <div class="field"><label>Nombres y apellidos</label><input type="text" id="ie-f-rev-nombre" placeholder="Opcional"></div>
+        <div class="field" style="margin-bottom:0;"><label>Cargo</label><input type="text" id="ie-f-rev-cargo"></div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" id="ie-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieEnviar()">✅ Guardar inspección</button>
+  `;
 }
 
-async function lvEnviar(){
+function ieFilaHTML(f, i, cfg){
+  return `
+    <div class="insp-card">
+      <div class="insp-card-head">
+        <span class="insp-card-num">${i+1}</span>
+        <div class="insp-card-campos">
+          <input type="text" placeholder="Herramienta / equipo" value="${escSm(f.herramienta)}"
+                 oninput="ieActualizarCampo(${f._id}, 'herramienta', this.value)">
+          <input type="number" placeholder="Cantidad" min="0" value="${escSm(f.cantidad)}"
+                 oninput="ieActualizarCampo(${f._id}, 'cantidad', this.value)">
+        </div>
+        ${ieState.filas.length > 1 ? `<button type="button" class="insp-card-quitar" onclick="ieQuitarFila(${f._id})" aria-label="Quitar">&times;</button>` : ''}
+      </div>
+      <div class="insp-chips">
+        ${cfg.leyenda.map(([l,t]) => `
+          <button type="button" class="insp-chip" data-estado="${f.resultados[l] || '—'}" title="${escSm(t)}"
+                  onclick="ieToggleChip(${f._id}, '${l}', this)">${l}</button>
+        `).join('')}
+      </div>
+      <div class="insp-obs">
+        <input type="text" placeholder="Observaciones (opcional)" value="${escSm(f.observaciones)}"
+               oninput="ieActualizarCampo(${f._id}, 'observaciones', this.value)">
+      </div>
+    </div>`;
+}
+
+function ieActualizarCampo(filaId, campo, valor){
+  const fila = ieState.filas.find(f => f._id === filaId);
+  if(fila) fila[campo] = valor;
+}
+
+function ieToggleChip(filaId, letra, btnEl){
+  const fila = ieState.filas.find(f => f._id === filaId);
+  if(!fila) return;
+  const nuevo = ieCiclo(fila.resultados[letra] || '—');
+  if(nuevo === '—') delete fila.resultados[letra];
+  else fila.resultados[letra] = nuevo;
+  if(btnEl) btnEl.dataset.estado = nuevo;
+}
+
+function ieAgregarFila(){
+  ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieRenderForm();
+}
+
+function ieQuitarFila(filaId){
+  ieState.filas = ieState.filas.filter(f => f._id !== filaId);
+  ieRenderForm();
+}
+
+async function ieEnviar(){
   const v = id => document.getElementById(id)?.value.trim() || null;
-  const cliente = v('lv-f-cliente');
-  const area = v('lv-f-area');
-  const mesInput = document.getElementById('lv-f-mes')?.value; // "YYYY-MM"
-  const obs = v('lv-f-obs');
+  const cliente = v('ie-f-cliente');
+  const area = v('ie-f-area');
+  const acciones = v('ie-f-acciones');
+  const responsables = v('ie-f-responsables');
+  const fechaAcciones = document.getElementById('ie-f-fecha-acciones')?.value || null;
+  const inspNombre = v('ie-f-insp-nombre');
+  const inspCargo = v('ie-f-insp-cargo');
+  const revNombre = v('ie-f-rev-nombre');
+  const revCargo = v('ie-f-rev-cargo');
 
-  if(!mesInput) return alert('Indica a qué mes corresponde la inspección.');
-  if(!lvState.archivo) return alert('Elige el archivo (PDF o Excel) ya llenado.');
+  if(!inspNombre) return alert('Falta el nombre de quien inspeccionó.');
+  const filasValidas = ieState.filas.filter(f => f.herramienta.trim());
+  if(filasValidas.length === 0) return alert('Agrega al menos un equipo con su nombre.');
 
-  const btn = document.getElementById('lv-btn-enviar');
-  btn.disabled = true; btn.textContent = 'Subiendo…';
+  const btn = document.getElementById('ie-btn-enviar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
   try{
-    const { data: fila, error } = await sb.from('ssoma_insp_lider_vida').insert({
-      tipo: lvState.tipo, cliente, area, mes: `${mesInput}-01`, observaciones: obs,
-      archivo_nombre: lvState.archivo.nombre, archivo_tipo: lvState.archivo.tipo,
-      archivo_tamano: lvState.archivo.tamano, archivo_contenido: lvState.archivo.contenido,
+    const { data: cabecera, error: e1 } = await sb.from('ssoma_insp_equipo_cabecera').insert({
+      tipo: ieState.tipo, cliente, area,
+      acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+      inspeccionado_por: inspNombre, inspeccionado_cargo: inspCargo,
+      revisado_por: revNombre, revisado_cargo: revCargo,
       creado_por: currentSession.usuario.nombre
     }).select().single();
-    if(error) throw error;
+    if(e1) throw e1;
 
-    lvState.registros.unshift(fila);
-    lvState.archivo = null;
-    document.getElementById('lv-f-archivo').value = '';
-    document.getElementById('lv-f-cliente').value = '';
-    document.getElementById('lv-f-area').value = '';
-    document.getElementById('lv-f-mes').value = '';
-    document.getElementById('lv-f-obs').value = '';
-    document.getElementById('lv-file-info').textContent = 'Hasta 8 MB.';
-    lvRender();
-    alert(`Subido: ${fila.codigo}`);
+    const lineas = filasValidas.map((f, i) => ({
+      cabecera_id: cabecera.id, n_orden: i + 1,
+      herramienta: f.herramienta.trim(), cantidad: f.cantidad ? parseInt(f.cantidad, 10) : null,
+      resultados: f.resultados, observaciones: f.observaciones.trim() || null
+    }));
+    const { error: e2 } = await sb.from('ssoma_insp_equipo_detalle').insert(lineas);
+    if(e2) throw e2;
+
+    ieState.registros.unshift(cabecera);
+    ieState.filas = [];
+    ieCounter = 0;
+    ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+    ieRender();
+    alert(`Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
   }catch(err){
-    alert('No se pudo subir el archivo: ' + err.message);
+    alert('No se pudo guardar: ' + err.message);
   }finally{
-    btn.disabled = false; btn.textContent = '📤 Subir inspección';
+    btn.disabled = false; btn.textContent = '✅ Guardar inspección';
   }
 }
 
-function lvMesLabel(mes){
-  if(!mes) return '—';
-  const [y,m] = String(mes).slice(0,7).split('-');
-  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  return `${meses[parseInt(m,10)-1]} ${y}`;
-}
-
-function lvRenderLista(){
-  const cont = document.getElementById('lv-lista');
+function ieRenderLista(){
+  const cont = document.getElementById('ie-lista');
   if(!cont) return;
-  cont.innerHTML = lvState.registros.length === 0
-    ? '<div class="sm-empty">Todavía no subiste ningún archivo.</div>'
-    : lvState.registros.map(r => `
-      <div class="insp-item-card">
-        <div class="insp-item-top"><strong>${escSm(r.codigo)}</strong><span class="estado-badge" style="background:var(--panel-alt);color:var(--text-soft);">${escSm(LV_TIPOS[r.tipo]?.label || r.tipo)}</span></div>
-        <div class="insp-item-meta">${lvMesLabel(r.mes)}${r.area ? ' · ' + escSm(r.area) : ''} · ${escSm(r.archivo_nombre)}${r.archivo_tamano ? ' (' + lvFormatoTamano(r.archivo_tamano) + ')' : ''}</div>
-        ${r.observaciones ? `<div class="insp-item-meta">${escSm(r.observaciones)}</div>` : ''}
-        <div class="insp-item-acciones">
-          <button type="button" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="lvDescargar(${r.id})">⬇️ Descargar</button>
-        </div>
-      </div>`).join('');
+  cont.innerHTML = ieState.registros.length === 0
+    ? '<div class="sm-empty">Todavía no registraste ninguna inspección.</div>'
+    : ieState.registros.map(r => `
+      <button type="button" class="insp-item-card" onclick="ieVerDetalle(${r.id})">
+        <div class="insp-item-top"><strong>${escSm(r.codigo)}</strong><span class="estado-badge" style="background:var(--panel-alt);color:var(--text-soft);">${escSm(IE_TIPOS[r.tipo]?.label || r.tipo)}</span></div>
+        <div class="insp-item-meta">${smFecha(r.fecha)}${r.area ? ' · ' + escSm(r.area) : ''}</div>
+      </button>`).join('');
 }
 
-function lvDescargar(id){
-  const r = lvState.registros.find(x => x.id === id);
-  if(!r || !r.archivo_contenido) return;
-  const a = document.createElement('a');
-  a.href = r.archivo_contenido;
-  a.download = r.archivo_nombre || 'inspeccion';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+async function ieVerDetalle(id){
+  const r = ieState.registros.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById('modal-title').textContent = r.codigo;
+  document.getElementById('modal-body').innerHTML = '<div class="sm-empty">Cargando…</div>';
+  document.getElementById('report-modal').classList.add('show');
+
+  const { data: lineas, error } = await sb.from('ssoma_insp_equipo_detalle').select('*').eq('cabecera_id', id).order('n_orden');
+  if(error){ document.getElementById('modal-body').innerHTML = `<div class="sm-empty" style="color:var(--red);">${escSm(error.message)}</div>`; return; }
+
+  ieDetalleActual = { cabecera: r, lineas: lineas || [] };
+  const cfg = IE_TIPOS[r.tipo];
+  document.getElementById('modal-body').innerHTML = `
+    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:16px;" onclick="ieImprimir()">🖨️ Generar documento</button>
+    <div class="field"><label>Tipo</label><div>${escSm(cfg?.label || r.tipo)}</div></div>
+    <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
+    <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
+    <div class="field"><label>Área</label><div>${escSm(r.area || '—')}</div></div>
+    ${(lineas||[]).map(l => `
+      <div class="insp-card">
+        <div class="insp-card-head"><span class="insp-card-num">${l.n_orden}</span><div><b>${escSm(l.herramienta||'—')}</b>${l.cantidad != null ? ' · Cant. ' + l.cantidad : ''}</div></div>
+        <div class="insp-chips">
+          ${(cfg?.leyenda||[]).map(([letra]) => `<span class="insp-chip" data-estado="${(l.resultados||{})[letra] || '—'}">${letra}</span>`).join('')}
+        </div>
+        ${l.observaciones ? `<div class="insp-obs" style="margin-top:8px;font-size:12.5px;color:var(--text-soft);">${escSm(l.observaciones)}</div>` : ''}
+      </div>`).join('')}
+    ${r.acciones_correctivas ? `<div class="field"><label>Acciones correctivas</label><div>${escSm(r.acciones_correctivas)}</div></div>` : ''}
+    <div class="field"><label>Inspeccionado por</label><div>${escSm(r.inspeccionado_por || '—')}${r.inspeccionado_cargo ? ' · ' + escSm(r.inspeccionado_cargo) : ''}</div></div>
+    ${r.revisado_por ? `<div class="field"><label>Revisado por</label><div>${escSm(r.revisado_por)}${r.revisado_cargo ? ' · ' + escSm(r.revisado_cargo) : ''}</div></div>` : ''}
+  `;
+}
+
+function ieImprimir(){
+  if(!ieDetalleActual) return;
+  const { cabecera: r, lineas } = ieDetalleActual;
+  const cfg = IE_TIPOS[r.tipo];
+  const simbolo = { OK:'✔', NC:'x', NA:'NA' };
+  const html = `
+    <div class="insp-doc-header">
+      <div><strong style="font-size:18px;">INSPECCIÓN DE ${escSm(cfg.label.toUpperCase())}</strong><br><span style="font-size:12px;color:#555;">Formato ${escSm(cfg.formato)}</span></div>
+      <div style="text-align:right;font-size:12px;">Código: <b>${escSm(r.codigo)}</b><br>Fecha: ${smFecha(r.fecha)}</div>
+    </div>
+    <p><b>Cliente:</b> ${escSm(r.cliente||'—')} &nbsp;&nbsp; <b>Área:</b> ${escSm(r.area||'—')}</p>
+    <p style="font-size:10.5px;"><b>Leyenda:</b> ${cfg.leyenda.map(([l,t])=>`${l}=${escSm(t)}`).join(' · ')}</p>
+    <table class="insp-doc-table">
+      <thead><tr><th>N°</th><th>Herramienta</th><th>Cant.</th>${cfg.leyenda.map(([l])=>`<th>${l}</th>`).join('')}<th>Observaciones</th></tr></thead>
+      <tbody>
+        ${lineas.map(l => `<tr><td>${l.n_orden}</td><td style="text-align:left;">${escSm(l.herramienta||'')}</td><td>${l.cantidad ?? ''}</td>
+          ${cfg.leyenda.map(([letra])=>`<td>${simbolo[(l.resultados||{})[letra]] || ''}</td>`).join('')}
+          <td style="text-align:left;">${escSm(l.observaciones||'')}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    ${r.acciones_correctivas ? `<p><b>Acciones correctivas:</b> ${escSm(r.acciones_correctivas)}${r.responsables ? ' — Responsable(s): ' + escSm(r.responsables) : ''}</p>` : ''}
+    <div class="insp-doc-firma">
+      <div>${escSm(r.inspeccionado_por||'')}<br><small>Inspeccionado por${r.inspeccionado_cargo?' — '+escSm(r.inspeccionado_cargo):''}</small></div>
+      <div>${escSm(r.revisado_por||'')}<br><small>Revisado por${r.revisado_cargo?' — '+escSm(r.revisado_cargo):''}</small></div>
+    </div>
+  `;
+  abrirVentanaImpresion(html, r.codigo);
+}
+
+// ============================================================================
+// LÍDER DE VIDA — Inspección de EPP (por trabajador, formato SSOMA-FR107)
+// ----------------------------------------------------------------------------
+// A diferencia de los 4 de arriba, acá cada fila es un TRABAJADOR, no un
+// equipo, y se marca qué EPP tiene: B=Bueno, M=Malo, RC=Requiere cambio,
+// NA=No aplica. El Excel original no usa letras para los EPP (los nombra
+// completos), así que se numeran dentro de cada grupo solo para el chip —
+// la clave que se guarda es "GRUPO-n" y el nombre completo queda en la
+// leyenda y en el title del botón.
+// ============================================================================
+const EPP_GRUPOS = [
+  { id: 'GEN', titulo: 'Generales', items: [
+    'CASCO DE SEGURIDAD','PROTECTORES AUDITIVOS','BARBIQUEJO','POLO DE TRABAJO/CORTA/LARGA',
+    'PANTALON DE TRABAJO CON CINTA REFLECTIVA','GUANTES ANTICORTE','BOTAS DE SEGURIDAD','TAPONES AUDITIVOS'
+  ]},
+  { id: 'OP', titulo: 'Operador equipo de acarreo', items: [
+    'CASCO','LENTES DE SEGURIDAD','TAPONES AUDITIVOS','BARBIQUEJO','POLO PIQUE','GUANTES DE MANIOBRA',
+    'CHALECO CON CINTA REFLECTIVA','ARNES DE SEGURIDAD (SOLO TRILATERAL)','ZAPATOS DIELECTRICOS'
+  ]},
+  { id: 'REF', titulo: 'Refrigerados', items: [
+    'OVEROL/MAMELUCO','PASAMONTAÑA POLAR','CALENTADOR','GUANTES MITONES LANA',
+    'GUANTES TÉRMICOS (EJM HERCULES)','MEDIAS LANA','BOTAS CAÑA ALTA TÉRMICOS (EJM CADEROUSSE)'
+  ]}
+];
+
+let ieppState = { filas: [], registros: [], cargado: false };
+let ieppCounter = 0;
+let ieppDetalleActual = null;
+
+function ieppCiclo(estado){
+  const orden = ['—','B','M','RC','NA'];
+  return orden[(orden.indexOf(estado) + 1) % orden.length];
+}
+
+async function cargarInspEpp(){
+  if(!ieppState.cargado){
+    try{
+      const { data, error } = await sb.from('ssoma_insp_epp_cabecera').select('*')
+        .eq('creado_por', currentSession.usuario.nombre).order('id', { ascending: false });
+      if(error) throw error;
+      ieppState.registros = data || [];
+      ieppState.cargado = true;
+    }catch(err){
+      console.error('Error cargando inspecciones de EPP:', err);
+      const cont = document.getElementById('iepp-lista');
+      if(cont) cont.innerHTML = `<div class="sm-empty" style="color:var(--red);">No se pudo cargar: ${escSm(err.message)}<br><small>Si la tabla no existe, ejecuta la migración 0043 en Supabase.</small></div>`;
+    }
+  }
+  if(ieppState.filas.length === 0) ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppRender();
+}
+
+function ieppRender(){
+  const el = document.getElementById('iepp-count');
+  if(el) el.textContent = `${ieppState.registros.length} inspección(es)`;
+  ieppRenderForm();
+  ieppRenderLista();
+}
+
+function ieppRenderForm(){
+  const cont = document.getElementById('iepp-form-cont');
+  if(!cont) return;
+
+  cont.innerHTML = `
+    <div class="insp-leyenda">
+      <div class="insp-leyenda-titulo">Marcar por EPP: B Bueno · M Malo · RC Requiere cambio · NA No aplica</div>
+      ${EPP_GRUPOS.map(g => `<div style="margin-top:6px;"><b>${escSm(g.titulo)}:</b> ${g.items.map((it,i)=>`${i+1}=${escSm(it)}`).join(', ')}</div>`).join('')}
+    </div>
+
+    <div class="field"><label>Cliente</label><input type="text" id="iepp-f-cliente" placeholder="Ej. Adecco"></div>
+    <div class="field"><label>Área</label><input type="text" id="iepp-f-area" placeholder="Ej. Despacho"></div>
+    <div class="field"><label>Tipo de inspección</label>
+      <select id="iepp-f-tipo"><option value="PLANEADA">Planeada</option><option value="NO PLANEADA">No planeada</option></select>
+    </div>
+
+    ${ieppState.filas.map((f, i) => ieppFilaHTML(f, i)).join('')}
+
+    <button type="button" class="insp-add-row" onclick="ieppAgregarFila()">➕ Agregar trabajador</button>
+
+    <div class="field"><label>Acciones correctivas</label><textarea id="iepp-f-acciones" placeholder="Opcional"></textarea></div>
+    <div class="field"><label>Responsable(s)</label><input type="text" id="iepp-f-responsables" placeholder="Opcional"></div>
+    <div class="field"><label>Fecha compromiso</label><input type="date" id="iepp-f-fecha-acciones"></div>
+
+    <div class="insp-firma-grid">
+      <div class="insp-firma-box">
+        <h5>Inspeccionado por</h5>
+        <div class="field"><label>Nombres y apellidos *</label><input type="text" id="iepp-f-insp-nombre"></div>
+        <div class="field" style="margin-bottom:0;"><label>Cargo</label><input type="text" id="iepp-f-insp-cargo"></div>
+      </div>
+      <div class="insp-firma-box">
+        <h5>Revisado por</h5>
+        <div class="field"><label>Nombres y apellidos</label><input type="text" id="iepp-f-rev-nombre" placeholder="Opcional"></div>
+        <div class="field" style="margin-bottom:0;"><label>Cargo</label><input type="text" id="iepp-f-rev-cargo"></div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" id="iepp-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieppEnviar()">✅ Guardar inspección</button>
+  `;
+}
+
+function ieppFilaHTML(f, i){
+  return `
+    <div class="insp-card">
+      <div class="insp-card-head">
+        <span class="insp-card-num">${i+1}</span>
+        <div class="insp-card-campos">
+          <input type="text" placeholder="Apellidos y nombres" value="${escSm(f.trabajador)}"
+                 oninput="ieppActualizarCampo(${f._id}, 'trabajador', this.value)">
+          <input type="text" placeholder="Cargo" value="${escSm(f.cargo)}"
+                 oninput="ieppActualizarCampo(${f._id}, 'cargo', this.value)">
+        </div>
+        ${ieppState.filas.length > 1 ? `<button type="button" class="insp-card-quitar" onclick="ieppQuitarFila(${f._id})" aria-label="Quitar">&times;</button>` : ''}
+      </div>
+      ${EPP_GRUPOS.map(g => `
+        <div class="insp-grupo-titulo">${escSm(g.titulo)}</div>
+        <div class="insp-chips">
+          ${g.items.map((item, idx) => {
+            const clave = `${g.id}-${idx+1}`;
+            return `<button type="button" class="insp-chip" data-estado="${f.resultados[clave] || '—'}" title="${escSm(item)}"
+                     onclick="ieppToggleChip(${f._id}, '${clave}', this)">${idx+1}</button>`;
+          }).join('')}
+        </div>
+      `).join('')}
+      <div class="insp-obs">
+        <input type="text" placeholder="Observaciones (opcional)" value="${escSm(f.observaciones)}"
+               oninput="ieppActualizarCampo(${f._id}, 'observaciones', this.value)">
+      </div>
+    </div>`;
+}
+
+function ieppActualizarCampo(filaId, campo, valor){
+  const fila = ieppState.filas.find(f => f._id === filaId);
+  if(fila) fila[campo] = valor;
+}
+
+function ieppToggleChip(filaId, clave, btnEl){
+  const fila = ieppState.filas.find(f => f._id === filaId);
+  if(!fila) return;
+  const nuevo = ieppCiclo(fila.resultados[clave] || '—');
+  if(nuevo === '—') delete fila.resultados[clave];
+  else fila.resultados[clave] = nuevo;
+  if(btnEl) btnEl.dataset.estado = nuevo;
+}
+
+function ieppAgregarFila(){
+  ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppRenderForm();
+}
+
+function ieppQuitarFila(filaId){
+  ieppState.filas = ieppState.filas.filter(f => f._id !== filaId);
+  ieppRenderForm();
+}
+
+async function ieppEnviar(){
+  const v = id => document.getElementById(id)?.value.trim() || null;
+  const cliente = v('iepp-f-cliente');
+  const area = v('iepp-f-area');
+  const tipoInspeccion = document.getElementById('iepp-f-tipo')?.value || 'PLANEADA';
+  const acciones = v('iepp-f-acciones');
+  const responsables = v('iepp-f-responsables');
+  const fechaAcciones = document.getElementById('iepp-f-fecha-acciones')?.value || null;
+  const inspNombre = v('iepp-f-insp-nombre');
+  const inspCargo = v('iepp-f-insp-cargo');
+  const revNombre = v('iepp-f-rev-nombre');
+  const revCargo = v('iepp-f-rev-cargo');
+
+  if(!inspNombre) return alert('Falta el nombre de quien inspeccionó.');
+  const filasValidas = ieppState.filas.filter(f => f.trabajador.trim());
+  if(filasValidas.length === 0) return alert('Agrega al menos un trabajador.');
+
+  const btn = document.getElementById('iepp-btn-enviar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    const { data: cabecera, error: e1 } = await sb.from('ssoma_insp_epp_cabecera').insert({
+      cliente, area, tipo_inspeccion: tipoInspeccion,
+      acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+      inspeccionado_por: inspNombre, inspeccionado_cargo: inspCargo,
+      revisado_por: revNombre, revisado_cargo: revCargo,
+      creado_por: currentSession.usuario.nombre
+    }).select().single();
+    if(e1) throw e1;
+
+    const lineas = filasValidas.map((f, i) => ({
+      cabecera_id: cabecera.id, n_orden: i + 1,
+      trabajador: f.trabajador.trim(), cargo: f.cargo.trim() || null,
+      resultados: f.resultados, observaciones: f.observaciones.trim() || null
+    }));
+    const { error: e2 } = await sb.from('ssoma_insp_epp_detalle').insert(lineas);
+    if(e2) throw e2;
+
+    ieppState.registros.unshift(cabecera);
+    ieppState.filas = [];
+    ieppCounter = 0;
+    ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+    ieppRender();
+    alert(`Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
+  }catch(err){
+    alert('No se pudo guardar: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '✅ Guardar inspección';
+  }
+}
+
+function ieppRenderLista(){
+  const cont = document.getElementById('iepp-lista');
+  if(!cont) return;
+  cont.innerHTML = ieppState.registros.length === 0
+    ? '<div class="sm-empty">Todavía no registraste ninguna inspección.</div>'
+    : ieppState.registros.map(r => `
+      <button type="button" class="insp-item-card" onclick="ieppVerDetalle(${r.id})">
+        <div class="insp-item-top"><strong>${escSm(r.codigo)}</strong><span class="estado-badge" style="background:var(--panel-alt);color:var(--text-soft);">${escSm(r.tipo_inspeccion || '')}</span></div>
+        <div class="insp-item-meta">${smFecha(r.fecha)}${r.area ? ' · ' + escSm(r.area) : ''}</div>
+      </button>`).join('');
+}
+
+async function ieppVerDetalle(id){
+  const r = ieppState.registros.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById('modal-title').textContent = r.codigo;
+  document.getElementById('modal-body').innerHTML = '<div class="sm-empty">Cargando…</div>';
+  document.getElementById('report-modal').classList.add('show');
+
+  const { data: lineas, error } = await sb.from('ssoma_insp_epp_detalle').select('*').eq('cabecera_id', id).order('n_orden');
+  if(error){ document.getElementById('modal-body').innerHTML = `<div class="sm-empty" style="color:var(--red);">${escSm(error.message)}</div>`; return; }
+
+  ieppDetalleActual = { cabecera: r, lineas: lineas || [] };
+  document.getElementById('modal-body').innerHTML = `
+    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:16px;" onclick="ieppImprimir()">🖨️ Generar documento</button>
+    <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
+    <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
+    <div class="field"><label>Área</label><div>${escSm(r.area || '—')}</div></div>
+    ${(lineas||[]).map(l => `
+      <div class="insp-card">
+        <div class="insp-card-head"><span class="insp-card-num">${l.n_orden}</span><div><b>${escSm(l.trabajador||'—')}</b>${l.cargo ? ' · ' + escSm(l.cargo) : ''}</div></div>
+        ${EPP_GRUPOS.map(g => `
+          <div class="insp-grupo-titulo">${escSm(g.titulo)}</div>
+          <div class="insp-chips">
+            ${g.items.map((item, idx) => `<span class="insp-chip" data-estado="${(l.resultados||{})[`${g.id}-${idx+1}`] || '—'}" title="${escSm(item)}">${idx+1}</span>`).join('')}
+          </div>`).join('')}
+        ${l.observaciones ? `<div class="insp-obs" style="margin-top:8px;font-size:12.5px;color:var(--text-soft);">${escSm(l.observaciones)}</div>` : ''}
+      </div>`).join('')}
+    ${r.acciones_correctivas ? `<div class="field"><label>Acciones correctivas</label><div>${escSm(r.acciones_correctivas)}</div></div>` : ''}
+    <div class="field"><label>Inspeccionado por</label><div>${escSm(r.inspeccionado_por || '—')}${r.inspeccionado_cargo ? ' · ' + escSm(r.inspeccionado_cargo) : ''}</div></div>
+    ${r.revisado_por ? `<div class="field"><label>Revisado por</label><div>${escSm(r.revisado_por)}${r.revisado_cargo ? ' · ' + escSm(r.revisado_cargo) : ''}</div></div>` : ''}
+  `;
+}
+
+function ieppImprimir(){
+  if(!ieppDetalleActual) return;
+  const { cabecera: r, lineas } = ieppDetalleActual;
+  const simbolo = { B:'B', M:'M', RC:'RC', NA:'NA' };
+  const html = `
+    <div class="insp-doc-header">
+      <div><strong style="font-size:18px;">INSPECCIÓN DE EPP</strong><br><span style="font-size:12px;color:#555;">Formato SSOMA-FR107 · ${escSm(r.tipo_inspeccion||'')}</span></div>
+      <div style="text-align:right;font-size:12px;">Código: <b>${escSm(r.codigo)}</b><br>Fecha: ${smFecha(r.fecha)}</div>
+    </div>
+    <p><b>Cliente:</b> ${escSm(r.cliente||'—')} &nbsp;&nbsp; <b>Área:</b> ${escSm(r.area||'—')}</p>
+    ${lineas.map(l => `
+      <p style="margin:14px 0 4px;"><b>${escSm(l.trabajador||'')}</b>${l.cargo ? ' — ' + escSm(l.cargo) : ''}</p>
+      <table class="insp-doc-table">
+        <thead><tr><th style="text-align:left;">EPP</th><th>Estado</th></tr></thead>
+        <tbody>
+          ${EPP_GRUPOS.flatMap(g => g.items.map((item, idx) => {
+            const estado = (l.resultados||{})[`${g.id}-${idx+1}`];
+            return estado ? `<tr><td style="text-align:left;">${escSm(item)}</td><td>${simbolo[estado]||estado}</td></tr>` : '';
+          })).join('')}
+        </tbody>
+      </table>
+      ${l.observaciones ? `<p style="font-size:11px;"><i>${escSm(l.observaciones)}</i></p>` : ''}
+    `).join('')}
+    ${r.acciones_correctivas ? `<p><b>Acciones correctivas:</b> ${escSm(r.acciones_correctivas)}${r.responsables ? ' — Responsable(s): ' + escSm(r.responsables) : ''}</p>` : ''}
+    <div class="insp-doc-firma">
+      <div>${escSm(r.inspeccionado_por||'')}<br><small>Inspeccionado por${r.inspeccionado_cargo?' — '+escSm(r.inspeccionado_cargo):''}</small></div>
+      <div>${escSm(r.revisado_por||'')}<br><small>Revisado por${r.revisado_cargo?' — '+escSm(r.revisado_cargo):''}</small></div>
+    </div>
+  `;
+  abrirVentanaImpresion(html, r.codigo);
 }
 
 checkSession();
