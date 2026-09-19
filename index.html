@@ -1160,6 +1160,22 @@
   @media (max-width:480px){
     .sm-fab{padding:12px 18px;font-size:13px;}
   }
+
+  /* LÍDER DE VIDA — repositorio de inspecciones mensuales: solo se sube el
+     archivo ya llenado (PDF/Excel), no se replica el formulario campo a campo. */
+  .insp-tipos{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .insp-tipos::-webkit-scrollbar{display:none;}
+  .insp-tipo-btn{flex-shrink:0;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;color:var(--text-soft);background:var(--panel-alt);border:1px solid var(--border);border-radius:20px;padding:9px 16px;cursor:pointer;white-space:nowrap;}
+  .insp-tipo-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+  .insp-file-hint{font-size:11.5px;color:var(--muted);margin-top:5px;}
+
+  .insp-lista{display:flex;flex-direction:column;gap:8px;}
+  @media (min-width:680px){ .insp-lista{display:grid;grid-template-columns:1fr 1fr;gap:8px;} }
+  .insp-item-card{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:10px;padding:12px 14px;}
+  .insp-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;}
+  .insp-item-meta{font-size:12px;color:var(--muted);}
+  .insp-item-acciones{display:flex;gap:8px;margin-top:10px;}
 </style>
 </head>
 <body>
@@ -1244,6 +1260,16 @@
       </button>
       <div class="navgroup-body" id="navgroup-suministros-body">
         <button class="navitem" data-view="inventario-suministros"><span class="dot" style="background:#059669;"></span><span class="label">Solicitar Suministros</span><span class="tag">Activo</span></button>
+      </div>
+
+      <button type="button" class="navgroup-header" id="navgroup-lidervida-toggle" aria-expanded="false" style="margin-top:10px;">
+        <span class="navgroup-icon">🦺</span>
+        <span class="navgroup-title">Líder de Vida</span>
+        <span class="navgroup-count" id="navgroup-lidervida-count">1</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-lidervida-body">
+        <button class="navitem" data-view="insp-lider-vida"><span class="dot" style="background:#DC2626;"></span><span class="label">Inspecciones mensuales</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -2278,6 +2304,35 @@ Sube los 2 archivos del trimestre (auditoría + WMS) y con un solo clic arma la 
           <tbody></tbody>
         </table>
       </div>
+    </section>
+
+    <!-- LÍDER DE VIDA · INSPECCIONES MENSUALES (sube el archivo ya llenado) -->
+    <section class="panel" id="panel-insp-lider-vida">
+      <div class="section-head">
+        <h2 class="section-title">🦺 Inspecciones — Líder de Vida</h2>
+        <span class="count-pill" id="lv-count">0 archivos</span>
+      </div>
+      <p class="section-desc">Sube el formato mensual ya llenado (PDF o Excel): EPP, ESTOCA, cuchillas, encintador o coches de acarreo — reemplaza los formatos SSOMA-FR107/108/110/111/112.</p>
+
+      <div class="insp-tipos" id="lv-tipos"></div>
+
+      <div class="sm-cart-box">
+        <div class="field"><label>Cliente</label><input type="text" id="lv-f-cliente" placeholder="Ej. Adecco"></div>
+        <div class="field"><label>Área</label><input type="text" id="lv-f-area" placeholder="Ej. Despacho"></div>
+        <div class="field"><label>Mes que corresponde *</label><input type="month" id="lv-f-mes"></div>
+        <div class="field">
+          <label>Archivo (PDF o Excel) *</label>
+          <input type="file" id="lv-f-archivo" accept=".pdf,.xls,.xlsx">
+          <div class="insp-file-hint" id="lv-file-info">Hasta 8 MB.</div>
+        </div>
+        <div class="field" style="margin-bottom:14px;"><label>Observaciones</label><input type="text" id="lv-f-obs" placeholder="Opcional"></div>
+        <button type="button" class="btn btn-primary sm-enviar-btn" id="lv-btn-enviar" onclick="lvEnviar()">📤 Subir inspección</button>
+      </div>
+
+      <div class="section-head" style="margin-top:8px;">
+        <h2 class="section-title" style="font-size:16px;">📋 Archivos subidos</h2>
+      </div>
+      <div class="insp-lista" id="lv-lista"></div>
     </section>
 
     <!-- DESIGNACIÓN DE TAREAS · VISTA JEFATURA -->
@@ -3476,6 +3531,8 @@ function irAVista(view){
     trLoadTareas();
   } else if(view === "inventario-suministros"){
     cargarSuministrosSSOMA();
+  } else if(view === "insp-lider-vida"){
+    cargarInspLiderVida();
   }
 }
 document.querySelectorAll(".navitem").forEach(btn=>{
@@ -5376,6 +5433,8 @@ function aplicarVisibilidadNav(){
   const cuerpoInventario = document.getElementById("navgroup-inventario-body");
   const grupoSuministros = document.getElementById("navgroup-suministros-toggle");
   const cuerpoSuministros = document.getElementById("navgroup-suministros-body");
+  const grupoLiderVida = document.getElementById("navgroup-lidervida-toggle");
+  const cuerpoLiderVida = document.getElementById("navgroup-lidervida-body");
   const grupoTareas = document.getElementById("navgroup-tareas-toggle");
   const cuerpoTareas = document.getElementById("navgroup-tareas-body");
   const itemJefatura = document.querySelector('.navitem[data-view="tareas-jefatura"]');
@@ -5384,16 +5443,17 @@ function aplicarVisibilidadNav(){
 
   if(seccion === "admin"){
     [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
-     grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, true));
+     grupoLiderVida, cuerpoLiderVida, grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, true));
     return;
   }
 
   [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
-   grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, false));
+   grupoLiderVida, cuerpoLiderVida, grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas].forEach(el=> mostrar(el, false));
 
   let vistaInicial = null;
   if(seccion === "ssoma"){
     mostrar(grupoSsoma, true); mostrar(cuerpoSsoma, true);
+    mostrar(grupoLiderVida, true); mostrar(cuerpoLiderVida, true);
     vistaInicial = "racs";
   } else if(seccion === "jefatura"){
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemJefatura, true);
@@ -5417,6 +5477,7 @@ function aplicarVisibilidadNav(){
   } else if(seccion === "inventario"){
     mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
     mostrar(grupoSuministros, true); mostrar(cuerpoSuministros, true);
+    mostrar(grupoLiderVida, true); mostrar(cuerpoLiderVida, true);
     vistaInicial = "auditoria-inventario";
   }
 
@@ -8354,6 +8415,161 @@ document.getElementById("sm-fab-btn")?.addEventListener("click", ()=>{
     ultimoClick.set(btn, ahora);
   }, true);
 })();
+
+// ============================================================================
+// LÍDER DE VIDA — repositorio de inspecciones mensuales (tabla ssoma_insp_lider_vida)
+// ----------------------------------------------------------------------------
+// El Líder de Vida llena estos 5 formatos (EPP, ESTOCA, Cuchillas, Encintador,
+// Coches) fuera de la app, en el Excel oficial. Acá solo se SUBE el archivo ya
+// llenado (PDF o Excel) con una metadata mínima — no se replica el formulario
+// campo a campo. El archivo se guarda como data URL base64 en la misma fila,
+// igual que la evidencia fotográfica de RACS.
+// ============================================================================
+const LV_TIPOS = {
+  EPP:        { label: 'EPP',               formato: 'SSOMA-FR107' },
+  ESTOCA:     { label: 'ESTOCA',             formato: 'SSOMA-FR108' },
+  CUCHILLAS:  { label: 'Cuchillas',          formato: 'SSOMA-FR110' },
+  ENCINTADOR: { label: 'Encintador',         formato: 'SSOMA-FR111' },
+  COCHES:     { label: 'Coches de acarreo',  formato: 'SSOMA-FR112' }
+};
+const LV_TAMANO_MAX = 8 * 1024 * 1024; // 8 MB
+
+let lvState = { tipo: 'EPP', archivo: null, registros: [], cargado: false };
+
+async function cargarInspLiderVida(){
+  if(!lvState.cargado){
+    try{
+      const { data, error } = await sb.from('ssoma_insp_lider_vida').select('*')
+        .eq('creado_por', currentSession.usuario.nombre).order('id', { ascending: false });
+      if(error) throw error;
+      lvState.registros = data || [];
+      lvState.cargado = true;
+    }catch(err){
+      console.error('Error cargando inspecciones Líder de Vida:', err);
+      const cont = document.getElementById('lv-lista');
+      if(cont) cont.innerHTML = `<div class="sm-empty" style="color:var(--red);">No se pudo cargar: ${escSm(err.message)}<br><small>Si la tabla no existe, ejecuta la migración 0043 en Supabase.</small></div>`;
+    }
+  }
+  lvRender();
+}
+
+function lvRender(){
+  const el = document.getElementById('lv-count');
+  if(el) el.textContent = `${lvState.registros.length} archivo(s)`;
+  lvRenderTipos();
+  lvRenderLista();
+}
+
+function lvRenderTipos(){
+  const cont = document.getElementById('lv-tipos');
+  if(!cont) return;
+  cont.innerHTML = Object.entries(LV_TIPOS).map(([id, cfg]) => `
+    <button type="button" class="insp-tipo-btn${lvState.tipo===id?' active':''}" onclick="lvCambiarTipo('${id}')">${escSm(cfg.label)}</button>
+  `).join('');
+}
+
+function lvCambiarTipo(tipo){
+  lvState.tipo = tipo;
+  lvRenderTipos();
+}
+
+document.getElementById('lv-f-archivo')?.addEventListener('change', (e)=>{
+  const file = e.target.files?.[0] || null;
+  const info = document.getElementById('lv-file-info');
+  if(!file){ lvState.archivo = null; if(info) info.textContent = 'Hasta 8 MB.'; return; }
+  if(file.size > LV_TAMANO_MAX){
+    alert('El archivo pesa más de 8 MB. Comprímelo o pide que lo suban desde una compu.');
+    e.target.value = '';
+    lvState.archivo = null;
+    if(info) info.textContent = 'Hasta 8 MB.';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    lvState.archivo = { nombre: file.name, tipo: file.type, tamano: file.size, contenido: reader.result };
+    if(info) info.textContent = `${file.name} · ${lvFormatoTamano(file.size)}`;
+  };
+  reader.onerror = () => alert('No se pudo leer el archivo.');
+  reader.readAsDataURL(file);
+});
+
+function lvFormatoTamano(bytes){
+  if(bytes < 1024) return `${bytes} B`;
+  if(bytes < 1024*1024) return `${(bytes/1024).toFixed(0)} KB`;
+  return `${(bytes/(1024*1024)).toFixed(1)} MB`;
+}
+
+async function lvEnviar(){
+  const v = id => document.getElementById(id)?.value.trim() || null;
+  const cliente = v('lv-f-cliente');
+  const area = v('lv-f-area');
+  const mesInput = document.getElementById('lv-f-mes')?.value; // "YYYY-MM"
+  const obs = v('lv-f-obs');
+
+  if(!mesInput) return alert('Indica a qué mes corresponde la inspección.');
+  if(!lvState.archivo) return alert('Elige el archivo (PDF o Excel) ya llenado.');
+
+  const btn = document.getElementById('lv-btn-enviar');
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+  try{
+    const { data: fila, error } = await sb.from('ssoma_insp_lider_vida').insert({
+      tipo: lvState.tipo, cliente, area, mes: `${mesInput}-01`, observaciones: obs,
+      archivo_nombre: lvState.archivo.nombre, archivo_tipo: lvState.archivo.tipo,
+      archivo_tamano: lvState.archivo.tamano, archivo_contenido: lvState.archivo.contenido,
+      creado_por: currentSession.usuario.nombre
+    }).select().single();
+    if(error) throw error;
+
+    lvState.registros.unshift(fila);
+    lvState.archivo = null;
+    document.getElementById('lv-f-archivo').value = '';
+    document.getElementById('lv-f-cliente').value = '';
+    document.getElementById('lv-f-area').value = '';
+    document.getElementById('lv-f-mes').value = '';
+    document.getElementById('lv-f-obs').value = '';
+    document.getElementById('lv-file-info').textContent = 'Hasta 8 MB.';
+    lvRender();
+    alert(`Subido: ${fila.codigo}`);
+  }catch(err){
+    alert('No se pudo subir el archivo: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '📤 Subir inspección';
+  }
+}
+
+function lvMesLabel(mes){
+  if(!mes) return '—';
+  const [y,m] = String(mes).slice(0,7).split('-');
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${meses[parseInt(m,10)-1]} ${y}`;
+}
+
+function lvRenderLista(){
+  const cont = document.getElementById('lv-lista');
+  if(!cont) return;
+  cont.innerHTML = lvState.registros.length === 0
+    ? '<div class="sm-empty">Todavía no subiste ningún archivo.</div>'
+    : lvState.registros.map(r => `
+      <div class="insp-item-card">
+        <div class="insp-item-top"><strong>${escSm(r.codigo)}</strong><span class="estado-badge" style="background:var(--panel-alt);color:var(--text-soft);">${escSm(LV_TIPOS[r.tipo]?.label || r.tipo)}</span></div>
+        <div class="insp-item-meta">${lvMesLabel(r.mes)}${r.area ? ' · ' + escSm(r.area) : ''} · ${escSm(r.archivo_nombre)}${r.archivo_tamano ? ' (' + lvFormatoTamano(r.archivo_tamano) + ')' : ''}</div>
+        ${r.observaciones ? `<div class="insp-item-meta">${escSm(r.observaciones)}</div>` : ''}
+        <div class="insp-item-acciones">
+          <button type="button" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="lvDescargar(${r.id})">⬇️ Descargar</button>
+        </div>
+      </div>`).join('');
+}
+
+function lvDescargar(id){
+  const r = lvState.registros.find(x => x.id === id);
+  if(!r || !r.archivo_contenido) return;
+  const a = document.createElement('a');
+  a.href = r.archivo_contenido;
+  a.download = r.archivo_nombre || 'inspeccion';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 checkSession();
 </script>
