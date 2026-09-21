@@ -1346,6 +1346,22 @@
   .insp-firma-canvas{display:block;width:100%;height:120px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;touch-action:none;cursor:crosshair;}
   .insp-firma-limpiar{margin-top:6px;background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;}
   .insp-firma-img{max-width:220px;max-height:90px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px;}
+
+  /* CHARLA DE 5 MINUTOS — tarjetas con acento de color y mejor jerarquía que el
+     bloque de texto plano original. */
+  .charla-lista{display:flex;flex-direction:column;gap:10px;}
+  @media (min-width:680px){ .charla-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;} }
+  .charla-card{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--green);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);transition:box-shadow .15s;}
+  .charla-card:hover{box-shadow:0 6px 18px rgba(16,24,40,.1);}
+  .charla-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .charla-card-title{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--text);font-size:14px;line-height:1.35;}
+  .charla-card-title .icon{font-size:16px;flex-shrink:0;}
+  .charla-btn-del{padding:5px 8px;font-size:13px;line-height:1;border-radius:7px;flex-shrink:0;}
+  .charla-btn-del:hover{background:var(--red-tint);}
+  .charla-meta{display:flex;flex-wrap:wrap;gap:5px 14px;margin-top:8px;font-size:11.5px;color:var(--muted);}
+  .charla-meta span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+  .charla-fotos-label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;}
+  .charla-sin-fotos{margin-top:10px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px;}
 </style>
 </head>
 <body>
@@ -1939,7 +1955,7 @@
       </form>
 
       <div class="section-subhead" style="margin-top:22px;">Charlas registradas</div>
-      <div id="charla-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="charla-list" class="charla-lista"></div>
     </section>
 
     <!-- INVENTARIO · AUDITORÍA DE INVENTARIO (Shortpick + Bultos Perdidos + Sin Ubicación fusionados
@@ -11033,16 +11049,40 @@ function renderCharlaList(){
     list.innerHTML = `<div class="empty">Todavía no hay charlas registradas.</div>`;
     return;
   }
+  const puedeEliminar = esAdmin() || esSsomaU(miUsuario);
   list.innerHTML = charlaReports.map(r => `
-    <div class="stat-card" style="padding:14px 16px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
-        <div>
-          <div style="font-weight:700;color:var(--text);font-size:13.5px;">${escapeHtml(r.tema)}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${formatDate(r.fecha)} · ${escapeHtml(r.responsable)} · ${escapeHtml(r.ubicacion)}</div>
-        </div>
+    <div class="charla-card">
+      <div class="charla-card-head">
+        <div class="charla-card-title"><span class="icon">🗣️</span> ${escapeHtml(r.tema)}</div>
+        ${puedeEliminar ? `<button type="button" class="btn btn-ghost charla-btn-del" data-id="${r.id}" title="Eliminar" aria-label="Eliminar">🗑️</button>` : ""}
       </div>
-      ${r.evidencia && r.evidencia.length ? `<div style="margin-top:10px;">${imgRowHtml(r.evidencia, false)}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:var(--muted);">Sin fotos</div>`}
+      <div class="charla-meta">
+        <span>📅 ${formatDate(r.fecha)}</span>
+        <span>👤 ${escapeHtml(r.responsable)}</span>
+        <span>📍 ${escapeHtml(r.ubicacion)}</span>
+      </div>
+      ${r.evidencia && r.evidencia.length
+        ? `<div class="charla-fotos-label">Evidencia (${r.evidencia.length})</div>${imgRowHtml(r.evidencia, false)}`
+        : `<div class="charla-sin-fotos">🚫 Sin fotos</div>`}
     </div>`).join("");
+}
+
+// Duplicados por doble-clic en "Guardar" (antes de los guards de disabled/900ms) se
+// borran a mano: solo SSOMA o un administrador pueden hacerlo, mismo criterio que
+// ya decide quién ve el grupo SSOMA completo en el menú (ver aplicarVisibilidadNav).
+document.getElementById("charla-list").addEventListener("click", (e) => {
+  const delBtn = e.target.closest(".charla-btn-del");
+  if(delBtn) charlaEliminar(Number(delBtn.dataset.id), delBtn);
+});
+
+async function charlaEliminar(id, btn){
+  if(!(esAdmin() || esSsomaU(miUsuario))){ alert("Solo SSOMA o un administrador pueden eliminar este registro."); return; }
+  if(!confirm("¿Eliminar esta charla de 5 minutos? Esta acción no se puede deshacer.")) return;
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_charlas_5min").delete().eq("id", id);
+  if(error){ alert("No se pudo eliminar: " + error.message); btn.disabled = false; return; }
+  charlaReports = charlaReports.filter(r => r.id !== id);
+  renderCharlaList();
 }
 
 document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
