@@ -1328,6 +1328,18 @@
   .insp-obs{margin-top:10px;}
   .insp-obs input{padding:9px 10px;font-size:13px;}
 
+  /* Checklist de EPP: cada ítem en su propia fila con el nombre siempre a
+     la vista — reemplaza los chips numerados (1,2,3…) que obligaban a
+     tocar/pasar el mouse para saber a qué EPP correspondía cada uno. */
+  .insp-epp-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);}
+  .insp-epp-item:last-child{border-bottom:none;}
+  .insp-epp-item-nombre{font-size:12.5px;color:var(--text);flex:1;}
+  .insp-epp-badge{flex-shrink:0;min-width:44px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel-alt);color:var(--text-soft);font-weight:700;font-size:12px;cursor:pointer;}
+  .insp-epp-badge[data-estado="B"]{background:var(--green-tint);border-color:var(--green);color:var(--green);}
+  .insp-epp-badge[data-estado="M"]{background:var(--red-tint);border-color:var(--red);color:var(--red-dark);}
+  .insp-epp-badge[data-estado="RC"]{background:var(--orange-tint);border-color:var(--orange);color:var(--amber-text);}
+  .insp-epp-badge[data-estado="NA"]{background:var(--panel);border-color:var(--border);color:var(--muted);}
+
   .insp-add-row{width:100%;border:1px dashed var(--border-strong);background:var(--panel-alt);color:var(--text-soft);border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:20px;}
   .insp-add-row:hover{border-color:var(--red);color:var(--red);}
 
@@ -12212,6 +12224,7 @@ function abrirVentanaImpresion(html, titulo){
   const css = [...document.querySelectorAll('link[rel=stylesheet]')].map(l => `<link rel="stylesheet" href="${l.href}">`).join('');
   const w = window.open('', '_blank');
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title>${css}<style>
+    @page{size:landscape;margin:10mm;}
     body{padding:24px;background:#fff;color:#111;font-family:'Inter',sans-serif;}
     .insp-doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:12px;margin-bottom:16px;}
     .insp-doc-table{width:100%;border-collapse:collapse;margin:16px 0;}
@@ -12635,28 +12648,77 @@ async function ieVerDetalle(id){
 // pura (no abre ventana) para poder reusarla tanto en la vista previa en
 // vivo (ieImprimir) como en el guardado del documento oficial al firmar la
 // revisión (ieGuardarRevision).
+// Caja de firma (Inspeccionado por / Revisado por) del documento final,
+// con el mismo rótulo "Apellidos y Nombres: / Cargo: / Firma" que traen los
+// 5 formatos SSOMA originales (FR107/108/110/111/112) — compartida por
+// Equipos y EPP.
+function docFirmaBoxHtml(titulo, nombre, cargo, firma){
+  return `
+    <div style="flex:1;border:1px solid #999;font-size:11px;">
+      <div style="background:#f3f4f6;font-weight:700;padding:4px 10px;border-bottom:1px solid #999;">${escSm(titulo)}</div>
+      <div style="padding:8px 10px;">
+        <div>Apellidos y Nombres: <b>${escSm(nombre||'—')}</b></div>
+        <div style="margin-top:4px;">Cargo: ${escSm(cargo||'—')}</div>
+        <div style="text-align:center;min-height:${firma ? '0' : '34px'};margin-top:6px;">
+          ${firma ? `<img src="${firma}" style="max-height:60px;">` : ''}
+        </div>
+        <div style="border-top:1px solid #000;text-align:center;padding-top:4px;margin-top:4px;">Firma</div>
+      </div>
+    </div>`;
+}
+
+// Franja "ACCIONES CORRECTIVAS / RESPONSABLES / FECHA" — compartida.
+function docAccionesRowHtml(r){
+  return `
+    <table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:11px;">
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px 8px;width:50%;vertical-align:top;"><b>ACCIONES CORRECTIVAS</b><br>${escSm(r.acciones_correctivas||'—')}</td>
+        <td style="border:1px solid #ccc;padding:6px 8px;width:25%;vertical-align:top;"><b>RESPONSABLES</b><br>${escSm(r.responsables||'—')}</td>
+        <td style="border:1px solid #ccc;padding:6px 8px;width:25%;vertical-align:top;"><b>FECHA</b><br>${r.fecha_acciones ? smFecha(r.fecha_acciones) : '—'}</td>
+      </tr>
+    </table>`;
+}
+
 function ieConstruirDocumentoHtml(r, lineas){
   const cfg = IE_TIPOS[r.tipo];
   const simbolo = { OK:'✔', NC:'x', NA:'NA' };
+  // La leyenda va en 3 columnas, igual que en el Excel original (A9:T9 con
+  // A10:E12 / F10:N12 / O10:T12).
+  const porCol = Math.ceil(cfg.leyenda.length / 3);
+  const columnas = [cfg.leyenda.slice(0, porCol), cfg.leyenda.slice(porCol, porCol*2), cfg.leyenda.slice(porCol*2)];
+  const colHtml = col => col.map(([l,t]) => `<div style="margin-bottom:3px;"><b>${escSm(l)}=</b> ${escSm(t)}</div>`).join('');
   return `
-    <div class="insp-doc-header">
-      <div><strong style="font-size:18px;">INSPECCIÓN DE ${escSm(cfg.label.toUpperCase())}</strong><br><span style="font-size:12px;color:#555;">Formato ${escSm(cfg.formato)}</span></div>
-      <div style="text-align:right;font-size:12px;">Código: <b>${escSm(r.codigo)}</b><br>Fecha: ${smFecha(r.fecha)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:10px;margin-bottom:12px;">
+      <div style="font-size:19px;font-weight:800;">INSPECCIÓN DE ${escSm(cfg.label.toUpperCase())}</div>
+      <div style="border:1px solid #999;font-size:10.5px;text-align:center;min-width:150px;">
+        <div style="background:#f3f4f6;padding:3px 6px;border-bottom:1px solid #999;"><b>${escSm(cfg.formato)}</b></div>
+        <div style="padding:3px 6px;border-bottom:1px solid #999;">Versión: 01</div>
+        <div style="padding:3px 6px;">Fecha: ${smFecha(r.fecha)}</div>
+      </div>
     </div>
-    <p><b>Cliente:</b> ${escSm(r.cliente||'—')} &nbsp;&nbsp; <b>Área:</b> ${escSm(r.area||'—')}</p>
-    <p style="font-size:10.5px;"><b>Leyenda:</b> ${cfg.leyenda.map(([l,t])=>`${l}=${escSm(t)}`).join(' · ')}</p>
+    <div style="display:flex;gap:28px;font-size:12px;margin-bottom:8px;flex-wrap:wrap;">
+      <div><b>CLIENTE:</b> ${escSm(r.cliente||'—')}</div>
+      <div><b>FECHA:</b> ${smFecha(r.fecha)}</div>
+      <div><b>ÁREA:</b> ${escSm(r.area||'—')}</div>
+    </div>
+    <p style="font-size:11px;"><b>Instrucciones:</b> Marcar: No Cumple (x) &nbsp; Conforme (✔) &nbsp; No Aplica (NA)</p>
+    <div style="background:#f3f4f6;font-weight:700;font-size:11px;padding:4px 8px;border:1px solid #ccc;border-bottom:none;">LEYENDA:</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;border:1px solid #ccc;padding:8px;font-size:10px;margin-bottom:14px;">
+      <div>${colHtml(columnas[0])}</div><div>${colHtml(columnas[1])}</div><div>${colHtml(columnas[2])}</div>
+    </div>
     <table class="insp-doc-table">
-      <thead><tr><th>N°</th><th>Herramienta</th><th>Cant.</th>${cfg.leyenda.map(([l])=>`<th>${l}</th>`).join('')}<th>Observaciones</th></tr></thead>
+      <thead><tr><th>N°</th><th>Herramienta</th><th>Cant.</th>${cfg.leyenda.map(([l])=>`<th>${escSm(l)}</th>`).join('')}<th>Observaciones</th></tr></thead>
       <tbody>
         ${lineas.map(l => `<tr><td>${l.n_orden}</td><td style="text-align:left;">${escSm(l.herramienta||'')}</td><td>${l.cantidad ?? ''}</td>
           ${cfg.leyenda.map(([letra])=>`<td>${simbolo[(l.resultados||{})[letra]] || ''}</td>`).join('')}
           <td style="text-align:left;">${escSm(l.observaciones||'')}</td></tr>`).join('')}
       </tbody>
     </table>
-    ${r.acciones_correctivas ? `<p><b>Acciones correctivas:</b> ${escSm(r.acciones_correctivas)}${r.responsables ? ' — Responsable(s): ' + escSm(r.responsables) : ''}</p>` : ''}
-    <div class="insp-doc-firma">
-      <div>${r.inspeccionado_firma ? `<img src="${r.inspeccionado_firma}" style="max-height:70px;">` : '<br><br>'}<br>${escSm(r.inspeccionado_por||'')}<br><small>Inspeccionado por${r.inspeccionado_cargo?' — '+escSm(r.inspeccionado_cargo):''}</small></div>
-      <div>${r.revisado_firma ? `<img src="${r.revisado_firma}" style="max-height:70px;">` : '<br><br>'}<br>${escSm(r.revisado_por||'')}<br><small>Revisado por</small></div>
+    <p style="font-size:9.5px;color:#555;">NOTA: Toda herramienta que no cumpla con los requisitos de seguridad quedará fuera de uso, siendo identificada con una tarjeta de FUERA DE SERVICIO. Ningún trabajador utilizará herramientas no autorizadas (Hechizas o artesanales).</p>
+    ${docAccionesRowHtml(r)}
+    <div style="display:flex;gap:24px;margin-top:26px;">
+      ${docFirmaBoxHtml('INSPECCIONADO POR:', r.inspeccionado_por, r.inspeccionado_cargo, r.inspeccionado_firma)}
+      ${docFirmaBoxHtml('REVISADO POR:', r.revisado_por, null, r.revisado_firma)}
     </div>
   `;
 }
@@ -12771,8 +12833,7 @@ function ieppRenderForm(){
   cont.innerHTML = `
     ${editando ? `<div class="insp-leyenda" style="border-color:var(--red);">✏️ <b>Corrigiendo ${escSm(ieppState.editandoCodigo||'')}</b> — al guardar se reemplaza el contenido que habías enviado. <button type="button" class="insp-firma-limpiar" onclick="ieppCancelarEdicion()">Cancelar corrección</button></div>` : ''}
     <div class="insp-leyenda">
-      <div class="insp-leyenda-titulo">Marcar por EPP: B Bueno · M Malo · RC Requiere cambio · NA No aplica</div>
-      ${EPP_GRUPOS.map(g => `<div style="margin-top:6px;"><b>${escSm(g.titulo)}:</b> ${g.items.map((it,i)=>`${i+1}=${escSm(it)}`).join(', ')}</div>`).join('')}
+      <div class="insp-leyenda-titulo">Toca cada EPP para marcarlo: Bueno → Malo → Requiere cambio → No aplica</div>
     </div>
 
     <div class="field"><label>Cliente</label><input type="text" id="iepp-f-cliente" placeholder="Ej. Adecco" value="${escSm(ieppState.campos.cliente)}" oninput="ieppState.campos.cliente=this.value"></div>
@@ -12822,13 +12883,15 @@ function ieppFilaHTML(f, i){
       </div>
       ${EPP_GRUPOS.map(g => `
         <div class="insp-grupo-titulo">${escSm(g.titulo)}</div>
-        <div class="insp-chips">
-          ${g.items.map((item, idx) => {
-            const clave = `${g.id}-${idx+1}`;
-            return `<button type="button" class="insp-chip" data-estado="${f.resultados[clave] || '—'}" title="${escSm(item)}"
-                     onclick="ieppToggleChip(${f._id}, '${clave}', this)">${idx+1}</button>`;
-          }).join('')}
-        </div>
+        ${g.items.map((item, idx) => {
+          const clave = `${g.id}-${idx+1}`;
+          const estado = f.resultados[clave] || '—';
+          return `<div class="insp-epp-item">
+              <span class="insp-epp-item-nombre">${escSm(item)}</span>
+              <button type="button" class="insp-epp-badge" data-estado="${estado}"
+                      onclick="ieppToggleChip(${f._id}, '${clave}', this)">${estado === '—' ? 'Marcar' : estado}</button>
+            </div>`;
+        }).join('')}
       `).join('')}
       <div class="insp-obs">
         <input type="text" placeholder="Observaciones (opcional)" value="${escSm(f.observaciones)}"
@@ -12848,7 +12911,10 @@ function ieppToggleChip(filaId, clave, btnEl){
   const nuevo = ieppCiclo(fila.resultados[clave] || '—');
   if(nuevo === '—') delete fila.resultados[clave];
   else fila.resultados[clave] = nuevo;
-  if(btnEl) btnEl.dataset.estado = nuevo;
+  if(btnEl){
+    btnEl.dataset.estado = nuevo;
+    btnEl.textContent = nuevo === '—' ? 'Marcar' : nuevo;
+  }
 }
 
 function ieppAgregarFila(){
@@ -13001,9 +13067,13 @@ async function ieppVerDetalle(id){
         <div class="insp-card-head"><span class="insp-card-num">${l.n_orden}</span><div><b>${escSm(l.trabajador||'—')}</b>${l.cargo ? ' · ' + escSm(l.cargo) : ''}</div></div>
         ${EPP_GRUPOS.map(g => `
           <div class="insp-grupo-titulo">${escSm(g.titulo)}</div>
-          <div class="insp-chips">
-            ${g.items.map((item, idx) => `<span class="insp-chip" data-estado="${(l.resultados||{})[`${g.id}-${idx+1}`] || '—'}" title="${escSm(item)}">${idx+1}</span>`).join('')}
-          </div>`).join('')}
+          ${g.items.map((item, idx) => {
+            const estado = (l.resultados||{})[`${g.id}-${idx+1}`] || '—';
+            return `<div class="insp-epp-item">
+                <span class="insp-epp-item-nombre">${escSm(item)}</span>
+                <span class="insp-epp-badge" data-estado="${estado}" style="cursor:default;">${estado === '—' ? 'Sin marcar' : estado}</span>
+              </div>`;
+          }).join('')}`).join('')}
         ${l.observaciones ? `<div class="insp-obs" style="margin-top:8px;font-size:12.5px;color:var(--text-soft);">${escSm(l.observaciones)}</div>` : ''}
       </div>`).join('')}
     ${r.acciones_correctivas ? `<div class="field"><label>Acciones correctivas</label><div>${escSm(r.acciones_correctivas)}</div></div>` : ''}
@@ -13025,31 +13095,63 @@ async function ieppVerDetalle(id){
 }
 
 // Misma idea que ieConstruirDocumentoHtml, para Inspección de EPP.
+// Tabla ancha con las columnas agrupadas por Generales / Operador equipo de
+// acarreo / Refrigerados — igual a como está armado el Excel original
+// (F8:AC8 con los 3 sub-grupos F9:M9 / N9:V9 / W9:AC9), en vez de una
+// mini-tabla vertical por trabajador. Los encabezados de cada EPP van en
+// vertical (igual truco que usan las plantillas en Excel) porque son
+// demasiadas columnas angostas para texto horizontal.
 function ieppConstruirDocumentoHtml(r, lineas){
   const simbolo = { B:'B', M:'M', RC:'RC', NA:'NA' };
   return `
-    <div class="insp-doc-header">
-      <div><strong style="font-size:18px;">INSPECCIÓN DE EPP</strong><br><span style="font-size:12px;color:#555;">Formato SSOMA-FR107 · ${escSm(r.tipo_inspeccion||'')}</span></div>
-      <div style="text-align:right;font-size:12px;">Código: <b>${escSm(r.codigo)}</b><br>Fecha: ${smFecha(r.fecha)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:10px;margin-bottom:12px;">
+      <div style="font-size:19px;font-weight:800;">INSPECCIÓN DE EPP PARA CENTRO DE DISTRIBUCIÓN</div>
+      <div style="border:1px solid #999;font-size:10.5px;text-align:center;min-width:150px;">
+        <div style="background:#f3f4f6;padding:3px 6px;border-bottom:1px solid #999;"><b>SSOMA-FR107</b></div>
+        <div style="padding:3px 6px;border-bottom:1px solid #999;">Versión: 01</div>
+        <div style="padding:3px 6px;">Fecha: ${smFecha(r.fecha)}</div>
+      </div>
     </div>
-    <p><b>Cliente:</b> ${escSm(r.cliente||'—')} &nbsp;&nbsp; <b>Área:</b> ${escSm(r.area||'—')}</p>
-    ${lineas.map(l => `
-      <p style="margin:14px 0 4px;"><b>${escSm(l.trabajador||'')}</b>${l.cargo ? ' — ' + escSm(l.cargo) : ''}</p>
-      <table class="insp-doc-table">
-        <thead><tr><th style="text-align:left;">EPP</th><th>Estado</th></tr></thead>
-        <tbody>
-          ${EPP_GRUPOS.flatMap(g => g.items.map((item, idx) => {
-            const estado = (l.resultados||{})[`${g.id}-${idx+1}`];
-            return estado ? `<tr><td style="text-align:left;">${escSm(item)}</td><td>${simbolo[estado]||estado}</td></tr>` : '';
-          })).join('')}
-        </tbody>
-      </table>
-      ${l.observaciones ? `<p style="font-size:11px;"><i>${escSm(l.observaciones)}</i></p>` : ''}
-    `).join('')}
-    ${r.acciones_correctivas ? `<p><b>Acciones correctivas:</b> ${escSm(r.acciones_correctivas)}${r.responsables ? ' — Responsable(s): ' + escSm(r.responsables) : ''}</p>` : ''}
-    <div class="insp-doc-firma">
-      <div>${r.inspeccionado_firma ? `<img src="${r.inspeccionado_firma}" style="max-height:70px;">` : '<br><br>'}<br>${escSm(r.inspeccionado_por||'')}<br><small>Inspeccionado por${r.inspeccionado_cargo?' — '+escSm(r.inspeccionado_cargo):''}</small></div>
-      <div>${r.revisado_firma ? `<img src="${r.revisado_firma}" style="max-height:70px;">` : '<br><br>'}<br>${escSm(r.revisado_por||'')}<br><small>Revisado por</small></div>
+    <div style="display:flex;gap:28px;font-size:12px;margin-bottom:8px;flex-wrap:wrap;">
+      <div><b>CLIENTE:</b> ${escSm(r.cliente||'—')}</div>
+      <div><b>FECHA:</b> ${smFecha(r.fecha)}</div>
+      <div><b>ÁREA:</b> ${escSm(r.area||'—')}</div>
+      <div><b>TIPO DE INSPECCIÓN:</b> ${escSm(r.tipo_inspeccion||'—')}</div>
+    </div>
+    <p style="font-size:11px;"><b>Marcar:</b> (B) Bueno &nbsp; (M) Malo &nbsp; (RC) Requiere cambio &nbsp; (NA) No Aplica</p>
+    <table class="insp-doc-table" style="font-size:8.5px;">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:22px;">N°</th>
+          <th rowspan="2" style="min-width:110px;">Apellidos y nombres</th>
+          <th rowspan="2" style="min-width:70px;">Cargo</th>
+          ${EPP_GRUPOS.map(g => `<th colspan="${g.items.length}">${escSm(g.titulo)}</th>`).join('')}
+          <th rowspan="2" style="min-width:90px;">Observaciones</th>
+        </tr>
+        <tr>
+          ${EPP_GRUPOS.flatMap(g => g.items.map(item =>
+            `<th style="width:32px;max-width:32px;font-size:7px;line-height:1.15;font-weight:500;padding:3px 1px;word-break:break-word;">${escSm(item)}</th>`
+          )).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${lineas.map(l => `
+          <tr>
+            <td>${l.n_orden}</td>
+            <td style="text-align:left;">${escSm(l.trabajador||'')}</td>
+            <td style="text-align:left;">${escSm(l.cargo||'')}</td>
+            ${EPP_GRUPOS.flatMap(g => g.items.map((item, idx) => {
+              const estado = (l.resultados||{})[`${g.id}-${idx+1}`];
+              return `<td>${estado ? (simbolo[estado]||estado) : ''}</td>`;
+            })).join('')}
+            <td style="text-align:left;">${escSm(l.observaciones||'')}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    ${docAccionesRowHtml(r)}
+    <div style="display:flex;gap:24px;margin-top:26px;">
+      ${docFirmaBoxHtml('INSPECCIONADO POR:', r.inspeccionado_por, r.inspeccionado_cargo, r.inspeccionado_firma)}
+      ${docFirmaBoxHtml('REVISADO POR:', r.revisado_por, null, r.revisado_firma)}
     </div>
   `;
 }
