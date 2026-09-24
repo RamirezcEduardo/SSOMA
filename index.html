@@ -12532,7 +12532,8 @@ async function ieVerDetalle(id){
   ieDetalleActual = { cabecera: r, lineas: lineas || [] };
   const cfg = IE_TIPOS[r.tipo];
   document.getElementById('modal-body').innerHTML = `
-    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:16px;" onclick="ieImprimir()">🖨️ Generar documento</button>
+    <button type="button" class="btn btn-primary" style="width:100%;" onclick="ieImprimir()">🖨️ Generar documento</button>
+    <p class="insp-file-hint" style="margin-top:6px;margin-bottom:16px;">${r.documento_html ? '✅ Documento oficial guardado (con ambas firmas) — este botón lo reabre tal cual.' : 'Vista previa: se arma al momento. Queda guardado como oficial recién cuando SSOMA firma la revisión.'}</p>
     <div class="field"><label>Tipo</label><div>${escSm(cfg?.label || r.tipo)}</div></div>
     <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
     <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
@@ -12563,30 +12564,14 @@ async function ieVerDetalle(id){
   if(!r.revisado_por) inicializarFirma('ie-rev-firma', () => ieRevisionFirma, v => ieRevisionFirma = v);
 }
 
-async function ieGuardarRevision(id){
-  if(!ieRevisionFirma) return alert('Falta la firma.');
-  const btn = document.getElementById('ie-rev-btn-guardar');
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  try{
-    const { data: actualizada, error } = await sb.from('ssoma_insp_equipo_cabecera')
-      .update({ revisado_por: currentSession.usuario.nombre, revisado_firma: ieRevisionFirma })
-      .eq('id', id).select().single();
-    if(error) throw error;
-    const i = ieState.registros.findIndex(x => x.id === id);
-    if(i >= 0) ieState.registros[i] = actualizada;
-    ieVerDetalle(id);
-  }catch(err){
-    alert('No se pudo guardar la revisión: ' + err.message);
-    btn.disabled = false; btn.textContent = '✅ Guardar revisión';
-  }
-}
-
-function ieImprimir(){
-  if(!ieDetalleActual) return;
-  const { cabecera: r, lineas } = ieDetalleActual;
+// Arma el HTML del documento final de una inspección de Equipos — función
+// pura (no abre ventana) para poder reusarla tanto en la vista previa en
+// vivo (ieImprimir) como en el guardado del documento oficial al firmar la
+// revisión (ieGuardarRevision).
+function ieConstruirDocumentoHtml(r, lineas){
   const cfg = IE_TIPOS[r.tipo];
   const simbolo = { OK:'✔', NC:'x', NA:'NA' };
-  const html = `
+  return `
     <div class="insp-doc-header">
       <div><strong style="font-size:18px;">INSPECCIÓN DE ${escSm(cfg.label.toUpperCase())}</strong><br><span style="font-size:12px;color:#555;">Formato ${escSm(cfg.formato)}</span></div>
       <div style="text-align:right;font-size:12px;">Código: <b>${escSm(r.codigo)}</b><br>Fecha: ${smFecha(r.fecha)}</div>
@@ -12607,6 +12592,43 @@ function ieImprimir(){
       <div>${r.revisado_firma ? `<img src="${r.revisado_firma}" style="max-height:70px;">` : '<br><br>'}<br>${escSm(r.revisado_por||'')}<br><small>Revisado por</small></div>
     </div>
   `;
+}
+
+async function ieGuardarRevision(id){
+  if(!ieRevisionFirma) return alert('Falta la firma.');
+  const btn = document.getElementById('ie-rev-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    const { data: actualizada, error } = await sb.from('ssoma_insp_equipo_cabecera')
+      .update({ revisado_por: currentSession.usuario.nombre, revisado_firma: ieRevisionFirma })
+      .eq('id', id).select().single();
+    if(error) throw error;
+
+    // Con la revisión ya firmada, el registro queda completo: se arma el
+    // documento final UNA vez y se guarda como la versión oficial, para que
+    // "Generar documento" ya no lo reconstruya cada vez.
+    const lineas = (ieDetalleActual && ieDetalleActual.cabecera.id === id) ? ieDetalleActual.lineas : [];
+    const documentoHtml = ieConstruirDocumentoHtml(actualizada, lineas);
+    const { data: conDocumento, error: e2 } = await sb.from('ssoma_insp_equipo_cabecera')
+      .update({ documento_html: documentoHtml }).eq('id', id).select().single();
+    const final = e2 ? actualizada : conDocumento;
+
+    const i = ieState.registros.findIndex(x => x.id === id);
+    if(i >= 0) ieState.registros[i] = final;
+    ieVerDetalle(id);
+  }catch(err){
+    alert('No se pudo guardar la revisión: ' + err.message);
+    btn.disabled = false; btn.textContent = '✅ Guardar revisión';
+  }
+}
+
+function ieImprimir(){
+  if(!ieDetalleActual) return;
+  const { cabecera: r, lineas } = ieDetalleActual;
+  // Si ya existe un documento oficial guardado (se guarda al firmar la
+  // revisión SSOMA), se reabre tal cual quedó firmado en vez de
+  // reconstruirlo — así no cambia después aunque cambien otros datos.
+  const html = r.documento_html || ieConstruirDocumentoHtml(r, lineas);
   abrirVentanaImpresion(html, r.codigo);
 }
 
@@ -12841,7 +12863,8 @@ async function ieppVerDetalle(id){
 
   ieppDetalleActual = { cabecera: r, lineas: lineas || [] };
   document.getElementById('modal-body').innerHTML = `
-    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:16px;" onclick="ieppImprimir()">🖨️ Generar documento</button>
+    <button type="button" class="btn btn-primary" style="width:100%;" onclick="ieppImprimir()">🖨️ Generar documento</button>
+    <p class="insp-file-hint" style="margin-top:6px;margin-bottom:16px;">${r.documento_html ? '✅ Documento oficial guardado (con ambas firmas) — este botón lo reabre tal cual.' : 'Vista previa: se arma al momento. Queda guardado como oficial recién cuando SSOMA firma la revisión.'}</p>
     <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
     <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
     <div class="field"><label>Área</label><div>${escSm(r.area || '—')}</div></div>
@@ -12873,29 +12896,10 @@ async function ieppVerDetalle(id){
   if(!r.revisado_por) inicializarFirma('iepp-rev-firma', () => ieppRevisionFirma, v => ieppRevisionFirma = v);
 }
 
-async function ieppGuardarRevision(id){
-  if(!ieppRevisionFirma) return alert('Falta la firma.');
-  const btn = document.getElementById('iepp-rev-btn-guardar');
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  try{
-    const { data: actualizada, error } = await sb.from('ssoma_insp_epp_cabecera')
-      .update({ revisado_por: currentSession.usuario.nombre, revisado_firma: ieppRevisionFirma })
-      .eq('id', id).select().single();
-    if(error) throw error;
-    const i = ieppState.registros.findIndex(x => x.id === id);
-    if(i >= 0) ieppState.registros[i] = actualizada;
-    ieppVerDetalle(id);
-  }catch(err){
-    alert('No se pudo guardar la revisión: ' + err.message);
-    btn.disabled = false; btn.textContent = '✅ Guardar revisión';
-  }
-}
-
-function ieppImprimir(){
-  if(!ieppDetalleActual) return;
-  const { cabecera: r, lineas } = ieppDetalleActual;
+// Misma idea que ieConstruirDocumentoHtml, para Inspección de EPP.
+function ieppConstruirDocumentoHtml(r, lineas){
   const simbolo = { B:'B', M:'M', RC:'RC', NA:'NA' };
-  const html = `
+  return `
     <div class="insp-doc-header">
       <div><strong style="font-size:18px;">INSPECCIÓN DE EPP</strong><br><span style="font-size:12px;color:#555;">Formato SSOMA-FR107 · ${escSm(r.tipo_inspeccion||'')}</span></div>
       <div style="text-align:right;font-size:12px;">Código: <b>${escSm(r.codigo)}</b><br>Fecha: ${smFecha(r.fecha)}</div>
@@ -12920,6 +12924,37 @@ function ieppImprimir(){
       <div>${r.revisado_firma ? `<img src="${r.revisado_firma}" style="max-height:70px;">` : '<br><br>'}<br>${escSm(r.revisado_por||'')}<br><small>Revisado por</small></div>
     </div>
   `;
+}
+
+async function ieppGuardarRevision(id){
+  if(!ieppRevisionFirma) return alert('Falta la firma.');
+  const btn = document.getElementById('iepp-rev-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    const { data: actualizada, error } = await sb.from('ssoma_insp_epp_cabecera')
+      .update({ revisado_por: currentSession.usuario.nombre, revisado_firma: ieppRevisionFirma })
+      .eq('id', id).select().single();
+    if(error) throw error;
+
+    const lineas = (ieppDetalleActual && ieppDetalleActual.cabecera.id === id) ? ieppDetalleActual.lineas : [];
+    const documentoHtml = ieppConstruirDocumentoHtml(actualizada, lineas);
+    const { data: conDocumento, error: e2 } = await sb.from('ssoma_insp_epp_cabecera')
+      .update({ documento_html: documentoHtml }).eq('id', id).select().single();
+    const final = e2 ? actualizada : conDocumento;
+
+    const i = ieppState.registros.findIndex(x => x.id === id);
+    if(i >= 0) ieppState.registros[i] = final;
+    ieppVerDetalle(id);
+  }catch(err){
+    alert('No se pudo guardar la revisión: ' + err.message);
+    btn.disabled = false; btn.textContent = '✅ Guardar revisión';
+  }
+}
+
+function ieppImprimir(){
+  if(!ieppDetalleActual) return;
+  const { cabecera: r, lineas } = ieppDetalleActual;
+  const html = r.documento_html || ieppConstruirDocumentoHtml(r, lineas);
   abrirVentanaImpresion(html, r.codigo);
 }
 
