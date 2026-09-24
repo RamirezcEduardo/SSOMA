@@ -12321,7 +12321,7 @@ const IE_TIPOS = {
     ['I','ALMACENAMIENTO ADECUADO'],
     ['J','EL PERSONAL CUENTA CON EL EPP REQUERIDO PARA LAS HERRAMIENTAS A USAR']
   ]},
-  COCHES: { label: 'Coches de acarreo', formato: 'SSOMA-FR112', leyenda: [
+  COCHES: { label: 'Coches de acarreo', tituloDoc: 'COCHES DE ACARREO MANUAL', formato: 'SSOMA-FR112', leyenda: [
     ['A','FRENO DE LLANTAS'],
     ['B','MANIJA DE COCHE (EMPUÑADURA)'],
     ['C','ESTRUCTURA DE EMPUÑADURA'],
@@ -12689,7 +12689,7 @@ function ieConstruirDocumentoHtml(r, lineas){
   const colHtml = col => col.map(([l,t]) => `<div style="margin-bottom:3px;"><b>${escSm(l)}=</b> ${escSm(t)}</div>`).join('');
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:10px;margin-bottom:12px;">
-      <div style="font-size:19px;font-weight:800;">INSPECCIÓN DE ${escSm(cfg.label.toUpperCase())}</div>
+      <div style="font-size:19px;font-weight:800;">INSPECCIÓN DE ${escSm(cfg.tituloDoc || cfg.label.toUpperCase())}</div>
       <div style="border:1px solid #999;font-size:10.5px;text-align:center;min-width:150px;">
         <div style="background:#f3f4f6;padding:3px 6px;border-bottom:1px solid #999;"><b>${escSm(cfg.formato)}</b></div>
         <div style="padding:3px 6px;border-bottom:1px solid #999;">Versión: 01</div>
