@@ -12322,6 +12322,7 @@ const IE_TIPOS = {
 };
 
 let ieState = { tipo: 'ESTOCA', filas: [], registros: [], cargado: false, firmaInsp: null,
+  editandoId: null, editandoCodigo: null,
   campos: { cliente:'', area:'', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' } };
 let ieRevisionFirma = null; // firma temporal mientras se revisa un registro ya guardado (ver detalle)
 let ieCounter = 0;
@@ -12335,8 +12336,11 @@ function ieCiclo(estado){
 async function cargarInspEquipos(){
   if(!ieState.cargado){
     try{
-      const { data, error } = await sb.from('ssoma_insp_equipo_cabecera').select('*')
-        .eq('creado_por', currentSession.usuario.nombre).order('id', { ascending: false });
+      // SSOMA y Admin ven todas las inspecciones (para poder revisarlas);
+      // el resto solo ve las que él mismo registró.
+      let q = sb.from('ssoma_insp_equipo_cabecera').select('*');
+      if(!esSsomaU(miUsuario) && !esAdmin()) q = q.eq('creado_por', currentSession.usuario.nombre);
+      const { data, error } = await q.order('id', { ascending: false });
       if(error) throw error;
       ieState.registros = data || [];
       ieState.cargado = true;
@@ -12376,7 +12380,9 @@ function ieRenderForm(){
   if(!cont) return;
   const cfg = IE_TIPOS[ieState.tipo];
 
+  const editando = !!ieState.editandoId;
   cont.innerHTML = `
+    ${editando ? `<div class="insp-leyenda" style="border-color:var(--red);">✏️ <b>Corrigiendo ${escSm(ieState.editandoCodigo||'')}</b> — al guardar se reemplaza el contenido que habías enviado. <button type="button" class="insp-firma-limpiar" onclick="ieCancelarEdicion()">Cancelar corrección</button></div>` : ''}
     <div class="insp-leyenda">
       <div class="insp-leyenda-titulo">Marcar: ✔ Conforme · x No cumple · NA No aplica</div>
       ${cfg.leyenda.map(([l,t]) => `<div><b>${l}</b> = ${escSm(t)}</div>`).join('')}
@@ -12401,9 +12407,9 @@ function ieRenderForm(){
       <canvas id="ie-firma-insp" class="insp-firma-canvas" width="280" height="120"></canvas>
       <button type="button" class="insp-firma-limpiar" onclick="limpiarFirma('ie-firma-insp', v=>ieState.firmaInsp=v)">Limpiar firma</button>
     </div>
-    <p class="insp-file-hint">La revisión de SSOMA (nombre y firma) se agrega después, desde el detalle del registro ya guardado.</p>
+    <p class="insp-file-hint">${editando ? 'Como el contenido cambió, hay que volver a firmar.' : 'La revisión de SSOMA (nombre y firma) se agrega después, desde el detalle del registro ya guardado.'}</p>
 
-    <button type="button" class="btn btn-primary" id="ie-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieEnviar()">✅ Guardar inspección</button>
+    <button type="button" class="btn btn-primary" id="ie-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieEnviar()">${editando ? '💾 Guardar corrección' : '✅ Guardar inspección'}</button>
   `;
   inicializarFirma('ie-firma-insp', () => ieState.firmaInsp, v => ieState.firmaInsp = v);
 }
@@ -12471,17 +12477,32 @@ async function ieEnviar(){
   if(filasValidas.length === 0) return alert('Agrega al menos un equipo con su nombre.');
   if(!ieState.firmaInsp) return alert('Falta la firma de quien inspeccionó.');
 
+  const editandoId = ieState.editandoId;
   const btn = document.getElementById('ie-btn-enviar');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try{
-    const { data: cabecera, error: e1 } = await sb.from('ssoma_insp_equipo_cabecera').insert({
-      tipo: ieState.tipo, cliente, area,
-      acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
-      inspeccionado_por: currentSession.usuario.nombre, inspeccionado_cargo: inspCargo,
-      inspeccionado_firma: ieState.firmaInsp,
-      creado_por: currentSession.usuario.nombre
-    }).select().single();
-    if(e1) throw e1;
+    let cabecera;
+    if(editandoId){
+      const { data, error } = await sb.from('ssoma_insp_equipo_cabecera').update({
+        tipo: ieState.tipo, cliente, area,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_cargo: inspCargo, inspeccionado_firma: ieState.firmaInsp
+      }).eq('id', editandoId).select().single();
+      if(error) throw error;
+      cabecera = data;
+      const { error: eDel } = await sb.from('ssoma_insp_equipo_detalle').delete().eq('cabecera_id', editandoId);
+      if(eDel) throw eDel;
+    }else{
+      const { data, error: e1 } = await sb.from('ssoma_insp_equipo_cabecera').insert({
+        tipo: ieState.tipo, cliente, area,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_por: currentSession.usuario.nombre, inspeccionado_cargo: inspCargo,
+        inspeccionado_firma: ieState.firmaInsp,
+        creado_por: currentSession.usuario.nombre
+      }).select().single();
+      if(e1) throw e1;
+      cabecera = data;
+    }
 
     const lineas = filasValidas.map((f, i) => ({
       cabecera_id: cabecera.id, n_orden: i + 1,
@@ -12491,19 +12512,63 @@ async function ieEnviar(){
     const { error: e2 } = await sb.from('ssoma_insp_equipo_detalle').insert(lineas);
     if(e2) throw e2;
 
-    ieState.registros.unshift(cabecera);
+    if(editandoId){
+      const i = ieState.registros.findIndex(x => x.id === editandoId);
+      if(i >= 0) ieState.registros[i] = cabecera;
+    }else{
+      ieState.registros.unshift(cabecera);
+    }
     ieState.filas = [];
     ieCounter = 0;
     ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
     ieState.firmaInsp = null;
     ieState.campos = { cliente:'', area:'', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+    ieState.editandoId = null;
+    ieState.editandoCodigo = null;
     ieRender();
-    alert(`Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
+    alert(editandoId ? `Corrección guardada en ${cabecera.codigo}.` : `Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
   }catch(err){
     alert('No se pudo guardar: ' + err.message);
   }finally{
-    btn.disabled = false; btn.textContent = '✅ Guardar inspección';
+    btn.disabled = false; btn.textContent = editandoId ? '💾 Guardar corrección' : '✅ Guardar inspección';
   }
+}
+
+// Reabre el formulario con los datos de un registro ya guardado (mismo
+// tipo, campos y filas) para corregir un error — solo lo puede hacer quien
+// lo creó, y solo mientras SSOMA no lo haya revisado todavía (si ya tiene
+// revisión, el documento oficial ya se firmó con ese contenido). Hay que
+// volver a firmar porque el contenido va a cambiar.
+function ieEditar(id){
+  const r = ieState.registros.find(x => x.id === id);
+  if(!r || !ieDetalleActual || ieDetalleActual.cabecera.id !== id) return;
+  ieState.editandoId = id;
+  ieState.editandoCodigo = r.codigo;
+  ieState.tipo = r.tipo;
+  ieState.campos = {
+    cliente: r.cliente || '', area: r.area || '', acciones: r.acciones_correctivas || '',
+    responsables: r.responsables || '', fechaAcciones: r.fecha_acciones || '', inspCargo: r.inspeccionado_cargo || ''
+  };
+  ieCounter = 0;
+  ieState.filas = (ieDetalleActual.lineas || []).map(l => ({
+    _id: ++ieCounter, herramienta: l.herramienta || '', cantidad: l.cantidad != null ? String(l.cantidad) : '',
+    resultados: { ...(l.resultados||{}) }, observaciones: l.observaciones || ''
+  }));
+  if(ieState.filas.length === 0) ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieState.firmaInsp = null;
+  document.getElementById('report-modal').classList.remove('show');
+  irAVista('insp-equipos');
+}
+
+function ieCancelarEdicion(){
+  ieState.editandoId = null;
+  ieState.editandoCodigo = null;
+  ieState.filas = [];
+  ieCounter = 0;
+  ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieState.firmaInsp = null;
+  ieState.campos = { cliente:'', area:'', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+  ieRenderForm();
 }
 
 function ieRenderLista(){
@@ -12531,8 +12596,10 @@ async function ieVerDetalle(id){
 
   ieDetalleActual = { cabecera: r, lineas: lineas || [] };
   const cfg = IE_TIPOS[r.tipo];
+  const puedeEditar = r.creado_por === currentSession.usuario.nombre && !r.revisado_por;
   document.getElementById('modal-body').innerHTML = `
     <button type="button" class="btn btn-primary" style="width:100%;" onclick="ieImprimir()">🖨️ Generar documento</button>
+    ${puedeEditar ? `<button type="button" class="btn" style="width:100%;margin-top:8px;" onclick="ieEditar(${r.id})">✏️ Editar (corregir un error)</button>` : ''}
     <p class="insp-file-hint" style="margin-top:6px;margin-bottom:16px;">${r.documento_html ? '✅ Documento oficial guardado (con ambas firmas) — este botón lo reabre tal cual.' : 'Vista previa: se arma al momento. Queda guardado como oficial recién cuando SSOMA firma la revisión.'}</p>
     <div class="field"><label>Tipo</label><div>${escSm(cfg?.label || r.tipo)}</div></div>
     <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
@@ -12658,6 +12725,7 @@ const EPP_GRUPOS = [
 ];
 
 let ieppState = { filas: [], registros: [], cargado: false, firmaInsp: null,
+  editandoId: null, editandoCodigo: null,
   campos: { cliente:'', area:'', tipoInspeccion:'PLANEADA', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' } };
 let ieppRevisionFirma = null; // firma temporal mientras se revisa un registro ya guardado (ver detalle)
 let ieppCounter = 0;
@@ -12671,8 +12739,10 @@ function ieppCiclo(estado){
 async function cargarInspEpp(){
   if(!ieppState.cargado){
     try{
-      const { data, error } = await sb.from('ssoma_insp_epp_cabecera').select('*')
-        .eq('creado_por', currentSession.usuario.nombre).order('id', { ascending: false });
+      // SSOMA/Admin ven todas — ver comentario en cargarInspEquipos.
+      let q = sb.from('ssoma_insp_epp_cabecera').select('*');
+      if(!esSsomaU(miUsuario) && !esAdmin()) q = q.eq('creado_por', currentSession.usuario.nombre);
+      const { data, error } = await q.order('id', { ascending: false });
       if(error) throw error;
       ieppState.registros = data || [];
       ieppState.cargado = true;
@@ -12697,7 +12767,9 @@ function ieppRenderForm(){
   const cont = document.getElementById('iepp-form-cont');
   if(!cont) return;
 
+  const editando = !!ieppState.editandoId;
   cont.innerHTML = `
+    ${editando ? `<div class="insp-leyenda" style="border-color:var(--red);">✏️ <b>Corrigiendo ${escSm(ieppState.editandoCodigo||'')}</b> — al guardar se reemplaza el contenido que habías enviado. <button type="button" class="insp-firma-limpiar" onclick="ieppCancelarEdicion()">Cancelar corrección</button></div>` : ''}
     <div class="insp-leyenda">
       <div class="insp-leyenda-titulo">Marcar por EPP: B Bueno · M Malo · RC Requiere cambio · NA No aplica</div>
       ${EPP_GRUPOS.map(g => `<div style="margin-top:6px;"><b>${escSm(g.titulo)}:</b> ${g.items.map((it,i)=>`${i+1}=${escSm(it)}`).join(', ')}</div>`).join('')}
@@ -12728,9 +12800,9 @@ function ieppRenderForm(){
       <canvas id="iepp-firma-insp" class="insp-firma-canvas" width="280" height="120"></canvas>
       <button type="button" class="insp-firma-limpiar" onclick="limpiarFirma('iepp-firma-insp', v=>ieppState.firmaInsp=v)">Limpiar firma</button>
     </div>
-    <p class="insp-file-hint">La revisión de SSOMA (nombre y firma) se agrega después, desde el detalle del registro ya guardado.</p>
+    <p class="insp-file-hint">${editando ? 'Como el contenido cambió, hay que volver a firmar.' : 'La revisión de SSOMA (nombre y firma) se agrega después, desde el detalle del registro ya guardado.'}</p>
 
-    <button type="button" class="btn btn-primary" id="iepp-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieppEnviar()">✅ Guardar inspección</button>
+    <button type="button" class="btn btn-primary" id="iepp-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieppEnviar()">${editando ? '💾 Guardar corrección' : '✅ Guardar inspección'}</button>
   `;
   inicializarFirma('iepp-firma-insp', () => ieppState.firmaInsp, v => ieppState.firmaInsp = v);
 }
@@ -12803,17 +12875,32 @@ async function ieppEnviar(){
   if(filasValidas.length === 0) return alert('Agrega al menos un trabajador.');
   if(!ieppState.firmaInsp) return alert('Falta la firma de quien inspeccionó.');
 
+  const editandoId = ieppState.editandoId;
   const btn = document.getElementById('iepp-btn-enviar');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try{
-    const { data: cabecera, error: e1 } = await sb.from('ssoma_insp_epp_cabecera').insert({
-      cliente, area, tipo_inspeccion: tipoInspeccion,
-      acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
-      inspeccionado_por: currentSession.usuario.nombre, inspeccionado_cargo: inspCargo,
-      inspeccionado_firma: ieppState.firmaInsp,
-      creado_por: currentSession.usuario.nombre
-    }).select().single();
-    if(e1) throw e1;
+    let cabecera;
+    if(editandoId){
+      const { data, error } = await sb.from('ssoma_insp_epp_cabecera').update({
+        cliente, area, tipo_inspeccion: tipoInspeccion,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_cargo: inspCargo, inspeccionado_firma: ieppState.firmaInsp
+      }).eq('id', editandoId).select().single();
+      if(error) throw error;
+      cabecera = data;
+      const { error: eDel } = await sb.from('ssoma_insp_epp_detalle').delete().eq('cabecera_id', editandoId);
+      if(eDel) throw eDel;
+    }else{
+      const { data, error: e1 } = await sb.from('ssoma_insp_epp_cabecera').insert({
+        cliente, area, tipo_inspeccion: tipoInspeccion,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_por: currentSession.usuario.nombre, inspeccionado_cargo: inspCargo,
+        inspeccionado_firma: ieppState.firmaInsp,
+        creado_por: currentSession.usuario.nombre
+      }).select().single();
+      if(e1) throw e1;
+      cabecera = data;
+    }
 
     const lineas = filasValidas.map((f, i) => ({
       cabecera_id: cabecera.id, n_orden: i + 1,
@@ -12823,19 +12910,58 @@ async function ieppEnviar(){
     const { error: e2 } = await sb.from('ssoma_insp_epp_detalle').insert(lineas);
     if(e2) throw e2;
 
-    ieppState.registros.unshift(cabecera);
+    if(editandoId){
+      const i = ieppState.registros.findIndex(x => x.id === editandoId);
+      if(i >= 0) ieppState.registros[i] = cabecera;
+    }else{
+      ieppState.registros.unshift(cabecera);
+    }
     ieppState.filas = [];
     ieppCounter = 0;
     ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
     ieppState.firmaInsp = null;
     ieppState.campos = { cliente:'', area:'', tipoInspeccion:'PLANEADA', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+    ieppState.editandoId = null;
+    ieppState.editandoCodigo = null;
     ieppRender();
-    alert(`Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
+    alert(editandoId ? `Corrección guardada en ${cabecera.codigo}.` : `Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
   }catch(err){
     alert('No se pudo guardar: ' + err.message);
   }finally{
-    btn.disabled = false; btn.textContent = '✅ Guardar inspección';
+    btn.disabled = false; btn.textContent = editandoId ? '💾 Guardar corrección' : '✅ Guardar inspección';
   }
+}
+
+function ieppEditar(id){
+  const r = ieppState.registros.find(x => x.id === id);
+  if(!r || !ieppDetalleActual || ieppDetalleActual.cabecera.id !== id) return;
+  ieppState.editandoId = id;
+  ieppState.editandoCodigo = r.codigo;
+  ieppState.campos = {
+    cliente: r.cliente || '', area: r.area || '', tipoInspeccion: r.tipo_inspeccion || 'PLANEADA',
+    acciones: r.acciones_correctivas || '', responsables: r.responsables || '',
+    fechaAcciones: r.fecha_acciones || '', inspCargo: r.inspeccionado_cargo || ''
+  };
+  ieppCounter = 0;
+  ieppState.filas = (ieppDetalleActual.lineas || []).map(l => ({
+    _id: ++ieppCounter, trabajador: l.trabajador || '', cargo: l.cargo || '',
+    resultados: { ...(l.resultados||{}) }, observaciones: l.observaciones || ''
+  }));
+  if(ieppState.filas.length === 0) ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppState.firmaInsp = null;
+  document.getElementById('report-modal').classList.remove('show');
+  irAVista('insp-epp');
+}
+
+function ieppCancelarEdicion(){
+  ieppState.editandoId = null;
+  ieppState.editandoCodigo = null;
+  ieppState.filas = [];
+  ieppCounter = 0;
+  ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppState.firmaInsp = null;
+  ieppState.campos = { cliente:'', area:'', tipoInspeccion:'PLANEADA', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+  ieppRenderForm();
 }
 
 function ieppRenderLista(){
@@ -12862,8 +12988,10 @@ async function ieppVerDetalle(id){
   if(error){ document.getElementById('modal-body').innerHTML = `<div class="sm-empty" style="color:var(--red);">${escSm(error.message)}</div>`; return; }
 
   ieppDetalleActual = { cabecera: r, lineas: lineas || [] };
+  const puedeEditar = r.creado_por === currentSession.usuario.nombre && !r.revisado_por;
   document.getElementById('modal-body').innerHTML = `
     <button type="button" class="btn btn-primary" style="width:100%;" onclick="ieppImprimir()">🖨️ Generar documento</button>
+    ${puedeEditar ? `<button type="button" class="btn" style="width:100%;margin-top:8px;" onclick="ieppEditar(${r.id})">✏️ Editar (corregir un error)</button>` : ''}
     <p class="insp-file-hint" style="margin-top:6px;margin-bottom:16px;">${r.documento_html ? '✅ Documento oficial guardado (con ambas firmas) — este botón lo reabre tal cual.' : 'Vista previa: se arma al momento. Queda guardado como oficial recién cuando SSOMA firma la revisión.'}</p>
     <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
     <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
