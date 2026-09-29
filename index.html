@@ -7379,9 +7379,12 @@ function sdBuildInformeSemanalHtml(semana){
   const pendientesSdSemana = sdRegistros.filter(r => sdEsPendiente(r) && r.semana === semana);
   const filasRiesgo = sdBuildTablaProcesoUbicacion(pendientesSdSemana);
 
-  // EN RIESGO DE COBRO — subconjunto de lo pendiente que el equipo marcó a mano con el
-  // botón 🚩. Su valorizado se suma al indicador "En riesgo" junto con Bultos Perdidos.
-  const pendientesSdRiesgo = pendientesSdSemana.filter(r => r.enRiesgo);
+  // EN RIESGO DE COBRO — TODO lo pendiente marcado a mano con el botón 🚩, sin importar
+  // en qué semana se marcó: un riesgo de una semana anterior que sigue sin resolverse
+  // debe seguir apareciendo en el informe hasta que se finalice o se le quite la marca,
+  // no solo en el informe de la semana en que se marcó. Su valorizado se suma al
+  // indicador "En riesgo" junto con Bultos Perdidos.
+  const pendientesSdRiesgo = sdRegistros.filter(r => sdEsPendiente(r) && r.enRiesgo);
   const totalRiesgoSd = pendientesSdRiesgo.reduce((a, r) => a + (r.valTot || 0), 0);
   const filasRiesgoCobro = sdBuildTablaProcesoUbicacion(pendientesSdRiesgo);
   const totalRiesgo = totalRiesgoBpo + totalRiesgoSd;
@@ -7454,7 +7457,7 @@ function sdBuildInformeSemanalHtml(semana){
     </table>
 
     <div class="modal-section-title">🚩 En riesgo de cobro — Seguimiento Diario</div>
-    <p class="section-desc" style="margin:-6px 0 10px;">Casos marcados a mano por el equipo (botón "Marcar en riesgo de cobro") — se suman al indicador "En riesgo" de arriba.</p>
+    <p class="section-desc" style="margin:-6px 0 10px;">Casos marcados a mano por el equipo (botón "Marcar en riesgo de cobro") que siguen sin resolverse — incluye semanas anteriores mientras no se finalicen o se les quite la marca. Se suman al indicador "En riesgo" de arriba.</p>
     <table class="print-table">
       <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
       <tbody>${filasRiesgoCobro || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin casos marcados en riesgo de cobro esa semana.</td></tr>`}</tbody>
