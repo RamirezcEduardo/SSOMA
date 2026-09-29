@@ -1297,6 +1297,87 @@
   @media (max-width:480px){
     .sm-fab{padding:12px 18px;font-size:13px;}
   }
+
+  /* LÍDER DE VIDA — cuestionario dentro de la app (no un archivo subido). Cada
+     equipo/trabajador es una tarjeta con chips de estado por ítem (en vez de
+     la tabla ancha del Excel original), para llenarlo con el pulgar desde el
+     celular. Al guardar, además del registro, se puede descargar/imprimir el
+     documento final con el mismo contenido del formato oficial. */
+  .insp-tipos{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .insp-tipos::-webkit-scrollbar{display:none;}
+  .insp-tipo-btn{flex-shrink:0;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;color:var(--text-soft);background:var(--panel-alt);border:1px solid var(--border);border-radius:20px;padding:9px 16px;cursor:pointer;white-space:nowrap;}
+  .insp-tipo-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+  .insp-leyenda{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text-soft);line-height:1.7;}
+  .insp-leyenda b{color:var(--text);font-family:'IBM Plex Mono',monospace;}
+  .insp-leyenda-titulo{font-weight:700;color:var(--text);font-size:12.5px;margin-bottom:6px;}
+
+  .insp-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow);}
+  .insp-card-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;}
+  .insp-card-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--panel-alt);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;margin-top:6px;}
+  .insp-card-campos{flex:1;display:grid;grid-template-columns:1fr;gap:8px;}
+  @media (min-width:520px){ .insp-card-campos{grid-template-columns:2fr 1fr;} }
+  .insp-card-campos input{padding:9px 10px;font-size:13px;}
+  .insp-card-quitar{flex-shrink:0;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 4px;margin-top:2px;}
+  .insp-card-quitar:hover{color:var(--red);}
+
+  .insp-grupo-titulo{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin:10px 0 6px;}
+  .insp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .insp-chip{width:34px;height:34px;border-radius:9px;border:1px solid var(--border-strong);background:var(--panel-alt);color:var(--text-soft);font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12.5px;cursor:pointer;}
+  .insp-chip[data-estado="OK"], .insp-chip[data-estado="B"]{background:var(--green-tint);border-color:var(--green);color:var(--green);}
+  .insp-chip[data-estado="NC"], .insp-chip[data-estado="M"]{background:var(--red-tint);border-color:var(--red);color:var(--red-dark);}
+  .insp-chip[data-estado="RC"]{background:var(--orange-tint);border-color:var(--orange);color:var(--amber-text);}
+  .insp-chip[data-estado="NA"]{background:var(--panel);border-color:var(--border);color:var(--muted);}
+
+  .insp-obs{margin-top:10px;}
+  .insp-obs input{padding:9px 10px;font-size:13px;}
+
+  /* Checklist de EPP: cada ítem en su propia fila con el nombre siempre a
+     la vista — reemplaza los chips numerados (1,2,3…) que obligaban a
+     tocar/pasar el mouse para saber a qué EPP correspondía cada uno. */
+  .insp-epp-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);}
+  .insp-epp-item:last-child{border-bottom:none;}
+  .insp-epp-item-nombre{font-size:12.5px;color:var(--text);flex:1;}
+  .insp-epp-badge{flex-shrink:0;min-width:44px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--border-strong);background:var(--panel-alt);color:var(--text-soft);font-weight:700;font-size:12px;cursor:pointer;}
+  .insp-epp-badge[data-estado="B"]{background:var(--green-tint);border-color:var(--green);color:var(--green);}
+  .insp-epp-badge[data-estado="M"]{background:var(--red-tint);border-color:var(--red);color:var(--red-dark);}
+  .insp-epp-badge[data-estado="RC"]{background:var(--orange-tint);border-color:var(--orange);color:var(--amber-text);}
+  .insp-epp-badge[data-estado="NA"]{background:var(--panel);border-color:var(--border);color:var(--muted);}
+
+  .insp-add-row{width:100%;border:1px dashed var(--border-strong);background:var(--panel-alt);color:var(--text-soft);border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:20px;}
+  .insp-add-row:hover{border-color:var(--red);color:var(--red);}
+
+  .insp-lista{display:flex;flex-direction:column;gap:8px;}
+  @media (min-width:680px){ .insp-lista{display:grid;grid-template-columns:1fr 1fr;gap:8px;} }
+  .insp-item-card{display:block;width:100%;text-align:left;font-family:inherit;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:10px;padding:12px 14px;cursor:pointer;}
+  .insp-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;}
+  .insp-item-meta{font-size:12px;color:var(--muted);}
+
+  .insp-firma-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:6px;}
+  @media (min-width:600px){ .insp-firma-grid{grid-template-columns:1fr 1fr;} }
+  .insp-firma-box{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .insp-firma-box h5{margin:0 0 10px;font-size:12.5px;font-weight:700;color:var(--text);}
+  .insp-firma-nombre{font-size:13px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px;}
+  .insp-firma-label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text);}
+  .insp-firma-canvas{display:block;width:100%;height:120px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;touch-action:none;cursor:crosshair;}
+  .insp-firma-limpiar{margin-top:6px;background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;}
+  .insp-firma-img{max-width:220px;max-height:90px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px;}
+
+  /* CHARLA DE 5 MINUTOS — tarjetas con acento de color y mejor jerarquía que el
+     bloque de texto plano original. */
+  .charla-lista{display:flex;flex-direction:column;gap:10px;}
+  @media (min-width:680px){ .charla-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;} }
+  .charla-card{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--green);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);transition:box-shadow .15s;}
+  .charla-card:hover{box-shadow:0 6px 18px rgba(16,24,40,.1);}
+  .charla-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .charla-card-title{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--text);font-size:14px;line-height:1.35;}
+  .charla-card-title .icon{font-size:16px;flex-shrink:0;}
+  .charla-btn-del{padding:5px 8px;font-size:13px;line-height:1;border-radius:7px;flex-shrink:0;}
+  .charla-btn-del:hover{background:var(--red-tint);}
+  .charla-meta{display:flex;flex-wrap:wrap;gap:5px 14px;margin-top:8px;font-size:11.5px;color:var(--muted);}
+  .charla-meta span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+  .charla-fotos-label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;}
+  .charla-sin-fotos{margin-top:10px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px;}
 </style>
 </head>
 <body>
@@ -1385,6 +1466,17 @@
       </button>
       <div class="navgroup-body" id="navgroup-suministros-body">
         <button class="navitem" data-view="inventario-suministros"><span class="dot" style="background:#059669;"></span><span class="label">Solicitar Suministros</span><span class="tag">Activo</span></button>
+      </div>
+
+      <button type="button" class="navgroup-header" id="navgroup-lidervida-toggle" aria-expanded="false" style="margin-top:10px;">
+        <span class="navgroup-icon">🦺</span>
+        <span class="navgroup-title">Líder de Vida</span>
+        <span class="navgroup-count" id="navgroup-lidervida-count">2</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-lidervida-body">
+        <button class="navitem" data-view="insp-equipos"><span class="dot" style="background:#DC2626;"></span><span class="label">Inspección de Equipos</span><span class="tag">Activo</span></button>
+        <button class="navitem" data-view="insp-epp"><span class="dot" style="background:#0EA5E9;"></span><span class="label">Inspección de EPP</span><span class="tag">Activo</span></button>
       </div>
 
       <button type="button" class="navgroup-header" id="navgroup-tareas-toggle" aria-expanded="false" style="margin-top:10px;">
@@ -1879,7 +1971,7 @@
       </form>
 
       <div class="section-subhead" style="margin-top:22px;">Charlas registradas</div>
-      <div id="charla-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="charla-list" class="charla-lista"></div>
     </section>
 
     <!-- INVENTARIO · AUDITORÍA DE INVENTARIO (Shortpick + Bultos Perdidos + Sin Ubicación fusionados
@@ -2876,6 +2968,39 @@
           <div>Esta programación la carga directo el equipo de COMEX desde su propio link — no hace falta subir ningún Excel.</div>
         </div>
       </div>
+    </section>
+
+    <!-- LÍDER DE VIDA · INSPECCIÓN DE EQUIPOS (ESTOCA/Cuchillas/Encintador/Coches) -->
+    <section class="panel" id="panel-insp-equipos">
+      <div class="section-head">
+        <h2 class="section-title">🦺 Inspección de Equipos</h2>
+        <span class="count-pill" id="ie-count">0 inspecciones</span>
+      </div>
+      <p class="section-desc">Inspección mensual de ESTOCA, cuchillas, encintadores y coches de acarreo — reemplaza los formatos SSOMA-FR108/110/111/112. Al guardar queda el registro y puedes descargar el documento final.</p>
+
+      <div class="insp-tipos" id="ie-tipos"></div>
+      <div id="ie-form-cont"></div>
+
+      <div class="section-head" style="margin-top:8px;">
+        <h2 class="section-title" style="font-size:16px;">📋 Inspecciones registradas</h2>
+      </div>
+      <div class="insp-lista" id="ie-lista"></div>
+    </section>
+
+    <!-- LÍDER DE VIDA · INSPECCIÓN DE EPP -->
+    <section class="panel" id="panel-insp-epp">
+      <div class="section-head">
+        <h2 class="section-title">🦺 Inspección de EPP</h2>
+        <span class="count-pill" id="iepp-count">0 inspecciones</span>
+      </div>
+      <p class="section-desc">Inspección mensual de EPP por trabajador — reemplaza el formato SSOMA-FR107. Al guardar queda el registro y puedes descargar el documento final.</p>
+
+      <div id="iepp-form-cont"></div>
+
+      <div class="section-head" style="margin-top:8px;">
+        <h2 class="section-title" style="font-size:16px;">📋 Inspecciones registradas</h2>
+      </div>
+      <div class="insp-lista" id="iepp-lista"></div>
     </section>
 
     <!-- DESIGNACIÓN DE TAREAS · VISTA JEFATURA -->
@@ -4312,6 +4437,10 @@ function irAVista(view){
     trLoadTareas();
   } else if(view === "inventario-suministros"){
     cargarSuministrosSSOMA();
+  } else if(view === "insp-equipos"){
+    cargarInspEquipos();
+  } else if(view === "insp-epp"){
+    cargarInspEpp();
   } else if(view === "inbound-recepcion-importados"){
     sotLoadRegistros();
     pcLoadRegistros();
@@ -8141,6 +8270,8 @@ function aplicarVisibilidadNav(){
   const cuerpoInventario = document.getElementById("navgroup-inventario-body");
   const grupoSuministros = document.getElementById("navgroup-suministros-toggle");
   const cuerpoSuministros = document.getElementById("navgroup-suministros-body");
+  const grupoLiderVida = document.getElementById("navgroup-lidervida-toggle");
+  const cuerpoLiderVida = document.getElementById("navgroup-lidervida-body");
   const grupoTareas = document.getElementById("navgroup-tareas-toggle");
   const cuerpoTareas = document.getElementById("navgroup-tareas-body");
   const grupoInbound = document.getElementById("navgroup-inbound-toggle");
@@ -8151,16 +8282,19 @@ function aplicarVisibilidadNav(){
 
   if(seccion === "admin"){
     [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
-     grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas, grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, true));
+     grupoLiderVida, cuerpoLiderVida, grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas,
+     grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, true));
     return;
   }
 
   [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
-   grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas, grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, false));
+   grupoLiderVida, cuerpoLiderVida, grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas,
+   grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, false));
 
   let vistaInicial = null;
   if(seccion === "ssoma"){
     mostrar(grupoSsoma, true); mostrar(cuerpoSsoma, true);
+    mostrar(grupoLiderVida, true); mostrar(cuerpoLiderVida, true);
     vistaInicial = "racs";
   } else if(seccion === "jefatura"){
     mostrar(grupoTareas, true); mostrar(cuerpoTareas, true); mostrar(itemJefatura, true);
@@ -8184,6 +8318,7 @@ function aplicarVisibilidadNav(){
   } else if(seccion === "inventario"){
     mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
     mostrar(grupoSuministros, true); mostrar(cuerpoSuministros, true);
+    mostrar(grupoLiderVida, true); mostrar(cuerpoLiderVida, true);
     mostrar(grupoInbound, true); mostrar(cuerpoInbound, true);
     vistaInicial = "auditoria-inventario";
   }
@@ -10979,16 +11114,40 @@ function renderCharlaList(){
     list.innerHTML = `<div class="empty">Todavía no hay charlas registradas.</div>`;
     return;
   }
+  const puedeEliminar = esAdmin() || esSsomaU(miUsuario);
   list.innerHTML = charlaReports.map(r => `
-    <div class="stat-card" style="padding:14px 16px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
-        <div>
-          <div style="font-weight:700;color:var(--text);font-size:13.5px;">${escapeHtml(r.tema)}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${formatDate(r.fecha)} · ${escapeHtml(r.responsable)} · ${escapeHtml(r.ubicacion)}</div>
-        </div>
+    <div class="charla-card">
+      <div class="charla-card-head">
+        <div class="charla-card-title"><span class="icon">🗣️</span> ${escapeHtml(r.tema)}</div>
+        ${puedeEliminar ? `<button type="button" class="btn btn-ghost charla-btn-del" data-id="${r.id}" title="Eliminar" aria-label="Eliminar">🗑️</button>` : ""}
       </div>
-      ${r.evidencia && r.evidencia.length ? `<div style="margin-top:10px;">${imgRowHtml(r.evidencia, false)}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:var(--muted);">Sin fotos</div>`}
+      <div class="charla-meta">
+        <span>📅 ${formatDate(r.fecha)}</span>
+        <span>👤 ${escapeHtml(r.responsable)}</span>
+        <span>📍 ${escapeHtml(r.ubicacion)}</span>
+      </div>
+      ${r.evidencia && r.evidencia.length
+        ? `<div class="charla-fotos-label">Evidencia (${r.evidencia.length})</div>${imgRowHtml(r.evidencia, false)}`
+        : `<div class="charla-sin-fotos">🚫 Sin fotos</div>`}
     </div>`).join("");
+}
+
+// Duplicados por doble-clic en "Guardar" (antes de los guards de disabled/900ms) se
+// borran a mano: solo SSOMA o un administrador pueden hacerlo, mismo criterio que
+// ya decide quién ve el grupo SSOMA completo en el menú (ver aplicarVisibilidadNav).
+document.getElementById("charla-list").addEventListener("click", (e) => {
+  const delBtn = e.target.closest(".charla-btn-del");
+  if(delBtn) charlaEliminar(Number(delBtn.dataset.id), delBtn);
+});
+
+async function charlaEliminar(id, btn){
+  if(!(esAdmin() || esSsomaU(miUsuario))){ alert("Solo SSOMA o un administrador pueden eliminar este registro."); return; }
+  if(!confirm("¿Eliminar esta charla de 5 minutos? Esta acción no se puede deshacer.")) return;
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_charlas_5min").delete().eq("id", id);
+  if(error){ alert("No se pudo eliminar: " + error.message); btn.disabled = false; return; }
+  charlaReports = charlaReports.filter(r => r.id !== id);
+  renderCharlaList();
 }
 
 document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
@@ -12104,6 +12263,989 @@ document.getElementById("sm-fab-btn")?.addEventListener("click", ()=>{
     ultimoClick.set(btn, ahora);
   }, true);
 })();
+
+// ============================================================================
+// LÍDER DE VIDA — Inspección de Equipos (ESTOCA/Cuchillas/Encintador/Coches)
+// ----------------------------------------------------------------------------
+// Digitaliza SSOMA-FR108/110/111/112 como CUESTIONARIO dentro de la app: cada
+// equipo es una tarjeta con chips en vez de la tabla ancha del Excel, para
+// llenarlo con el pulgar. Al guardar queda el registro en Supabase, y desde
+// el detalle se puede generar/imprimir el documento final (misma info del
+// formato oficial, para archivar o entregar).
+// ============================================================================
+function abrirVentanaImpresion(html, titulo){
+  const css = [...document.querySelectorAll('link[rel=stylesheet]')].map(l => `<link rel="stylesheet" href="${l.href}">`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title>${css}<style>
+    @page{size:landscape;margin:10mm;}
+    body{padding:24px;background:#fff;color:#111;font-family:'Inter',sans-serif;}
+    .insp-doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:12px;margin-bottom:16px;}
+    .insp-doc-table{width:100%;border-collapse:collapse;margin:16px 0;}
+    .insp-doc-table th,.insp-doc-table td{border:1px solid #ccc;padding:6px 8px;font-size:11px;text-align:center;}
+    .insp-doc-table th{background:#f3f4f6;}
+    .insp-doc-firma{display:flex;justify-content:space-between;gap:40px;margin-top:50px;}
+    .insp-doc-firma div{text-align:center;width:100%;border-top:1px solid #000;padding-top:6px;font-size:12px;}
+  </style></head><body>${html}</body></html>`);
+  w.document.close();
+  setTimeout(()=>{ w.focus(); w.print(); }, 400);
+}
+
+// ---------------------------------------------------------------------------
+// Firma dibujada (dedo o mouse) — se reutiliza en Equipos y EPP, tanto para
+// "Inspeccionado por" como "Revisado por". getValor/setValor leen y escriben
+// el data URL en el state de cada formulario, así que si se agrega/quita una
+// fila (que reconstruye todo el HTML) la firma ya dibujada se puede volver a
+// pintar sobre el canvas nuevo en vez de perderse.
+// ---------------------------------------------------------------------------
+function inicializarFirma(canvasId, getValor, setValor){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+  const previa = getValor();
+  if(previa){
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.src = previa;
+  }
+
+  let dibujando = false;
+  const pos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches && e.touches[0] ? e.touches[0] : e;
+    return { x: (t.clientX - rect.left) * (canvas.width / rect.width), y: (t.clientY - rect.top) * (canvas.height / rect.height) };
+  };
+  const iniciar = (e) => { dibujando = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
+  const mover = (e) => { if(!dibujando) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); };
+  const terminar = () => { if(!dibujando) return; dibujando = false; setValor(canvas.toDataURL('image/png')); };
+
+  canvas.addEventListener('mousedown', iniciar);
+  canvas.addEventListener('mousemove', mover);
+  window.addEventListener('mouseup', terminar);
+  canvas.addEventListener('touchstart', iniciar, { passive: false });
+  canvas.addEventListener('touchmove', mover, { passive: false });
+  canvas.addEventListener('touchend', terminar);
+}
+
+function limpiarFirma(canvasId, setValor){
+  const canvas = document.getElementById(canvasId);
+  if(canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  setValor(null);
+}
+
+const IE_TIPOS = {
+  ESTOCA: { label: 'ESTOCA', formato: 'SSOMA-FR108', leyenda: [
+    ['A','FRENO DE MANO Y APARCAMIENTO, COMBINADOS'],
+    ['B','EMPUÑADURA'],
+    ['C','MANDO DE VALVULAS, ELEVACION, PUNTO MUERTO, DESCENSO'],
+    ['D','BARRA DE TRACCION'],
+    ['E','MUELLE DE RETORNO A VERTICAL'],
+    ['F','CHASIS'],
+    ['G','CONJUNTO HIDRAULICO (SI PRESENTA FUGAS)'],
+    ['H','RUEDAS DIRECTRICES'],
+    ['I','RUEDAS DELANTERAS'],
+    ['J','BARRA DE EMPUJE DE ELEVACION'],
+    ['K','LEVA DE MECANISMO DE ELEVACION'],
+    ['L','SE CUENTA CON LA CINTA DE INSPECCION DEL MES'],
+    ['M','SE CUENTA CON LA TARJETA DE FUERA DE SERVICIO EN CASO SEA NECESARIO USAR']
+  ]},
+  CUCHILLAS: { label: 'Cuchillas', formato: 'SSOMA-FR110', leyenda: [
+    ['A','CONDICIONES GENERALES DE HERRAMIENTAS'],
+    ['B','MANGO EN BUEN ESTADO'],
+    ['C','HERRAMIENTA NO HECHIZA'],
+    ['D','CUCHILLA DE ACERO SK EN BUEN ESTADO (NO OXIDADO, CORTADO, PERFORADO)'],
+    ['E','SEGURO AUTOMATICO RETRÁCTIL EN BUEN ESTADO'],
+    ['F','EL PERSONAL CONOCE LOS RIESGOS AL QUE ESTA EXPUESTO'],
+    ['G','PUNTA METALICA MULTIPROPÓSITO EN BUEN ESTADO'],
+    ['H','MANGO ANTIDESLIZANTE Y CURVADO EN BUEN ESTADO'],
+    ['I','EL PERSONAL CUENTA CON EL EPP REQUERIDO PARA LAS HERRAMIENTAS A USAR'],
+    ['J','ALMACENAMIENTO ADECUADO']
+  ]},
+  ENCINTADOR: { label: 'Encintador', formato: 'SSOMA-FR111', leyenda: [
+    ['A','CONDICIONES GENERALES DE HERRAMIENTAS'],
+    ['B','MANGO ERGONÓMICO EN BUEN ESTADO'],
+    ['C','HERRAMIENTA NO HECHIZA'],
+    ['D','SIERRA DE CORTE EN BUEN ESTADO'],
+    ['E','LENGÚETA DE PRESIÓN EN BUEN ESTADO'],
+    ['F','EL PERSONAL CONOCE LOS RIESGOS AL QUE ESTA EXPUESTO'],
+    ['G','ESTRUCTURA METALICA SIN ÓXIDOS'],
+    ['H','RODILLO DE PRESIÓN EN BUEN ESTADO'],
+    ['I','ALMACENAMIENTO ADECUADO'],
+    ['J','EL PERSONAL CUENTA CON EL EPP REQUERIDO PARA LAS HERRAMIENTAS A USAR']
+  ]},
+  COCHES: { label: 'Coches de acarreo', tituloDoc: 'COCHES DE ACARREO MANUAL', formato: 'SSOMA-FR112', leyenda: [
+    ['A','FRENO DE LLANTAS'],
+    ['B','MANIJA DE COCHE (EMPUÑADURA)'],
+    ['C','ESTRUCTURA DE EMPUÑADURA'],
+    ['D','CHASIS INFERIOR, MEDIO Y SUPERIOR DE COCHE'],
+    ['E','RUEDAS DIRECTRICES'],
+    ['F','RUEDAS DELANTERAS'],
+    ['G','SE CUENTA CON LA CINTA DE INSPECCION DEL MES'],
+    ['H','SE CUENTA CON LA TARJETA DE FUERA DE SERVICIO EN CASO SEA NECESARIO USAR'],
+    ['I','ESTRUCTURA DE COCHE SIN SUPERFICIES FILOSAS']
+  ]}
+};
+
+let ieState = { tipo: 'ESTOCA', filas: [], registros: [], cargado: false, firmaInsp: null,
+  editandoId: null, editandoCodigo: null,
+  campos: { cliente:'', area:'', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' } };
+let ieRevisionFirma = null; // firma temporal mientras se revisa un registro ya guardado (ver detalle)
+let ieCounter = 0;
+let ieDetalleActual = null; // { cabecera, lineas } — lo último abierto en el modal, para poder imprimirlo
+
+function ieCiclo(estado){
+  const orden = ['—','OK','NC','NA'];
+  return orden[(orden.indexOf(estado) + 1) % orden.length];
+}
+
+async function cargarInspEquipos(){
+  if(!ieState.cargado){
+    try{
+      // SSOMA y Admin ven todas las inspecciones (para poder revisarlas);
+      // el resto solo ve las que él mismo registró.
+      let q = sb.from('ssoma_insp_equipo_cabecera').select('*');
+      if(!esSsomaU(miUsuario) && !esAdmin()) q = q.eq('creado_por', currentSession.usuario.nombre);
+      const { data, error } = await q.order('id', { ascending: false });
+      if(error) throw error;
+      ieState.registros = data || [];
+      ieState.cargado = true;
+    }catch(err){
+      console.error('Error cargando inspecciones de equipo:', err);
+      const cont = document.getElementById('ie-lista');
+      if(cont) cont.innerHTML = `<div class="sm-empty" style="color:var(--red);">No se pudo cargar: ${escSm(err.message)}<br><small>Si la tabla no existe, ejecuta la migración 0043 en Supabase.</small></div>`;
+    }
+  }
+  if(ieState.filas.length === 0) ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieRender();
+}
+
+function ieRender(){
+  const el = document.getElementById('ie-count');
+  if(el) el.textContent = `${ieState.registros.length} inspección(es)`;
+  ieRenderTipos();
+  ieRenderForm();
+  ieRenderLista();
+}
+
+function ieRenderTipos(){
+  const cont = document.getElementById('ie-tipos');
+  if(!cont) return;
+  cont.innerHTML = Object.entries(IE_TIPOS).map(([id, cfg]) => `
+    <button type="button" class="insp-tipo-btn${ieState.tipo===id?' active':''}" onclick="ieCambiarTipo('${id}')">${escSm(cfg.label)}</button>
+  `).join('');
+}
+
+function ieCambiarTipo(tipo){
+  ieState.tipo = tipo;
+  ieRender();
+}
+
+function ieRenderForm(){
+  const cont = document.getElementById('ie-form-cont');
+  if(!cont) return;
+  const cfg = IE_TIPOS[ieState.tipo];
+
+  const editando = !!ieState.editandoId;
+  cont.innerHTML = `
+    ${editando ? `<div class="insp-leyenda" style="border-color:var(--red);">✏️ <b>Corrigiendo ${escSm(ieState.editandoCodigo||'')}</b> — al guardar se reemplaza el contenido que habías enviado. <button type="button" class="insp-firma-limpiar" onclick="ieCancelarEdicion()">Cancelar corrección</button></div>` : ''}
+    <div class="insp-leyenda">
+      <div class="insp-leyenda-titulo">Marcar: ✔ Conforme · x No cumple · NA No aplica</div>
+      ${cfg.leyenda.map(([l,t]) => `<div><b>${l}</b> = ${escSm(t)}</div>`).join('')}
+    </div>
+
+    <div class="field"><label>Cliente</label><input type="text" id="ie-f-cliente" placeholder="Ej. Adecco" value="${escSm(ieState.campos.cliente)}" oninput="ieState.campos.cliente=this.value"></div>
+    <div class="field"><label>Área</label><input type="text" id="ie-f-area" placeholder="Ej. Despacho" value="${escSm(ieState.campos.area)}" oninput="ieState.campos.area=this.value"></div>
+
+    ${ieState.filas.map((f, i) => ieFilaHTML(f, i, cfg)).join('')}
+
+    <button type="button" class="insp-add-row" onclick="ieAgregarFila()">➕ Agregar equipo</button>
+
+    <div class="field"><label>Acciones correctivas</label><textarea id="ie-f-acciones" placeholder="Opcional" oninput="ieState.campos.acciones=this.value">${escSm(ieState.campos.acciones)}</textarea></div>
+    <div class="field"><label>Responsable(s)</label><input type="text" id="ie-f-responsables" placeholder="Opcional" value="${escSm(ieState.campos.responsables)}" oninput="ieState.campos.responsables=this.value"></div>
+    <div class="field"><label>Fecha compromiso</label><input type="date" id="ie-f-fecha-acciones" value="${escSm(ieState.campos.fechaAcciones)}" oninput="ieState.campos.fechaAcciones=this.value"></div>
+
+    <div class="insp-firma-box">
+      <h5>Inspeccionado por</h5>
+      <div class="insp-firma-nombre">${escSm(currentSession.usuario.nombre)}</div>
+      <div class="field" style="margin-bottom:10px;"><label>Cargo</label><input type="text" id="ie-f-insp-cargo" placeholder="Ej. Líder de Vida" value="${escSm(ieState.campos.inspCargo)}" oninput="ieState.campos.inspCargo=this.value"></div>
+      <label class="insp-firma-label">Firma *</label>
+      <canvas id="ie-firma-insp" class="insp-firma-canvas" width="280" height="120"></canvas>
+      <button type="button" class="insp-firma-limpiar" onclick="limpiarFirma('ie-firma-insp', v=>ieState.firmaInsp=v)">Limpiar firma</button>
+    </div>
+    <p class="insp-file-hint">${editando ? 'Como el contenido cambió, hay que volver a firmar.' : 'La revisión de SSOMA (nombre y firma) se agrega después, desde el detalle del registro ya guardado.'}</p>
+
+    <button type="button" class="btn btn-primary" id="ie-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieEnviar()">${editando ? '💾 Guardar corrección' : '✅ Guardar inspección'}</button>
+  `;
+  inicializarFirma('ie-firma-insp', () => ieState.firmaInsp, v => ieState.firmaInsp = v);
+}
+
+function ieFilaHTML(f, i, cfg){
+  return `
+    <div class="insp-card">
+      <div class="insp-card-head">
+        <span class="insp-card-num">${i+1}</span>
+        <div class="insp-card-campos">
+          <input type="text" placeholder="Herramienta / equipo" value="${escSm(f.herramienta)}"
+                 oninput="ieActualizarCampo(${f._id}, 'herramienta', this.value)">
+          <input type="number" placeholder="Cantidad" min="0" value="${escSm(f.cantidad)}"
+                 oninput="ieActualizarCampo(${f._id}, 'cantidad', this.value)">
+        </div>
+        ${ieState.filas.length > 1 ? `<button type="button" class="insp-card-quitar" onclick="ieQuitarFila(${f._id})" aria-label="Quitar">&times;</button>` : ''}
+      </div>
+      <div class="insp-chips">
+        ${cfg.leyenda.map(([l,t]) => `
+          <button type="button" class="insp-chip" data-estado="${f.resultados[l] || '—'}" title="${escSm(t)}"
+                  onclick="ieToggleChip(${f._id}, '${l}', this)">${l}</button>
+        `).join('')}
+      </div>
+      <div class="insp-obs">
+        <input type="text" placeholder="Observaciones (opcional)" value="${escSm(f.observaciones)}"
+               oninput="ieActualizarCampo(${f._id}, 'observaciones', this.value)">
+      </div>
+    </div>`;
+}
+
+function ieActualizarCampo(filaId, campo, valor){
+  const fila = ieState.filas.find(f => f._id === filaId);
+  if(fila) fila[campo] = valor;
+}
+
+function ieToggleChip(filaId, letra, btnEl){
+  const fila = ieState.filas.find(f => f._id === filaId);
+  if(!fila) return;
+  const nuevo = ieCiclo(fila.resultados[letra] || '—');
+  if(nuevo === '—') delete fila.resultados[letra];
+  else fila.resultados[letra] = nuevo;
+  if(btnEl) btnEl.dataset.estado = nuevo;
+}
+
+function ieAgregarFila(){
+  ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieRenderForm();
+}
+
+function ieQuitarFila(filaId){
+  ieState.filas = ieState.filas.filter(f => f._id !== filaId);
+  ieRenderForm();
+}
+
+async function ieEnviar(){
+  const v = id => document.getElementById(id)?.value.trim() || null;
+  const cliente = v('ie-f-cliente');
+  const area = v('ie-f-area');
+  const acciones = v('ie-f-acciones');
+  const responsables = v('ie-f-responsables');
+  const fechaAcciones = document.getElementById('ie-f-fecha-acciones')?.value || null;
+  const inspCargo = v('ie-f-insp-cargo');
+
+  const filasValidas = ieState.filas.filter(f => f.herramienta.trim());
+  if(filasValidas.length === 0) return alert('Agrega al menos un equipo con su nombre.');
+  if(!ieState.firmaInsp) return alert('Falta la firma de quien inspeccionó.');
+
+  const editandoId = ieState.editandoId;
+  const btn = document.getElementById('ie-btn-enviar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    let cabecera;
+    if(editandoId){
+      const { data, error } = await sb.from('ssoma_insp_equipo_cabecera').update({
+        tipo: ieState.tipo, cliente, area,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_cargo: inspCargo, inspeccionado_firma: ieState.firmaInsp
+      }).eq('id', editandoId).select().single();
+      if(error) throw error;
+      cabecera = data;
+      const { error: eDel } = await sb.from('ssoma_insp_equipo_detalle').delete().eq('cabecera_id', editandoId);
+      if(eDel) throw eDel;
+    }else{
+      const { data, error: e1 } = await sb.from('ssoma_insp_equipo_cabecera').insert({
+        tipo: ieState.tipo, cliente, area,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_por: currentSession.usuario.nombre, inspeccionado_cargo: inspCargo,
+        inspeccionado_firma: ieState.firmaInsp,
+        creado_por: currentSession.usuario.nombre
+      }).select().single();
+      if(e1) throw e1;
+      cabecera = data;
+    }
+
+    const lineas = filasValidas.map((f, i) => ({
+      cabecera_id: cabecera.id, n_orden: i + 1,
+      herramienta: f.herramienta.trim(), cantidad: f.cantidad ? parseInt(f.cantidad, 10) : null,
+      resultados: f.resultados, observaciones: f.observaciones.trim() || null
+    }));
+    const { error: e2 } = await sb.from('ssoma_insp_equipo_detalle').insert(lineas);
+    if(e2) throw e2;
+
+    if(editandoId){
+      const i = ieState.registros.findIndex(x => x.id === editandoId);
+      if(i >= 0) ieState.registros[i] = cabecera;
+    }else{
+      ieState.registros.unshift(cabecera);
+    }
+    ieState.filas = [];
+    ieCounter = 0;
+    ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+    ieState.firmaInsp = null;
+    ieState.campos = { cliente:'', area:'', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+    ieState.editandoId = null;
+    ieState.editandoCodigo = null;
+    ieRender();
+    alert(editandoId ? `Corrección guardada en ${cabecera.codigo}.` : `Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
+  }catch(err){
+    alert('No se pudo guardar: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = editandoId ? '💾 Guardar corrección' : '✅ Guardar inspección';
+  }
+}
+
+// Reabre el formulario con los datos de un registro ya guardado (mismo
+// tipo, campos y filas) para corregir un error — solo lo puede hacer quien
+// lo creó, y solo mientras SSOMA no lo haya revisado todavía (si ya tiene
+// revisión, el documento oficial ya se firmó con ese contenido). Hay que
+// volver a firmar porque el contenido va a cambiar.
+function ieEditar(id){
+  const r = ieState.registros.find(x => x.id === id);
+  if(!r || !ieDetalleActual || ieDetalleActual.cabecera.id !== id) return;
+  ieState.editandoId = id;
+  ieState.editandoCodigo = r.codigo;
+  ieState.tipo = r.tipo;
+  ieState.campos = {
+    cliente: r.cliente || '', area: r.area || '', acciones: r.acciones_correctivas || '',
+    responsables: r.responsables || '', fechaAcciones: r.fecha_acciones || '', inspCargo: r.inspeccionado_cargo || ''
+  };
+  ieCounter = 0;
+  ieState.filas = (ieDetalleActual.lineas || []).map(l => ({
+    _id: ++ieCounter, herramienta: l.herramienta || '', cantidad: l.cantidad != null ? String(l.cantidad) : '',
+    resultados: { ...(l.resultados||{}) }, observaciones: l.observaciones || ''
+  }));
+  if(ieState.filas.length === 0) ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieState.firmaInsp = null;
+  document.getElementById('report-modal').classList.remove('show');
+  irAVista('insp-equipos');
+}
+
+function ieCancelarEdicion(){
+  ieState.editandoId = null;
+  ieState.editandoCodigo = null;
+  ieState.filas = [];
+  ieCounter = 0;
+  ieState.filas.push({ _id: ++ieCounter, herramienta:'', cantidad:'', resultados:{}, observaciones:'' });
+  ieState.firmaInsp = null;
+  ieState.campos = { cliente:'', area:'', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+  ieRenderForm();
+}
+
+function ieRenderLista(){
+  const cont = document.getElementById('ie-lista');
+  if(!cont) return;
+  cont.innerHTML = ieState.registros.length === 0
+    ? '<div class="sm-empty">Todavía no registraste ninguna inspección.</div>'
+    : ieState.registros.map(r => `
+      <button type="button" class="insp-item-card" onclick="ieVerDetalle(${r.id})">
+        <div class="insp-item-top"><strong>${escSm(r.codigo)}</strong><span class="estado-badge" style="background:var(--panel-alt);color:var(--text-soft);">${escSm(IE_TIPOS[r.tipo]?.label || r.tipo)}</span></div>
+        <div class="insp-item-meta">${smFecha(r.fecha)}${r.area ? ' · ' + escSm(r.area) : ''}</div>
+      </button>`).join('');
+}
+
+async function ieVerDetalle(id){
+  const r = ieState.registros.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById('modal-title').textContent = r.codigo;
+  document.getElementById('modal-body').innerHTML = '<div class="sm-empty">Cargando…</div>';
+  document.getElementById('report-modal').classList.add('show');
+  ieRevisionFirma = null;
+
+  const { data: lineas, error } = await sb.from('ssoma_insp_equipo_detalle').select('*').eq('cabecera_id', id).order('n_orden');
+  if(error){ document.getElementById('modal-body').innerHTML = `<div class="sm-empty" style="color:var(--red);">${escSm(error.message)}</div>`; return; }
+
+  ieDetalleActual = { cabecera: r, lineas: lineas || [] };
+  const cfg = IE_TIPOS[r.tipo];
+  const puedeEditar = r.creado_por === currentSession.usuario.nombre && !r.revisado_por;
+  document.getElementById('modal-body').innerHTML = `
+    <button type="button" class="btn btn-primary" style="width:100%;" onclick="ieImprimir()">🖨️ Generar documento</button>
+    ${puedeEditar ? `<button type="button" class="btn" style="width:100%;margin-top:8px;" onclick="ieEditar(${r.id})">✏️ Editar (corregir un error)</button>` : ''}
+    <p class="insp-file-hint" style="margin-top:6px;margin-bottom:16px;">${r.documento_html ? '✅ Documento oficial guardado (con ambas firmas) — este botón lo reabre tal cual.' : 'Vista previa: se arma al momento. Queda guardado como oficial recién cuando SSOMA firma la revisión.'}</p>
+    <div class="field"><label>Tipo</label><div>${escSm(cfg?.label || r.tipo)}</div></div>
+    <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
+    <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
+    <div class="field"><label>Área</label><div>${escSm(r.area || '—')}</div></div>
+    ${(lineas||[]).map(l => `
+      <div class="insp-card">
+        <div class="insp-card-head"><span class="insp-card-num">${l.n_orden}</span><div><b>${escSm(l.herramienta||'—')}</b>${l.cantidad != null ? ' · Cant. ' + l.cantidad : ''}</div></div>
+        <div class="insp-chips">
+          ${(cfg?.leyenda||[]).map(([letra]) => `<span class="insp-chip" data-estado="${(l.resultados||{})[letra] || '—'}">${letra}</span>`).join('')}
+        </div>
+        ${l.observaciones ? `<div class="insp-obs" style="margin-top:8px;font-size:12.5px;color:var(--text-soft);">${escSm(l.observaciones)}</div>` : ''}
+      </div>`).join('')}
+    ${r.acciones_correctivas ? `<div class="field"><label>Acciones correctivas</label><div>${escSm(r.acciones_correctivas)}</div></div>` : ''}
+    <div class="field"><label>Inspeccionado por</label><div>${escSm(r.inspeccionado_por || '—')}${r.inspeccionado_cargo ? ' · ' + escSm(r.inspeccionado_cargo) : ''}</div>
+      ${r.inspeccionado_firma ? `<img class="insp-firma-img" src="${r.inspeccionado_firma}" alt="Firma">` : ''}</div>
+    ${r.revisado_por
+      ? `<div class="field"><label>Revisado por</label><div>${escSm(r.revisado_por)}</div>
+          ${r.revisado_firma ? `<img class="insp-firma-img" src="${r.revisado_firma}" alt="Firma">` : ''}</div>`
+      : `<div class="insp-firma-box" style="margin-top:6px;">
+          <h5>Revisión SSOMA — todavía sin firmar</h5>
+          <div class="insp-firma-nombre">${escSm(currentSession.usuario.nombre)}</div>
+          <label class="insp-firma-label">Firma</label>
+          <canvas id="ie-rev-firma" class="insp-firma-canvas" width="280" height="120"></canvas>
+          <button type="button" class="insp-firma-limpiar" onclick="limpiarFirma('ie-rev-firma', v=>ieRevisionFirma=v)">Limpiar firma</button>
+          <button type="button" class="btn btn-primary" id="ie-rev-btn-guardar" style="width:100%;margin-top:10px;" onclick="ieGuardarRevision(${r.id})">✅ Guardar revisión</button>
+        </div>`}
+  `;
+  if(!r.revisado_por) inicializarFirma('ie-rev-firma', () => ieRevisionFirma, v => ieRevisionFirma = v);
+}
+
+// Arma el HTML del documento final de una inspección de Equipos — función
+// pura (no abre ventana) para poder reusarla tanto en la vista previa en
+// vivo (ieImprimir) como en el guardado del documento oficial al firmar la
+// revisión (ieGuardarRevision).
+// Caja de firma (Inspeccionado por / Revisado por) del documento final,
+// con el mismo rótulo "Apellidos y Nombres: / Cargo: / Firma" que traen los
+// 5 formatos SSOMA originales (FR107/108/110/111/112) — compartida por
+// Equipos y EPP.
+function docFirmaBoxHtml(titulo, nombre, cargo, firma){
+  return `
+    <div style="flex:1;border:1px solid #999;font-size:11px;">
+      <div style="background:#f3f4f6;font-weight:700;padding:4px 10px;border-bottom:1px solid #999;">${escSm(titulo)}</div>
+      <div style="padding:8px 10px;">
+        <div>Apellidos y Nombres: <b>${escSm(nombre||'—')}</b></div>
+        <div style="margin-top:4px;">Cargo: ${escSm(cargo||'—')}</div>
+        <div style="text-align:center;min-height:${firma ? '0' : '34px'};margin-top:6px;">
+          ${firma ? `<img src="${firma}" style="max-height:60px;">` : ''}
+        </div>
+        <div style="border-top:1px solid #000;text-align:center;padding-top:4px;margin-top:4px;">Firma</div>
+      </div>
+    </div>`;
+}
+
+// Franja "ACCIONES CORRECTIVAS / RESPONSABLES / FECHA" — compartida.
+function docAccionesRowHtml(r){
+  return `
+    <table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:11px;">
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px 8px;width:50%;vertical-align:top;"><b>ACCIONES CORRECTIVAS</b><br>${escSm(r.acciones_correctivas||'—')}</td>
+        <td style="border:1px solid #ccc;padding:6px 8px;width:25%;vertical-align:top;"><b>RESPONSABLES</b><br>${escSm(r.responsables||'—')}</td>
+        <td style="border:1px solid #ccc;padding:6px 8px;width:25%;vertical-align:top;"><b>FECHA</b><br>${r.fecha_acciones ? smFecha(r.fecha_acciones) : '—'}</td>
+      </tr>
+    </table>`;
+}
+
+function ieConstruirDocumentoHtml(r, lineas){
+  const cfg = IE_TIPOS[r.tipo];
+  const simbolo = { OK:'✔', NC:'x', NA:'NA' };
+  // La leyenda va en 3 columnas, igual que en el Excel original (A9:T9 con
+  // A10:E12 / F10:N12 / O10:T12).
+  const porCol = Math.ceil(cfg.leyenda.length / 3);
+  const columnas = [cfg.leyenda.slice(0, porCol), cfg.leyenda.slice(porCol, porCol*2), cfg.leyenda.slice(porCol*2)];
+  const colHtml = col => col.map(([l,t]) => `<div style="margin-bottom:3px;"><b>${escSm(l)}=</b> ${escSm(t)}</div>`).join('');
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:10px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        ${ADECCO_LOGO_DATA_URI ? `<img src="${ADECCO_LOGO_DATA_URI}" alt="Adecco" style="height:36px;">` : ''}
+        <div style="font-size:19px;font-weight:800;">INSPECCIÓN DE ${escSm(cfg.tituloDoc || cfg.label.toUpperCase())}</div>
+      </div>
+      <div style="border:1px solid #999;font-size:10.5px;text-align:center;min-width:150px;">
+        <div style="background:#f3f4f6;padding:3px 6px;border-bottom:1px solid #999;"><b>${escSm(cfg.formato)}</b></div>
+        <div style="padding:3px 6px;border-bottom:1px solid #999;">Versión: 01</div>
+        <div style="padding:3px 6px;">Fecha: ${smFecha(r.fecha)}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:28px;font-size:12px;margin-bottom:8px;flex-wrap:wrap;">
+      <div><b>CLIENTE:</b> ${escSm(r.cliente||'—')}</div>
+      <div><b>FECHA:</b> ${smFecha(r.fecha)}</div>
+      <div><b>ÁREA:</b> ${escSm(r.area||'—')}</div>
+    </div>
+    <p style="font-size:11px;"><b>Instrucciones:</b> Marcar: No Cumple (x) &nbsp; Conforme (✔) &nbsp; No Aplica (NA)</p>
+    <div style="background:#f3f4f6;font-weight:700;font-size:11px;padding:4px 8px;border:1px solid #ccc;border-bottom:none;">LEYENDA:</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;border:1px solid #ccc;padding:8px;font-size:10px;margin-bottom:14px;">
+      <div>${colHtml(columnas[0])}</div><div>${colHtml(columnas[1])}</div><div>${colHtml(columnas[2])}</div>
+    </div>
+    <table class="insp-doc-table">
+      <thead><tr><th>N°</th><th>Herramienta</th><th>Cant.</th>${cfg.leyenda.map(([l])=>`<th>${escSm(l)}</th>`).join('')}<th>Observaciones</th></tr></thead>
+      <tbody>
+        ${lineas.map(l => `<tr><td>${l.n_orden}</td><td style="text-align:left;">${escSm(l.herramienta||'')}</td><td>${l.cantidad ?? ''}</td>
+          ${cfg.leyenda.map(([letra])=>`<td>${simbolo[(l.resultados||{})[letra]] || ''}</td>`).join('')}
+          <td style="text-align:left;">${escSm(l.observaciones||'')}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <p style="font-size:9.5px;color:#555;">NOTA: Toda herramienta que no cumpla con los requisitos de seguridad quedará fuera de uso, siendo identificada con una tarjeta de FUERA DE SERVICIO. Ningún trabajador utilizará herramientas no autorizadas (Hechizas o artesanales).</p>
+    ${docAccionesRowHtml(r)}
+    <div style="display:flex;gap:24px;margin-top:26px;">
+      ${docFirmaBoxHtml('INSPECCIONADO POR:', r.inspeccionado_por, r.inspeccionado_cargo, r.inspeccionado_firma)}
+      ${docFirmaBoxHtml('REVISADO POR:', r.revisado_por, null, r.revisado_firma)}
+    </div>
+  `;
+}
+
+async function ieGuardarRevision(id){
+  if(!ieRevisionFirma) return alert('Falta la firma.');
+  const btn = document.getElementById('ie-rev-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    const { data: actualizada, error } = await sb.from('ssoma_insp_equipo_cabecera')
+      .update({ revisado_por: currentSession.usuario.nombre, revisado_firma: ieRevisionFirma })
+      .eq('id', id).select().single();
+    if(error) throw error;
+
+    // Con la revisión ya firmada, el registro queda completo: se arma el
+    // documento final UNA vez y se guarda como la versión oficial, para que
+    // "Generar documento" ya no lo reconstruya cada vez.
+    const lineas = (ieDetalleActual && ieDetalleActual.cabecera.id === id) ? ieDetalleActual.lineas : [];
+    const documentoHtml = ieConstruirDocumentoHtml(actualizada, lineas);
+    const { data: conDocumento, error: e2 } = await sb.from('ssoma_insp_equipo_cabecera')
+      .update({ documento_html: documentoHtml }).eq('id', id).select().single();
+    const final = e2 ? actualizada : conDocumento;
+
+    const i = ieState.registros.findIndex(x => x.id === id);
+    if(i >= 0) ieState.registros[i] = final;
+    ieVerDetalle(id);
+  }catch(err){
+    alert('No se pudo guardar la revisión: ' + err.message);
+    btn.disabled = false; btn.textContent = '✅ Guardar revisión';
+  }
+}
+
+function ieImprimir(){
+  if(!ieDetalleActual) return;
+  const { cabecera: r, lineas } = ieDetalleActual;
+  // Si ya existe un documento oficial guardado (se guarda al firmar la
+  // revisión SSOMA), se reabre tal cual quedó firmado en vez de
+  // reconstruirlo — así no cambia después aunque cambien otros datos.
+  const html = r.documento_html || ieConstruirDocumentoHtml(r, lineas);
+  abrirVentanaImpresion(html, r.codigo);
+}
+
+// ============================================================================
+// LÍDER DE VIDA — Inspección de EPP (por trabajador, formato SSOMA-FR107)
+// ----------------------------------------------------------------------------
+// A diferencia de los 4 de arriba, acá cada fila es un TRABAJADOR, no un
+// equipo, y se marca qué EPP tiene: B=Bueno, M=Malo, RC=Requiere cambio,
+// NA=No aplica. El Excel original no usa letras para los EPP (los nombra
+// completos), así que se numeran dentro de cada grupo solo para el chip —
+// la clave que se guarda es "GRUPO-n" y el nombre completo queda en la
+// leyenda y en el title del botón.
+// ============================================================================
+const EPP_GRUPOS = [
+  { id: 'GEN', titulo: 'Generales', items: [
+    'CASCO DE SEGURIDAD','PROTECTORES AUDITIVOS','BARBIQUEJO','POLO DE TRABAJO/CORTA/LARGA',
+    'PANTALON DE TRABAJO CON CINTA REFLECTIVA','GUANTES ANTICORTE','BOTAS DE SEGURIDAD','TAPONES AUDITIVOS'
+  ]},
+  { id: 'OP', titulo: 'Operador equipo de acarreo', items: [
+    'CASCO','LENTES DE SEGURIDAD','TAPONES AUDITIVOS','BARBIQUEJO','POLO PIQUE','GUANTES DE MANIOBRA',
+    'CHALECO CON CINTA REFLECTIVA','ARNES DE SEGURIDAD (SOLO TRILATERAL)','ZAPATOS DIELECTRICOS'
+  ]},
+  { id: 'REF', titulo: 'Refrigerados', items: [
+    'OVEROL/MAMELUCO','PASAMONTAÑA POLAR','CALENTADOR','GUANTES MITONES LANA',
+    'GUANTES TÉRMICOS (EJM HERCULES)','MEDIAS LANA','BOTAS CAÑA ALTA TÉRMICOS (EJM CADEROUSSE)'
+  ]}
+];
+
+let ieppState = { filas: [], registros: [], cargado: false, firmaInsp: null,
+  editandoId: null, editandoCodigo: null,
+  campos: { cliente:'', area:'', tipoInspeccion:'PLANEADA', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' } };
+let ieppRevisionFirma = null; // firma temporal mientras se revisa un registro ya guardado (ver detalle)
+let ieppCounter = 0;
+let ieppDetalleActual = null;
+
+function ieppCiclo(estado){
+  const orden = ['—','B','M','RC','NA'];
+  return orden[(orden.indexOf(estado) + 1) % orden.length];
+}
+
+async function cargarInspEpp(){
+  if(!ieppState.cargado){
+    try{
+      // SSOMA/Admin ven todas — ver comentario en cargarInspEquipos.
+      let q = sb.from('ssoma_insp_epp_cabecera').select('*');
+      if(!esSsomaU(miUsuario) && !esAdmin()) q = q.eq('creado_por', currentSession.usuario.nombre);
+      const { data, error } = await q.order('id', { ascending: false });
+      if(error) throw error;
+      ieppState.registros = data || [];
+      ieppState.cargado = true;
+    }catch(err){
+      console.error('Error cargando inspecciones de EPP:', err);
+      const cont = document.getElementById('iepp-lista');
+      if(cont) cont.innerHTML = `<div class="sm-empty" style="color:var(--red);">No se pudo cargar: ${escSm(err.message)}<br><small>Si la tabla no existe, ejecuta la migración 0043 en Supabase.</small></div>`;
+    }
+  }
+  if(ieppState.filas.length === 0) ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppRender();
+}
+
+function ieppRender(){
+  const el = document.getElementById('iepp-count');
+  if(el) el.textContent = `${ieppState.registros.length} inspección(es)`;
+  ieppRenderForm();
+  ieppRenderLista();
+}
+
+function ieppRenderForm(){
+  const cont = document.getElementById('iepp-form-cont');
+  if(!cont) return;
+
+  const editando = !!ieppState.editandoId;
+  cont.innerHTML = `
+    ${editando ? `<div class="insp-leyenda" style="border-color:var(--red);">✏️ <b>Corrigiendo ${escSm(ieppState.editandoCodigo||'')}</b> — al guardar se reemplaza el contenido que habías enviado. <button type="button" class="insp-firma-limpiar" onclick="ieppCancelarEdicion()">Cancelar corrección</button></div>` : ''}
+    <div class="insp-leyenda">
+      <div class="insp-leyenda-titulo">Toca cada EPP para marcarlo: Bueno → Malo → Requiere cambio → No aplica</div>
+    </div>
+
+    <div class="field"><label>Cliente</label><input type="text" id="iepp-f-cliente" placeholder="Ej. Adecco" value="${escSm(ieppState.campos.cliente)}" oninput="ieppState.campos.cliente=this.value"></div>
+    <div class="field"><label>Área</label><input type="text" id="iepp-f-area" placeholder="Ej. Despacho" value="${escSm(ieppState.campos.area)}" oninput="ieppState.campos.area=this.value"></div>
+    <div class="field"><label>Tipo de inspección</label>
+      <select id="iepp-f-tipo" onchange="ieppState.campos.tipoInspeccion=this.value">
+        <option value="PLANEADA"${ieppState.campos.tipoInspeccion==='PLANEADA'?' selected':''}>Planeada</option>
+        <option value="NO PLANEADA"${ieppState.campos.tipoInspeccion==='NO PLANEADA'?' selected':''}>No planeada</option>
+      </select>
+    </div>
+
+    ${ieppState.filas.map((f, i) => ieppFilaHTML(f, i)).join('')}
+
+    <button type="button" class="insp-add-row" onclick="ieppAgregarFila()">➕ Agregar trabajador</button>
+
+    <div class="field"><label>Acciones correctivas</label><textarea id="iepp-f-acciones" placeholder="Opcional" oninput="ieppState.campos.acciones=this.value">${escSm(ieppState.campos.acciones)}</textarea></div>
+    <div class="field"><label>Responsable(s)</label><input type="text" id="iepp-f-responsables" placeholder="Opcional" value="${escSm(ieppState.campos.responsables)}" oninput="ieppState.campos.responsables=this.value"></div>
+    <div class="field"><label>Fecha compromiso</label><input type="date" id="iepp-f-fecha-acciones" value="${escSm(ieppState.campos.fechaAcciones)}" oninput="ieppState.campos.fechaAcciones=this.value"></div>
+
+    <div class="insp-firma-box">
+      <h5>Inspeccionado por</h5>
+      <div class="insp-firma-nombre">${escSm(currentSession.usuario.nombre)}</div>
+      <div class="field" style="margin-bottom:10px;"><label>Cargo</label><input type="text" id="iepp-f-insp-cargo" placeholder="Ej. Líder de Vida" value="${escSm(ieppState.campos.inspCargo)}" oninput="ieppState.campos.inspCargo=this.value"></div>
+      <label class="insp-firma-label">Firma *</label>
+      <canvas id="iepp-firma-insp" class="insp-firma-canvas" width="280" height="120"></canvas>
+      <button type="button" class="insp-firma-limpiar" onclick="limpiarFirma('iepp-firma-insp', v=>ieppState.firmaInsp=v)">Limpiar firma</button>
+    </div>
+    <p class="insp-file-hint">${editando ? 'Como el contenido cambió, hay que volver a firmar.' : 'La revisión de SSOMA (nombre y firma) se agrega después, desde el detalle del registro ya guardado.'}</p>
+
+    <button type="button" class="btn btn-primary" id="iepp-btn-enviar" style="width:100%;margin-top:16px;" onclick="ieppEnviar()">${editando ? '💾 Guardar corrección' : '✅ Guardar inspección'}</button>
+  `;
+  inicializarFirma('iepp-firma-insp', () => ieppState.firmaInsp, v => ieppState.firmaInsp = v);
+}
+
+function ieppFilaHTML(f, i){
+  return `
+    <div class="insp-card">
+      <div class="insp-card-head">
+        <span class="insp-card-num">${i+1}</span>
+        <div class="insp-card-campos">
+          <input type="text" placeholder="Apellidos y nombres" value="${escSm(f.trabajador)}"
+                 oninput="ieppActualizarCampo(${f._id}, 'trabajador', this.value)">
+          <input type="text" placeholder="Cargo" value="${escSm(f.cargo)}"
+                 oninput="ieppActualizarCampo(${f._id}, 'cargo', this.value)">
+        </div>
+        ${ieppState.filas.length > 1 ? `<button type="button" class="insp-card-quitar" onclick="ieppQuitarFila(${f._id})" aria-label="Quitar">&times;</button>` : ''}
+      </div>
+      ${EPP_GRUPOS.map(g => `
+        <div class="insp-grupo-titulo">${escSm(g.titulo)}</div>
+        ${g.items.map((item, idx) => {
+          const clave = `${g.id}-${idx+1}`;
+          const estado = f.resultados[clave] || '—';
+          return `<div class="insp-epp-item">
+              <span class="insp-epp-item-nombre">${escSm(item)}</span>
+              <button type="button" class="insp-epp-badge" data-estado="${estado}"
+                      onclick="ieppToggleChip(${f._id}, '${clave}', this)">${estado === '—' ? 'Marcar' : estado}</button>
+            </div>`;
+        }).join('')}
+      `).join('')}
+      <div class="insp-obs">
+        <input type="text" placeholder="Observaciones (opcional)" value="${escSm(f.observaciones)}"
+               oninput="ieppActualizarCampo(${f._id}, 'observaciones', this.value)">
+      </div>
+    </div>`;
+}
+
+function ieppActualizarCampo(filaId, campo, valor){
+  const fila = ieppState.filas.find(f => f._id === filaId);
+  if(fila) fila[campo] = valor;
+}
+
+function ieppToggleChip(filaId, clave, btnEl){
+  const fila = ieppState.filas.find(f => f._id === filaId);
+  if(!fila) return;
+  const nuevo = ieppCiclo(fila.resultados[clave] || '—');
+  if(nuevo === '—') delete fila.resultados[clave];
+  else fila.resultados[clave] = nuevo;
+  if(btnEl){
+    btnEl.dataset.estado = nuevo;
+    btnEl.textContent = nuevo === '—' ? 'Marcar' : nuevo;
+  }
+}
+
+function ieppAgregarFila(){
+  ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppRenderForm();
+}
+
+function ieppQuitarFila(filaId){
+  ieppState.filas = ieppState.filas.filter(f => f._id !== filaId);
+  ieppRenderForm();
+}
+
+async function ieppEnviar(){
+  const v = id => document.getElementById(id)?.value.trim() || null;
+  const cliente = v('iepp-f-cliente');
+  const area = v('iepp-f-area');
+  const tipoInspeccion = document.getElementById('iepp-f-tipo')?.value || 'PLANEADA';
+  const acciones = v('iepp-f-acciones');
+  const responsables = v('iepp-f-responsables');
+  const fechaAcciones = document.getElementById('iepp-f-fecha-acciones')?.value || null;
+  const inspCargo = v('iepp-f-insp-cargo');
+
+  const filasValidas = ieppState.filas.filter(f => f.trabajador.trim());
+  if(filasValidas.length === 0) return alert('Agrega al menos un trabajador.');
+  if(!ieppState.firmaInsp) return alert('Falta la firma de quien inspeccionó.');
+
+  const editandoId = ieppState.editandoId;
+  const btn = document.getElementById('iepp-btn-enviar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    let cabecera;
+    if(editandoId){
+      const { data, error } = await sb.from('ssoma_insp_epp_cabecera').update({
+        cliente, area, tipo_inspeccion: tipoInspeccion,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_cargo: inspCargo, inspeccionado_firma: ieppState.firmaInsp
+      }).eq('id', editandoId).select().single();
+      if(error) throw error;
+      cabecera = data;
+      const { error: eDel } = await sb.from('ssoma_insp_epp_detalle').delete().eq('cabecera_id', editandoId);
+      if(eDel) throw eDel;
+    }else{
+      const { data, error: e1 } = await sb.from('ssoma_insp_epp_cabecera').insert({
+        cliente, area, tipo_inspeccion: tipoInspeccion,
+        acciones_correctivas: acciones, responsables, fecha_acciones: fechaAcciones,
+        inspeccionado_por: currentSession.usuario.nombre, inspeccionado_cargo: inspCargo,
+        inspeccionado_firma: ieppState.firmaInsp,
+        creado_por: currentSession.usuario.nombre
+      }).select().single();
+      if(e1) throw e1;
+      cabecera = data;
+    }
+
+    const lineas = filasValidas.map((f, i) => ({
+      cabecera_id: cabecera.id, n_orden: i + 1,
+      trabajador: f.trabajador.trim(), cargo: f.cargo.trim() || null,
+      resultados: f.resultados, observaciones: f.observaciones.trim() || null
+    }));
+    const { error: e2 } = await sb.from('ssoma_insp_epp_detalle').insert(lineas);
+    if(e2) throw e2;
+
+    if(editandoId){
+      const i = ieppState.registros.findIndex(x => x.id === editandoId);
+      if(i >= 0) ieppState.registros[i] = cabecera;
+    }else{
+      ieppState.registros.unshift(cabecera);
+    }
+    ieppState.filas = [];
+    ieppCounter = 0;
+    ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+    ieppState.firmaInsp = null;
+    ieppState.campos = { cliente:'', area:'', tipoInspeccion:'PLANEADA', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+    ieppState.editandoId = null;
+    ieppState.editandoCodigo = null;
+    ieppRender();
+    alert(editandoId ? `Corrección guardada en ${cabecera.codigo}.` : `Inspección ${cabecera.codigo} guardada. Puedes descargar el documento desde la lista de abajo.`);
+  }catch(err){
+    alert('No se pudo guardar: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = editandoId ? '💾 Guardar corrección' : '✅ Guardar inspección';
+  }
+}
+
+function ieppEditar(id){
+  const r = ieppState.registros.find(x => x.id === id);
+  if(!r || !ieppDetalleActual || ieppDetalleActual.cabecera.id !== id) return;
+  ieppState.editandoId = id;
+  ieppState.editandoCodigo = r.codigo;
+  ieppState.campos = {
+    cliente: r.cliente || '', area: r.area || '', tipoInspeccion: r.tipo_inspeccion || 'PLANEADA',
+    acciones: r.acciones_correctivas || '', responsables: r.responsables || '',
+    fechaAcciones: r.fecha_acciones || '', inspCargo: r.inspeccionado_cargo || ''
+  };
+  ieppCounter = 0;
+  ieppState.filas = (ieppDetalleActual.lineas || []).map(l => ({
+    _id: ++ieppCounter, trabajador: l.trabajador || '', cargo: l.cargo || '',
+    resultados: { ...(l.resultados||{}) }, observaciones: l.observaciones || ''
+  }));
+  if(ieppState.filas.length === 0) ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppState.firmaInsp = null;
+  document.getElementById('report-modal').classList.remove('show');
+  irAVista('insp-epp');
+}
+
+function ieppCancelarEdicion(){
+  ieppState.editandoId = null;
+  ieppState.editandoCodigo = null;
+  ieppState.filas = [];
+  ieppCounter = 0;
+  ieppState.filas.push({ _id: ++ieppCounter, trabajador:'', cargo:'', resultados:{}, observaciones:'' });
+  ieppState.firmaInsp = null;
+  ieppState.campos = { cliente:'', area:'', tipoInspeccion:'PLANEADA', acciones:'', responsables:'', fechaAcciones:'', inspCargo:'' };
+  ieppRenderForm();
+}
+
+function ieppRenderLista(){
+  const cont = document.getElementById('iepp-lista');
+  if(!cont) return;
+  cont.innerHTML = ieppState.registros.length === 0
+    ? '<div class="sm-empty">Todavía no registraste ninguna inspección.</div>'
+    : ieppState.registros.map(r => `
+      <button type="button" class="insp-item-card" onclick="ieppVerDetalle(${r.id})">
+        <div class="insp-item-top"><strong>${escSm(r.codigo)}</strong><span class="estado-badge" style="background:var(--panel-alt);color:var(--text-soft);">${escSm(r.tipo_inspeccion || '')}</span></div>
+        <div class="insp-item-meta">${smFecha(r.fecha)}${r.area ? ' · ' + escSm(r.area) : ''}</div>
+      </button>`).join('');
+}
+
+async function ieppVerDetalle(id){
+  const r = ieppState.registros.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById('modal-title').textContent = r.codigo;
+  document.getElementById('modal-body').innerHTML = '<div class="sm-empty">Cargando…</div>';
+  document.getElementById('report-modal').classList.add('show');
+  ieppRevisionFirma = null;
+
+  const { data: lineas, error } = await sb.from('ssoma_insp_epp_detalle').select('*').eq('cabecera_id', id).order('n_orden');
+  if(error){ document.getElementById('modal-body').innerHTML = `<div class="sm-empty" style="color:var(--red);">${escSm(error.message)}</div>`; return; }
+
+  ieppDetalleActual = { cabecera: r, lineas: lineas || [] };
+  const puedeEditar = r.creado_por === currentSession.usuario.nombre && !r.revisado_por;
+  document.getElementById('modal-body').innerHTML = `
+    <button type="button" class="btn btn-primary" style="width:100%;" onclick="ieppImprimir()">🖨️ Generar documento</button>
+    ${puedeEditar ? `<button type="button" class="btn" style="width:100%;margin-top:8px;" onclick="ieppEditar(${r.id})">✏️ Editar (corregir un error)</button>` : ''}
+    <p class="insp-file-hint" style="margin-top:6px;margin-bottom:16px;">${r.documento_html ? '✅ Documento oficial guardado (con ambas firmas) — este botón lo reabre tal cual.' : 'Vista previa: se arma al momento. Queda guardado como oficial recién cuando SSOMA firma la revisión.'}</p>
+    <div class="field"><label>Fecha</label><div>${smFecha(r.fecha)}</div></div>
+    <div class="field"><label>Cliente</label><div>${escSm(r.cliente || '—')}</div></div>
+    <div class="field"><label>Área</label><div>${escSm(r.area || '—')}</div></div>
+    ${(lineas||[]).map(l => `
+      <div class="insp-card">
+        <div class="insp-card-head"><span class="insp-card-num">${l.n_orden}</span><div><b>${escSm(l.trabajador||'—')}</b>${l.cargo ? ' · ' + escSm(l.cargo) : ''}</div></div>
+        ${EPP_GRUPOS.map(g => `
+          <div class="insp-grupo-titulo">${escSm(g.titulo)}</div>
+          ${g.items.map((item, idx) => {
+            const estado = (l.resultados||{})[`${g.id}-${idx+1}`] || '—';
+            return `<div class="insp-epp-item">
+                <span class="insp-epp-item-nombre">${escSm(item)}</span>
+                <span class="insp-epp-badge" data-estado="${estado}" style="cursor:default;">${estado === '—' ? 'Sin marcar' : estado}</span>
+              </div>`;
+          }).join('')}`).join('')}
+        ${l.observaciones ? `<div class="insp-obs" style="margin-top:8px;font-size:12.5px;color:var(--text-soft);">${escSm(l.observaciones)}</div>` : ''}
+      </div>`).join('')}
+    ${r.acciones_correctivas ? `<div class="field"><label>Acciones correctivas</label><div>${escSm(r.acciones_correctivas)}</div></div>` : ''}
+    <div class="field"><label>Inspeccionado por</label><div>${escSm(r.inspeccionado_por || '—')}${r.inspeccionado_cargo ? ' · ' + escSm(r.inspeccionado_cargo) : ''}</div>
+      ${r.inspeccionado_firma ? `<img class="insp-firma-img" src="${r.inspeccionado_firma}" alt="Firma">` : ''}</div>
+    ${r.revisado_por
+      ? `<div class="field"><label>Revisado por</label><div>${escSm(r.revisado_por)}</div>
+          ${r.revisado_firma ? `<img class="insp-firma-img" src="${r.revisado_firma}" alt="Firma">` : ''}</div>`
+      : `<div class="insp-firma-box" style="margin-top:6px;">
+          <h5>Revisión SSOMA — todavía sin firmar</h5>
+          <div class="insp-firma-nombre">${escSm(currentSession.usuario.nombre)}</div>
+          <label class="insp-firma-label">Firma</label>
+          <canvas id="iepp-rev-firma" class="insp-firma-canvas" width="280" height="120"></canvas>
+          <button type="button" class="insp-firma-limpiar" onclick="limpiarFirma('iepp-rev-firma', v=>ieppRevisionFirma=v)">Limpiar firma</button>
+          <button type="button" class="btn btn-primary" id="iepp-rev-btn-guardar" style="width:100%;margin-top:10px;" onclick="ieppGuardarRevision(${r.id})">✅ Guardar revisión</button>
+        </div>`}
+  `;
+  if(!r.revisado_por) inicializarFirma('iepp-rev-firma', () => ieppRevisionFirma, v => ieppRevisionFirma = v);
+}
+
+// Misma idea que ieConstruirDocumentoHtml, para Inspección de EPP.
+// Tabla ancha con las columnas agrupadas por Generales / Operador equipo de
+// acarreo / Refrigerados — igual a como está armado el Excel original
+// (F8:AC8 con los 3 sub-grupos F9:M9 / N9:V9 / W9:AC9), en vez de una
+// mini-tabla vertical por trabajador. Los encabezados de cada EPP van en
+// vertical (igual truco que usan las plantillas en Excel) porque son
+// demasiadas columnas angostas para texto horizontal.
+function ieppConstruirDocumentoHtml(r, lineas){
+  const simbolo = { B:'B', M:'M', RC:'RC', NA:'NA' };
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #E31E24;padding-bottom:10px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        ${ADECCO_LOGO_DATA_URI ? `<img src="${ADECCO_LOGO_DATA_URI}" alt="Adecco" style="height:36px;">` : ''}
+        <div style="font-size:19px;font-weight:800;">INSPECCIÓN DE EPP PARA CENTRO DE DISTRIBUCIÓN</div>
+      </div>
+      <div style="border:1px solid #999;font-size:10.5px;text-align:center;min-width:150px;">
+        <div style="background:#f3f4f6;padding:3px 6px;border-bottom:1px solid #999;"><b>SSOMA-FR107</b></div>
+        <div style="padding:3px 6px;border-bottom:1px solid #999;">Versión: 01</div>
+        <div style="padding:3px 6px;">Fecha: ${smFecha(r.fecha)}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:28px;font-size:12px;margin-bottom:8px;flex-wrap:wrap;">
+      <div><b>CLIENTE:</b> ${escSm(r.cliente||'—')}</div>
+      <div><b>FECHA:</b> ${smFecha(r.fecha)}</div>
+      <div><b>ÁREA:</b> ${escSm(r.area||'—')}</div>
+      <div><b>TIPO DE INSPECCIÓN:</b> ${escSm(r.tipo_inspeccion||'—')}</div>
+    </div>
+    <p style="font-size:11px;"><b>Marcar:</b> (B) Bueno &nbsp; (M) Malo &nbsp; (RC) Requiere cambio &nbsp; (NA) No Aplica</p>
+    <table class="insp-doc-table" style="font-size:8.5px;">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:22px;">N°</th>
+          <th rowspan="2" style="min-width:110px;">Apellidos y nombres</th>
+          <th rowspan="2" style="min-width:70px;">Cargo</th>
+          ${EPP_GRUPOS.map(g => `<th colspan="${g.items.length}">${escSm(g.titulo)}</th>`).join('')}
+          <th rowspan="2" style="min-width:90px;">Observaciones</th>
+        </tr>
+        <tr>
+          ${EPP_GRUPOS.flatMap(g => g.items.map(item =>
+            `<th style="width:32px;max-width:32px;font-size:7px;line-height:1.15;font-weight:500;padding:3px 1px;word-break:break-word;">${escSm(item)}</th>`
+          )).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${lineas.map(l => `
+          <tr>
+            <td>${l.n_orden}</td>
+            <td style="text-align:left;">${escSm(l.trabajador||'')}</td>
+            <td style="text-align:left;">${escSm(l.cargo||'')}</td>
+            ${EPP_GRUPOS.flatMap(g => g.items.map((item, idx) => {
+              const estado = (l.resultados||{})[`${g.id}-${idx+1}`];
+              return `<td>${estado ? (simbolo[estado]||estado) : ''}</td>`;
+            })).join('')}
+            <td style="text-align:left;">${escSm(l.observaciones||'')}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    ${docAccionesRowHtml(r)}
+    <div style="display:flex;gap:24px;margin-top:26px;">
+      ${docFirmaBoxHtml('INSPECCIONADO POR:', r.inspeccionado_por, r.inspeccionado_cargo, r.inspeccionado_firma)}
+      ${docFirmaBoxHtml('REVISADO POR:', r.revisado_por, null, r.revisado_firma)}
+    </div>
+  `;
+}
+
+async function ieppGuardarRevision(id){
+  if(!ieppRevisionFirma) return alert('Falta la firma.');
+  const btn = document.getElementById('iepp-rev-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try{
+    const { data: actualizada, error } = await sb.from('ssoma_insp_epp_cabecera')
+      .update({ revisado_por: currentSession.usuario.nombre, revisado_firma: ieppRevisionFirma })
+      .eq('id', id).select().single();
+    if(error) throw error;
+
+    const lineas = (ieppDetalleActual && ieppDetalleActual.cabecera.id === id) ? ieppDetalleActual.lineas : [];
+    const documentoHtml = ieppConstruirDocumentoHtml(actualizada, lineas);
+    const { data: conDocumento, error: e2 } = await sb.from('ssoma_insp_epp_cabecera')
+      .update({ documento_html: documentoHtml }).eq('id', id).select().single();
+    const final = e2 ? actualizada : conDocumento;
+
+    const i = ieppState.registros.findIndex(x => x.id === id);
+    if(i >= 0) ieppState.registros[i] = final;
+    ieppVerDetalle(id);
+  }catch(err){
+    alert('No se pudo guardar la revisión: ' + err.message);
+    btn.disabled = false; btn.textContent = '✅ Guardar revisión';
+  }
+}
+
+function ieppImprimir(){
+  if(!ieppDetalleActual) return;
+  const { cabecera: r, lineas } = ieppDetalleActual;
+  const html = r.documento_html || ieppConstruirDocumentoHtml(r, lineas);
+  abrirVentanaImpresion(html, r.codigo);
+}
 
 checkSession();
 </script>
