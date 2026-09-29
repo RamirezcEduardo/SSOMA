@@ -4258,39 +4258,45 @@ function abrirVentanaImpresion(titulo, bodyHtml, eyebrow){
     <title>${titulo}</title>
     <style>
       *{ box-sizing:border-box; }
-      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:32px;max-width:780px;margin:0 auto;font-size:15px;line-height:1.5;}
-      .hd{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:4px solid #E31E24;padding-bottom:18px;margin-bottom:32px;}
-      .hd-text{border-left:5px solid #E31E24;padding-left:18px;}
-      .hd .eyebrow{color:#E31E24;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
-      .hd h1{margin:4px 0 0;font-size:26px;}
-      .hd-logo{height:38px;flex-shrink:0;}
-      .modal-section-title{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#E31E24;margin:28px 0 14px;padding-top:16px;border-top:1px solid #E5E7EB;}
+      body{font-family:Arial,Helvetica,sans-serif;color:#1A1D23;padding:20px;max-width:900px;margin:0 auto;font-size:9.5px;line-height:1.25;}
+      .hd{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #E31E24;padding-bottom:6px;margin-bottom:9px;}
+      .hd-text{border-left:3px solid #E31E24;padding-left:9px;}
+      .hd .eyebrow{color:#E31E24;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;}
+      .hd h1{margin:2px 0 0;font-size:16px;}
+      .hd-logo{height:20px;flex-shrink:0;}
+      .modal-section-title{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:#E31E24;margin:8px 0 4px;padding-top:6px;border-top:1px solid #E5E7EB;}
       .modal-section-title:first-child{margin-top:0;padding-top:0;border-top:none;}
-      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 32px;margin-bottom:6px;}
-      .mrow{margin-bottom:16px;font-size:15px;}
-      .mrow-full{margin-top:8px;}
-      .mrow b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:4px;}
-      .estado-badge{font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:#FEF3E2;color:#B45309;}
-      .img-row{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;}
-      .img-row img{width:200px;height:200px;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB;}
-      .kpi-row{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0 28px;}
-      .kpi-card{flex:1;min-width:150px;background:#F7F8FA;border:1px solid #E5E7EB;border-radius:12px;padding:14px 16px;}
-      .kpi-card .kpi-label{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:6px;}
-      .kpi-card .kpi-value{font-size:22px;font-weight:800;color:#1A1D23;}
+      .section-desc{font-size:8.5px;color:#6B7280;margin:0 0 4px;}
+      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:4px;}
+      .mrow{margin-bottom:8px;font-size:9.5px;}
+      .mrow-full{margin-top:4px;}
+      .mrow b{display:block;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:2px;}
+      .estado-badge{font-size:9.5px;font-weight:700;padding:3px 10px;border-radius:20px;background:#FEF3E2;color:#B45309;}
+      .img-row{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
+      .img-row img{width:140px;height:140px;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB;}
+      .kpi-row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 9px;}
+      .kpi-card{flex:1;min-width:130px;background:#F7F8FA;border:1px solid #E5E7EB;border-radius:8px;padding:5px 8px;}
+      .kpi-card .kpi-label{font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;color:#8B92A0;font-weight:700;margin-bottom:1px;}
+      .kpi-card .kpi-value{font-size:13px;font-weight:800;color:#1A1D23;}
       .kpi-card.accent{background:#FDECEC;border-color:#F7C9CA;}
       .kpi-card.accent .kpi-value{color:#E31E24;}
-      .print-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;}
-      .print-table thead th{text-align:left;background:#1A1D23;color:#fff;padding:9px 8px;font-size:11px;letter-spacing:.03em;text-transform:uppercase;}
-      .print-table td{padding:8px;border-bottom:1px solid #E5E7EB;}
+      .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+      .print-table{width:100%;border-collapse:collapse;font-size:8px;margin-top:1px;}
+      .print-table thead th{text-align:left;background:#1A1D23;color:#fff;padding:3px 6px;font-size:7px;letter-spacing:.02em;text-transform:uppercase;}
+      .print-table td{padding:2px 6px;border-bottom:1px solid #EEF0F2;}
       .print-table tbody tr:nth-child(even){background:#F7F8FA;}
       .print-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
-      .print-footer{margin-top:36px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#8B92A0;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-      @page{ size:A4; margin:16mm; }
+      .print-table tbody tr.resp-row td{background:#1A1D23;color:#fff;font-weight:700;}
+      .print-table tbody tr.sup-row td{background:#F3F4F6;font-weight:700;}
+      .print-table tbody tr.subtotal-row td{font-weight:700;background:transparent;}
+      .print-table tbody tr.total-row td{font-weight:800;background:#FDECEC;}
+      .print-footer{margin-top:10px;padding-top:6px;border-top:1px solid #E5E7EB;font-size:8px;color:#8B92A0;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+      @page{ size:A4; margin:8mm; }
       @media print{
         body{padding:0;max-width:none;}
         .mrow, .info-grid, .modal-section-title, .img-row, .kpi-card, .print-table tr{ break-inside:avoid; }
       }
-      @media screen and (max-width:600px){ .info-grid{grid-template-columns:1fr;} .hd{flex-direction:column;align-items:flex-start;} }
+      @media screen and (max-width:600px){ .info-grid{grid-template-columns:1fr;} .cols{grid-template-columns:1fr;} .hd{flex-direction:column;align-items:flex-start;} }
     </style>
     </head><body>
       <div class="hd">
@@ -7315,14 +7321,14 @@ function sdBuildTablaProcesoUbicacion(rows){
       }
       totalResp += totalSup;
       bloqueResp += `
-        <tr style="background:#F7F8FA;"><td colspan="5" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        <tr class="sup-row"><td colspan="5">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
         ${bloqueSup}
-        <tr style="font-weight:700;"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td><td></td></tr>`;
+        <tr class="subtotal-row"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td><td></td></tr>`;
     }
     filas += `
-      <tr style="background:#1A1D23;color:#fff;"><td colspan="5">👤 ${escapeHtml(responsable)}</td></tr>
+      <tr class="resp-row"><td colspan="5">👤 ${escapeHtml(responsable)}</td></tr>
       ${bloqueResp}
-      <tr style="font-weight:800;background:#FDECEC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td><td></td></tr>`;
+      <tr class="total-row"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td><td></td></tr>`;
   }
   return filas;
 }
@@ -7362,14 +7368,14 @@ function sdBuildInformeSemanalHtml(semana){
       }
       totalResp += totalSup;
       bloqueResp += `
-        <tr style="background:#F7F8FA;"><td colspan="3" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        <tr class="sup-row"><td colspan="3">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
         ${bloqueSup}
-        <tr style="font-weight:700;"><td colspan="2">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td></tr>`;
+        <tr class="subtotal-row"><td colspan="2">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td></tr>`;
     }
     filasBpoRiesgo += `
-      <tr style="background:#1A1D23;color:#fff;"><td colspan="3">👤 ${escapeHtml(responsable)}</td></tr>
+      <tr class="resp-row"><td colspan="3">👤 ${escapeHtml(responsable)}</td></tr>
       ${bloqueResp}
-      <tr style="font-weight:800;background:#FDECEC;"><td colspan="2">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td></tr>`;
+      <tr class="total-row"><td colspan="2">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td></tr>`;
   }
 
   // PENDIENTE DE REGULARIZAR — lo que en Seguimiento Diario todavía no se finaliza esa
@@ -7432,14 +7438,14 @@ function sdBuildInformeSemanalHtml(semana){
       }
       totalResp += totalSup;
       bloqueResp += `
-        <tr style="background:#F7F8FA;"><td colspan="4" style="font-weight:700;">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
+        <tr class="sup-row"><td colspan="4">🧑‍💼 ${escapeHtml(supervisor)}</td></tr>
         ${bloqueSup}
-        <tr style="font-weight:700;"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td></tr>`;
+        <tr class="subtotal-row"><td colspan="3">Subtotal ${escapeHtml(supervisor)}</td><td class="num">${bpoMoneda(totalSup).replace("S/ ", "")}</td></tr>`;
     }
     filasRecuperado += `
-      <tr style="background:#1A1D23;color:#fff;"><td colspan="4">👤 ${escapeHtml(responsable)}</td></tr>
+      <tr class="resp-row"><td colspan="4">👤 ${escapeHtml(responsable)}</td></tr>
       ${bloqueResp}
-      <tr style="font-weight:800;background:#E6F7EC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td></tr>`;
+      <tr class="total-row" style="background:#E6F7EC;"><td colspan="3">TOTAL ${escapeHtml(responsable)}</td><td class="num">${bpoMoneda(totalResp).replace("S/ ", "")}</td></tr>`;
   }
 
   return `
@@ -7449,20 +7455,24 @@ function sdBuildInformeSemanalHtml(semana){
       <div class="kpi-card"><div class="kpi-label">Regularizado (${escapeHtml(semana)})</div><div class="kpi-value" style="color:var(--blue,#2563EB);">${bpoMoneda(totalRegularizado)}</div></div>
     </div>
 
+    <div class="cols">
+    <div>
     <div class="modal-section-title">🔴 En riesgo — Bultos Perdidos / Sin Ubicación (pendiente)</div>
-    <p class="section-desc" style="margin:-6px 0 10px;">Perdido ERU + Por Ubicar + Sin Ubicación — lo que todavía no se recupera esa semana.</p>
+    <p class="section-desc">Perdido ERU + Por Ubicar + Sin Ubicación — lo que todavía no se recupera esa semana.</p>
     <table class="print-table">
       <thead><tr><th>Proceso</th><th>LPN</th><th>Valorizado (S/)</th></tr></thead>
       <tbody>${filasBpoRiesgo || `<tr><td colspan="3" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
     </table>
 
     <div class="modal-section-title">🚩 En riesgo de cobro — Seguimiento Diario</div>
-    <p class="section-desc" style="margin:-6px 0 10px;">Casos marcados a mano por el equipo (botón "Marcar en riesgo de cobro") que siguen sin resolverse — incluye semanas anteriores mientras no se finalicen o se les quite la marca. Se suman al indicador "En riesgo" de arriba.</p>
+    <p class="section-desc">Marcados a mano por el equipo, incluye semanas anteriores sin resolver. Se suman al indicador "En riesgo" de arriba.</p>
     <table class="print-table">
       <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
       <tbody>${filasRiesgoCobro || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin casos marcados en riesgo de cobro esa semana.</td></tr>`}</tbody>
     </table>
+    </div>
 
+    <div>
     <div class="modal-section-title">✅ Recuperado — Bultos Perdidos / Sin Ubicación</div>
     <table class="print-table">
       <thead><tr><th>Clasificación</th><th>Reportes</th><th>Unidades</th><th>Valor (S/)</th></tr></thead>
@@ -7470,11 +7480,13 @@ function sdBuildInformeSemanalHtml(semana){
     </table>
 
     <div class="modal-section-title">📋 Pendiente de regularizar — Seguimiento Diario</div>
-    <p class="section-desc" style="margin:-6px 0 10px;">Todos los demás procesos — lo que el supervisor aún no finaliza esa semana, con el comentario de avance guardado.</p>
+    <p class="section-desc">Todos los demás procesos — lo que el supervisor aún no finaliza esa semana, con el comentario de avance guardado.</p>
     <table class="print-table">
       <thead><tr><th>Proceso</th><th>Ubicación</th><th>LPN</th><th>Valorizado (S/)</th><th>Comentario</th></tr></thead>
       <tbody>${filasRiesgo || `<tr><td colspan="5" style="padding:14px;color:#8B92A0;text-align:center;">Sin pendientes esa semana.</td></tr>`}</tbody>
-    </table>`;
+    </table>
+    </div>
+    </div>`;
 }
 
 function sdAbrirModalInformeSemanal(){
