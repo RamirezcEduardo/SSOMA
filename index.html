@@ -755,6 +755,8 @@
   .estado-badge.parcial::before{background:var(--blue);}
   .estado-badge.recuperado{background:var(--green-tint);color:var(--green);}
   .estado-badge.recuperado::before{background:var(--green);}
+  .estado-badge.migrado_bolsa{background:var(--purple-tint);color:var(--purple);}
+  .estado-badge.migrado_bolsa::before{background:var(--purple);}
 
   /* ---- Checklist de recuperación (Bultos Perdidos / Sin Ubicación en Auditoría
      de Inventario) — tarjetas grandes de un solo botón, pensadas para operadores
@@ -790,6 +792,7 @@
 
   .opk-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);}
   .opk-card.done{background:var(--panel-alt);opacity:.75;}
+  .opk-card.migrado{background:var(--panel-alt);opacity:.85;}
   .opk-card-top{display:flex;align-items:flex-start;gap:12px;}
   .opk-check-big{
     width:30px;height:30px;border-radius:50%;border:2.5px solid var(--border-strong);
@@ -797,6 +800,7 @@
     font-size:16px;font-weight:700;color:#fff;
   }
   .opk-card.done .opk-check-big{background:var(--green);border-color:var(--green);}
+  .opk-card.migrado .opk-check-big{background:var(--purple);border-color:var(--purple);font-size:13px;}
   .opk-check-big.parcial{background:var(--blue);border-color:var(--blue);color:#fff;}
   .opk-card-body{flex:1;min-width:0;}
   .opk-lpn-chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--text-soft);background:var(--panel-alt);border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
@@ -2140,6 +2144,15 @@
               <span class="rec" id="aic-bp-rec">S/ 0.00 recuperado</span>
             </div>
           </div>
+          <div class="opk-progress-card" style="flex:.6;">
+            <div class="opk-progress-top">
+              <span class="n" id="aic-bp-migrado-count" style="color:var(--purple);">0</span>
+              <span class="lbl">📦 Migró a Bolsa</span>
+            </div>
+            <div class="opk-progress-foot">
+              <span id="aic-bp-migrado-monto" style="color:var(--purple);font-weight:700;">S/ 0.00</span>
+            </div>
+          </div>
           <div class="opk-search-box">
             <div class="opk-search"><span>🔍</span><input type="text" id="aic-bp-buscar" placeholder="Buscar por LPN o producto…"></div>
             <select id="aic-bp-semana"><option value="">Todas</option></select>
@@ -2170,6 +2183,15 @@
             <div class="opk-progress-foot">
               <span class="pend" id="aic-su-pend">S/ 0.00 pendiente</span>
               <span class="rec" id="aic-su-rec">S/ 0.00 recuperado</span>
+            </div>
+          </div>
+          <div class="opk-progress-card" style="flex:.6;">
+            <div class="opk-progress-top">
+              <span class="n" id="aic-su-migrado-count" style="color:var(--purple);">0</span>
+              <span class="lbl">📦 Migró a Bolsa</span>
+            </div>
+            <div class="opk-progress-foot">
+              <span id="aic-su-migrado-monto" style="color:var(--purple);font-weight:700;">S/ 0.00</span>
             </div>
           </div>
           <div class="opk-search-box">
@@ -6104,15 +6126,15 @@ function bpoRender(){
   document.getElementById("bpo-tab-count-sin-ubicacion").textContent = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion").length;
 
   document.getElementById("bpo-stat-label").textContent = bpoTabActivo === "perdidos" ? "Perdidos" : "Sin Ubicación";
-  document.getElementById("bpo-stat-count").textContent = rows.filter(r => r.estado !== "recuperado").length;
-  document.getElementById("bpo-stat-en-juego").textContent = bpoMoneda(rows.reduce((a, r) => a + bpoValorPendiente(r), 0));
+  document.getElementById("bpo-stat-count").textContent = rows.filter(r => r.estado !== "recuperado" && r.estado !== "migrado_bolsa").length;
+  document.getElementById("bpo-stat-en-juego").textContent = bpoMoneda(rows.filter(r => r.estado !== "migrado_bolsa").reduce((a, r) => a + bpoValorPendiente(r), 0));
   document.getElementById("bpo-stat-recuperado").textContent = bpoMoneda(rows.reduce((a, r) => a + bpoValorRecuperadoRow(r), 0));
   const ultima = bpoRegistros.reduce((max, r) => (r.createdAt && (!max || r.createdAt > max)) ? r.createdAt : max, null);
   document.getElementById("bpo-stat-ultima-carga").textContent = ultima ? new Date(ultima).toLocaleDateString("es-PE") : "—";
 
   const semanaActiva = document.getElementById("bpo-f-semana").value;
   const tbody = document.querySelector("#bpo-table tbody");
-  const ESTADO_LABEL = { pendiente: "Pendiente", parcial: "Parcial", recuperado: "Recuperado" };
+  const ESTADO_LABEL = { pendiente: "Pendiente", parcial: "Parcial", recuperado: "Recuperado", migrado_bolsa: "Migró a Bolsa" };
   const puedeEditarSemana = esAdmin();
   tbody.innerHTML = rows.map(r => `
     <tr>
@@ -6179,7 +6201,7 @@ const BPO_COLUMNAS = [
   { header: "Nro de lote", get: r => r.nroLote },
   { header: "Val tot (S/)", get: r => (r.valTot || 0).toFixed(2) },
   { header: "Unidades recuperadas", get: r => bpoFmtUds(r.unidadesRecuperadas) },
-  { header: "Estado", get: r => r.estado === "recuperado" ? "Recuperado" : (r.estado === "parcial" ? "Parcial" : "Pendiente") },
+  { header: "Estado", get: r => r.estado === "recuperado" ? "Recuperado" : (r.estado === "migrado_bolsa" ? "Migró a Bolsa" : (r.estado === "parcial" ? "Parcial" : "Pendiente")) },
   { header: "Cargado por", get: r => (usuariosPorId[r.creadoPorId] || {}).nombre_completo || "" },
   { header: "Fecha y hora de carga", get: r => r.createdAt ? new Date(r.createdAt).toLocaleString("es-PE") : "" },
 ];
@@ -6226,6 +6248,7 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
   const pendUds = bpoPendienteUnidades(r);
   const done = r.estado === "recuperado";
   const parcial = r.estado === "parcial";
+  const migrado = r.estado === "migrado_bolsa";
   let extraHtml = "";
   if(parcial){
     const pct = r.cantidad ? Math.min(100, Math.round((r.unidadesRecuperadas / r.cantidad) * 100)) : 0;
@@ -6236,16 +6259,20 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
   if(done){
     extraHtml = `<div class="opk-done-note">✅ Recuperado completo — ${bpoFmtUds(r.unidadesRecuperadas)} de ${bpoFmtUds(r.cantidad)} uds (${bpoMoneda(bpoValorRecuperadoRow(r))})</div>`;
   }
-  const qtyRow = done ? "" : `
+  if(migrado){
+    extraHtml = `<div class="opk-done-note" style="color:var(--purple);">📦 Migró a Bolsa — ${bpoMoneda(bpoValorPendiente(r))} (${bpoFmtUds(pendUds)} uds), solo como dato.</div>`;
+  }
+  const qtyRow = (done || migrado) ? "" : `
       <div class="opk-qty-row">
         <div class="opk-qty">${bpoMoneda(bpoValorPendiente(r))}<span class="u">${bpoFmtUds(pendUds)} uds pendientes</span></div>
       </div>`;
-  const btnHtml = (done || soloLectura) ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
+  const btnHtml = (done || migrado || soloLectura) ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
+  const migradoBtn = (done || migrado || soloLectura) ? "" : `<button type="button" class="btn btn-ghost opk-btn-migrado" data-id="${r.id}" style="margin-top:6px;width:100%;padding:8px;font-size:11.5px;color:var(--purple);">📦 Migró a Bolsa</button>`;
   const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="bpo" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
   return `
-    <div class="opk-card ${done ? "done" : ""}">
+    <div class="opk-card ${done ? "done" : ""} ${migrado ? "migrado" : ""}">
       <div class="opk-card-top">
-        <div class="opk-check-big ${parcial ? "parcial" : ""}">${done ? "✓" : (parcial ? "–" : "")}</div>
+        <div class="opk-check-big ${parcial ? "parcial" : ""}">${done ? "✓" : (migrado ? "📦" : (parcial ? "–" : ""))}</div>
         <div class="opk-card-body">
           ${enGrupo ? "" : `<span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>`}
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
@@ -6255,6 +6282,7 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
         </div>
       </div>
       ${btnHtml}
+      ${migradoBtn}
       ${delBtn}
     </div>`;
 }
@@ -6262,12 +6290,12 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
 /* LPN multi-SKU: varios productos (Cod Alternat) bajo el mismo Nro LPN — se
    agrupan en un solo bloque con encabezado, en vez de tarjetas sueltas. */
 function bpoChkGrupoHtml(grupo){
-  const pend = grupo.filter(r => r.estado !== "recuperado").length;
+  const pend = grupo.filter(r => r.estado !== "recuperado" && r.estado !== "migrado_bolsa").length;
   return `
     <div class="opk-lpn-group">
       <div class="opk-lpn-group-head">
         <span class="opk-lpn-chip big">${escapeHtml(grupo[0].nroLpn)}</span>
-        <span class="opk-multi-badge">📦 Multi-SKU · ${grupo.length} productos${pend ? " · " + pend + " pendientes" : " · todos recuperados"}</span>
+        <span class="opk-multi-badge">📦 Multi-SKU · ${grupo.length} productos${pend ? " · " + pend + " pendientes" : " · todos resueltos"}</span>
       </div>
       <div class="opk-lpn-group-items">
         ${grupo.map(r => bpoChkCardHtml(r, true)).join("")}
@@ -6279,9 +6307,11 @@ function bpoChkRender(clasificacion){
   bpoChkRenderFiltroSemana(clasificacion);
   const prefijo = bpoChkPrefijo(clasificacion);
   const rows = bpoChkFiltered(clasificacion);
-  const pendRows = rows.filter(r => r.estado !== "recuperado");
-  const totalPend = rows.reduce((a, r) => a + bpoValorPendiente(r), 0);
+  const pendRows = rows.filter(r => r.estado !== "recuperado" && r.estado !== "migrado_bolsa");
+  const migradoRows = rows.filter(r => r.estado === "migrado_bolsa");
+  const totalPend = pendRows.reduce((a, r) => a + bpoValorPendiente(r), 0);
   const totalRec = rows.reduce((a, r) => a + bpoValorRecuperadoRow(r), 0);
+  const totalMigrado = migradoRows.reduce((a, r) => a + bpoValorPendiente(r), 0);
   const pct = (totalPend + totalRec) > 0 ? Math.round((totalRec / (totalPend + totalRec)) * 100) : 0;
 
   document.getElementById(`aic-${prefijo}-count`).innerHTML = `${pendRows.length} <span style="font-size:13px;font-weight:600;color:var(--muted);">pendientes</span>`;
@@ -6289,6 +6319,8 @@ function bpoChkRender(clasificacion){
   document.getElementById(`aic-${prefijo}-fill`).style.width = pct + "%";
   document.getElementById(`aic-${prefijo}-pend`).textContent = bpoMoneda(totalPend) + " pendiente";
   document.getElementById(`aic-${prefijo}-rec`).textContent = bpoMoneda(totalRec) + " recuperado";
+  document.getElementById(`aic-${prefijo}-migrado-count`).textContent = migradoRows.length;
+  document.getElementById(`aic-${prefijo}-migrado-monto`).textContent = bpoMoneda(totalMigrado);
 
   const lpnPendUnicos = [...new Set(pendRows.map(r => r.nroLpn))];
   document.getElementById(`aic-${prefijo}-lpn-text`).value = lpnPendUnicos.join(",");
@@ -6298,10 +6330,10 @@ function bpoChkRender(clasificacion){
 
   const sinFiltro = !document.getElementById(`aic-${prefijo}-buscar`).value && !document.getElementById(`aic-${prefijo}-semana`).value;
   const grupos = opkAgruparPorLpn(rows);
-  grupos.forEach(g => g.sort((a, b) => (a.estado === "recuperado" ? 1 : 0) - (b.estado === "recuperado" ? 1 : 0)));
+  grupos.forEach(g => g.sort((a, b) => ((a.estado === "recuperado" || a.estado === "migrado_bolsa") ? 1 : 0) - ((b.estado === "recuperado" || b.estado === "migrado_bolsa") ? 1 : 0)));
   grupos.sort((a, b) => {
-    const aDone = a.every(r => r.estado === "recuperado") ? 1 : 0;
-    const bDone = b.every(r => r.estado === "recuperado") ? 1 : 0;
+    const aDone = a.every(r => r.estado === "recuperado" || r.estado === "migrado_bolsa") ? 1 : 0;
+    const bDone = b.every(r => r.estado === "recuperado" || r.estado === "migrado_bolsa") ? 1 : 0;
     return aDone - bDone;
   });
   const grid = document.getElementById(`aic-${prefijo}-grid`);
@@ -6312,9 +6344,30 @@ function bpoChkRender(clasificacion){
   grid.querySelectorAll(".opk-btn-mark").forEach(btn=>{
     btn.addEventListener("click", ()=> bpoChkAbrirModal(Number(btn.dataset.id)));
   });
+  grid.querySelectorAll(".opk-btn-migrado").forEach(btn=>{
+    btn.addEventListener("click", ()=> bpoMarcarMigradoBolsa(Number(btn.dataset.id), btn));
+  });
   grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
     btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_bpo_registros", Number(btn.dataset.id), btn));
   });
+}
+
+/* Botón "Migró a Bolsa": solo etiqueta el registro como dato informativo de que
+   ese bulto se dio por perdido y pasó a Control de Bolsa — no crea ni vincula
+   ningún registro en Bolsa LATAM, es puramente un estado local del checklist. */
+async function bpoMarcarMigradoBolsa(id, btn){
+  const r = bpoRegistros.find(x => x.id === id);
+  if(!r) return;
+  if(!confirm(`¿Marcar "${r.descripcion || r.producto}" (LPN ${r.nroLpn}) como migrado a Bolsa? Esto solo lo registra como dato, no crea nada en Control de Bolsa.`)) return;
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_bpo_registros")
+    .update({ estado: "migrado_bolsa", actualizado_en: new Date().toISOString() })
+    .eq("id", id);
+  if(error){ alert("No se pudo guardar: " + error.message); btn.disabled = false; return; }
+  r.estado = "migrado_bolsa";
+  bpoChkRender("perdidos");
+  bpoChkRender("sin_ubicacion");
+  bpoRender();
 }
 
 document.getElementById("aic-bp-buscar").addEventListener("input", ()=> bpoChkRender("perdidos"));
@@ -7054,7 +7107,7 @@ function sdBuildInformeSemanalHtml(semana){
   // más lo de Seguimiento Diario que el equipo marcó a mano como "en riesgo de cobro"
   // (botón 🚩 en la tarjeta) — un caso puntual que corre riesgo real de que LATAM lo cobre,
   // aunque su proceso no sea Perdido ERU/Por Ubicar/Sin Ubicación.
-  const pendientesBpoSemana = bpoRegistros.filter(r => r.estado !== "recuperado" && r.semana === semana);
+  const pendientesBpoSemana = bpoRegistros.filter(r => r.estado !== "recuperado" && r.estado !== "migrado_bolsa" && r.semana === semana);
   const totalRiesgoBpo = pendientesBpoSemana.reduce((a, r) => a + bpoValorPendiente(r), 0);
   const arbolBpoRiesgo = sdArbolPorResponsable(pendientesBpoSemana);
 
