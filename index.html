@@ -2615,7 +2615,10 @@
         </div>
         <div class="field" style="min-width:150px;margin-bottom:0;">
           <label>Motivo OP</label>
-          <select id="bolsa-f-motivo"><option value="">Todos</option></select>
+          <div style="display:flex;gap:6px;">
+            <select id="bolsa-f-motivo" style="flex:1;"><option value="">Todos</option></select>
+            <button type="button" class="btn btn-ghost" id="bolsa-motivos-config-btn" title="Elegir qué motivos no se consideran en el cálculo" style="padding:0 10px;white-space:nowrap;">⚙️ Motivos</button>
+          </div>
         </div>
         <div class="field" style="min-width:130px;margin-bottom:0;">
           <label>Observación</label>
@@ -3631,6 +3634,21 @@
       <span class="login-error" id="sd-quitar-error"></span>
       <div id="sd-quitar-resultado" style="font-size:12.5px;color:var(--muted);margin-top:6px;"></div>
       <button type="button" class="btn btn-primary" id="sd-quitar-confirmar" style="width:100%;margin-top:6px;background:var(--red);border-color:var(--red);">Quitar de pendientes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bolsa-motivos-modal">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-head">
+      <h3>⚙️ Motivos a no considerar</h3>
+      <button class="modal-close" id="bolsa-motivos-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="section-desc" style="margin-bottom:14px;">Desmarca los "Motivo OP" que NO deben contar en el Neto real ni en Top Críticos/Sobrantes (ej. ajustes que el auditor no te cobra). Las transacciones con esos motivos siguen guardadas tal cual se importaron, solo se dejan fuera del cálculo — aplica a lo ya cargado y a lo que se importe después.</p>
+      <div id="bolsa-motivos-lista" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto;"></div>
+      <span class="login-error" id="bolsa-motivos-error"></span>
+      <button type="button" class="btn btn-primary" id="bolsa-motivos-guardar" style="width:100%;margin-top:14px;">Guardar</button>
     </div>
   </div>
 </div>
@@ -5641,6 +5659,7 @@ let bolsaLatamCriticosActual = [];
 let bolsaLatamSobrantesActual = [];
 let bolsaLatamMontoSobranteActual = 0;
 let bolsaLatamNetoTotalActual = 0;
+let bolsaLatamMotivosExcluidos = new Set();
 
 async function bolsaLatamLoad(){
   const { data, error } = await sbSelectAll("ssoma_bolsa_latam_lineas", "*", q => q.order("fecha", { ascending: false }));
@@ -5654,10 +5673,21 @@ async function bolsaLatamLoad(){
     gestion: r.gestion, cantReversada: Number(r.cant_reversada) || 0, montoReversado: Number(r.monto_reversado) || 0,
     creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
+  await bolsaLatamLoadMotivosExcluidos();
   bolsaLatamPopulateFiltros();
   bolsaLatamRender();
 }
 bolsaLatamLoad();
+
+/* Motivos OP marcados como "no considerar" — las transacciones con esos motivos
+   quedan guardadas tal cual, pero se excluyen del Neto real y de Top Críticos/
+   Sobrantes (ej. ajustes que el auditor no cobra realmente). Configurable desde
+   el botón ⚙️ Motivos, sin tocar el archivo original ni re-importar nada. */
+async function bolsaLatamLoadMotivosExcluidos(){
+  const { data, error } = await sbSelectAll("ssoma_bolsa_latam_motivos_excluidos", "*");
+  if(error){ console.error("No se pudo cargar motivos excluidos:", error.message); return; }
+  bolsaLatamMotivosExcluidos = new Set((data || []).map(r => r.motivo));
+}
 
 function bolsaLatamPopulateFiltros(){
   const campos = [
@@ -5673,7 +5703,12 @@ function bolsaLatamPopulateFiltros(){
     const defaultOption = sel.options[0];
     sel.innerHTML = "";
     sel.appendChild(defaultOption);
-    vals.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+    vals.forEach(v=>{
+      const o=document.createElement("option");
+      o.value=v;
+      o.textContent = (id === "bolsa-f-motivo" && bolsaLatamMotivosExcluidos.has(v)) ? v + " (no se considera)" : v;
+      sel.appendChild(o);
+    });
     if(vals.includes(current)) sel.value = current;
   });
 }
@@ -5686,6 +5721,7 @@ function bolsaLatamFiltradas(){
   const fObs = document.getElementById("bolsa-f-observacion").value;
   const fBuscar = document.getElementById("bolsa-f-buscar").value.trim().toLowerCase();
   return bolsaLatamLineas.filter(r =>
+    !bolsaLatamMotivosExcluidos.has(r.motivoOp) &&
     (!fMes || r.mes === fMes) &&
     (!fSemana || r.semana === fSemana) &&
     (!fFamilia || r.familia === fFamilia) &&
@@ -5731,6 +5767,9 @@ function bolsaLatamRender(){
   const rows = bolsaLatamFiltradas();
   document.getElementById("bolsa-stat-transacciones").textContent = rows.length.toLocaleString("es-PE");
 
+  const btnMotivos = document.getElementById("bolsa-motivos-config-btn");
+  btnMotivos.textContent = bolsaLatamMotivosExcluidos.size ? `⚙️ Motivos (${bolsaLatamMotivosExcluidos.size} excluidos)` : "⚙️ Motivos";
+
   const grupos = bolsaLatamAgrupar(rows);
   const netoTotal = grupos.reduce((s,g)=> s + g.monto, 0);
   bolsaLatamCriticosActual = grupos.filter(g => g.monto < -0.005).sort((a,b)=> a.monto - b.monto);
@@ -5774,6 +5813,63 @@ function bolsaLatamRender(){
   document.getElementById(id).addEventListener("change", bolsaLatamRender);
 });
 document.getElementById("bolsa-f-buscar").addEventListener("input", bolsaLatamRender);
+
+function bolsaLatamAbrirModalMotivos(){
+  const conteo = new Map();
+  bolsaLatamLineas.forEach(r=>{
+    if(!r.motivoOp) return;
+    conteo.set(r.motivoOp, (conteo.get(r.motivoOp) || 0) + 1);
+  });
+  const motivos = [...conteo.keys()].sort();
+  const lista = document.getElementById("bolsa-motivos-lista");
+  lista.innerHTML = motivos.length
+    ? motivos.map(m => `
+      <label style="display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+        <input type="checkbox" class="bolsa-motivo-check" data-motivo="${escapeHtml(m)}" ${bolsaLatamMotivosExcluidos.has(m) ? "" : "checked"}>
+        <span style="flex:1;">${escapeHtml(m)}</span>
+        <span style="font-size:11px;color:var(--muted);">${conteo.get(m)} trans.</span>
+      </label>`).join("")
+    : `<div class="empty" style="text-align:center;color:var(--muted);padding:16px;">Aún no hay motivos cargados — importa un reporte primero.</div>`;
+  document.getElementById("bolsa-motivos-error").textContent = "";
+  document.getElementById("bolsa-motivos-modal").classList.add("show");
+}
+function bolsaLatamCerrarModalMotivos(){
+  document.getElementById("bolsa-motivos-modal").classList.remove("show");
+}
+document.getElementById("bolsa-motivos-config-btn").addEventListener("click", bolsaLatamAbrirModalMotivos);
+document.getElementById("bolsa-motivos-close").addEventListener("click", bolsaLatamCerrarModalMotivos);
+document.getElementById("bolsa-motivos-modal").addEventListener("click", (e)=>{ if(e.target.id === "bolsa-motivos-modal") bolsaLatamCerrarModalMotivos(); });
+document.getElementById("bolsa-motivos-guardar").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const errEl = document.getElementById("bolsa-motivos-error");
+  errEl.textContent = "";
+  const checks = [...document.querySelectorAll(".bolsa-motivo-check")];
+  const nuevosExcluidos = new Set(checks.filter(c => !c.checked).map(c => c.dataset.motivo));
+  const aExcluir = [...nuevosExcluidos].filter(m => !bolsaLatamMotivosExcluidos.has(m));
+  const aIncluir = [...bolsaLatamMotivosExcluidos].filter(m => !nuevosExcluidos.has(m));
+  if(!aExcluir.length && !aIncluir.length){ bolsaLatamCerrarModalMotivos(); return; }
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  try{
+    if(aExcluir.length){
+      const { error } = await sb.from("ssoma_bolsa_latam_motivos_excluidos")
+        .upsert(aExcluir.map(m => ({ motivo: m, creado_por_id: miUsuario ? miUsuario.id : null })), { onConflict: "motivo", ignoreDuplicates: true });
+      if(error) throw new Error(error.message);
+    }
+    if(aIncluir.length){
+      const { error } = await sb.from("ssoma_bolsa_latam_motivos_excluidos").delete().in("motivo", aIncluir);
+      if(error) throw new Error(error.message);
+    }
+    await bolsaLatamLoadMotivosExcluidos();
+    bolsaLatamPopulateFiltros();
+    bolsaLatamRender();
+    bolsaLatamCerrarModalMotivos();
+  }catch(err){
+    errEl.textContent = "No se pudo guardar: " + err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
+});
 
 const BOLSA_LATAM_COLUMNAS = [
   { header: "Código Alterno", get: g => g.codAlternat },
