@@ -12369,7 +12369,7 @@ document.getElementById("sm-fab-btn")?.addEventListener("click", ()=>{
 // el detalle se puede generar/imprimir el documento final (misma info del
 // formato oficial, para archivar o entregar).
 // ============================================================================
-function abrirVentanaImpresion(html, titulo){
+function abrirVentanaImpresionDocumentoOficial(html, titulo){
   const css = [...document.querySelectorAll('link[rel=stylesheet]')].map(l => `<link rel="stylesheet" href="${l.href}">`).join('');
   const w = window.open('', '_blank');
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title>${css}<style>
@@ -12910,7 +12910,7 @@ function ieImprimir(){
   // revisión SSOMA), se reabre tal cual quedó firmado en vez de
   // reconstruirlo — así no cambia después aunque cambien otros datos.
   const html = r.documento_html || ieConstruirDocumentoHtml(r, lineas);
-  abrirVentanaImpresion(html, r.codigo);
+  abrirVentanaImpresionDocumentoOficial(html, r.codigo);
 }
 
 // ============================================================================
@@ -13340,7 +13340,7 @@ function ieppImprimir(){
   if(!ieppDetalleActual) return;
   const { cabecera: r, lineas } = ieppDetalleActual;
   const html = r.documento_html || ieppConstruirDocumentoHtml(r, lineas);
-  abrirVentanaImpresion(html, r.codigo);
+  abrirVentanaImpresionDocumentoOficial(html, r.codigo);
 }
 
 checkSession();
