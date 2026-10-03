@@ -1956,6 +1956,17 @@
             <select id="charla-ubicacion" required></select>
           </div>
         </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Turno<span class="req">*</span></label>
+            <select id="charla-turno" required>
+              <option value="" disabled selected>Selecciona un turno</option>
+              <option value="Mañana">Mañana</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Noche">Noche</option>
+            </select>
+          </div>
+        </div>
         <div class="field">
           <label>Evidencia fotográfica<span class="req">*</span> <span class="hint" style="display:inline;">(hasta 3 fotos)</span></label>
           <div class="img-widget" id="img-widget-charla"></div>
@@ -3844,6 +3855,48 @@
       <div class="hint" id="te-semanal-hint" style="display:none;font-size:12px;margin-top:-8px;margin-bottom:14px;">↻ Esta es una tarea semanal: la fecha define la semana (lunes a domingo), no un día puntual.</div>
       <span class="login-error" id="te-modal-error"></span>
       <button type="button" class="btn btn-primary" id="te-guardar-btn" style="width:100%;margin-top:6px;">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="charla-editar-modal">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-head">
+      <h3>Editar charla de 5 minutos</h3>
+      <button class="modal-close" id="charla-editar-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field">
+          <label>Fecha<span class="req">*</span></label>
+          <input type="date" id="ce-fecha">
+        </div>
+        <div class="field">
+          <label>Responsable / Quién dictó la charla<span class="req">*</span></label>
+          <select id="ce-responsable"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tema tratado<span class="req">*</span></label>
+        <input type="text" id="ce-tema">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Ubicación<span class="req">*</span></label>
+          <select id="ce-ubicacion"></select>
+        </div>
+        <div class="field">
+          <label>Turno<span class="req">*</span></label>
+          <select id="ce-turno">
+            <option value="" disabled>Selecciona un turno</option>
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noche">Noche</option>
+          </select>
+        </div>
+      </div>
+      <span class="login-error" id="charla-editar-error"></span>
+      <button type="button" class="btn btn-primary" id="charla-editar-guardar" style="width:100%;margin-top:6px;">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -11194,7 +11247,8 @@ async function loadCharlas(){
   const { data, error } = await sb
     .from("ssoma_charlas_5min")
     .select(`
-      id, fecha, tema, evidencia, created_at,
+      id, fecha, tema, turno, evidencia, created_at,
+      responsable_id, ubicacion_id,
       responsable:ssoma_personal(nombre_completo),
       ubicacion:ssoma_ubicaciones(nombre)
     `)
@@ -11208,6 +11262,9 @@ async function loadCharlas(){
       id: r.id,
       fecha: r.fecha,
       tema: r.tema,
+      turno: r.turno || "",
+      responsableId: r.responsable_id,
+      ubicacionId: r.ubicacion_id,
       responsable: r.responsable ? r.responsable.nombre_completo : "",
       ubicacion: r.ubicacion ? r.ubicacion.nombre : "",
       evidencia: r.evidencia || [],
@@ -11215,6 +11272,11 @@ async function loadCharlas(){
     }));
   }
   renderCharlaList();
+}
+
+function charlaFmtHora(iso){
+  if(!iso) return "";
+  return new Date(iso).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 function renderCharlaList(){
@@ -11226,16 +11288,21 @@ function renderCharlaList(){
     return;
   }
   const puedeEliminar = esAdmin() || esSsomaU(miUsuario);
+  const puedeEditar = esAdmin();
   list.innerHTML = charlaReports.map(r => `
     <div class="charla-card">
       <div class="charla-card-head">
         <div class="charla-card-title"><span class="icon">🗣️</span> ${escapeHtml(r.tema)}</div>
-        ${puedeEliminar ? `<button type="button" class="btn btn-ghost charla-btn-del" data-id="${r.id}" title="Eliminar" aria-label="Eliminar">🗑️</button>` : ""}
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          ${puedeEditar ? `<button type="button" class="btn btn-ghost charla-btn-editar" data-id="${r.id}" title="Editar" aria-label="Editar">✏️</button>` : ""}
+          ${puedeEliminar ? `<button type="button" class="btn btn-ghost charla-btn-del" data-id="${r.id}" title="Eliminar" aria-label="Eliminar">🗑️</button>` : ""}
+        </div>
       </div>
       <div class="charla-meta">
-        <span>📅 ${formatDate(r.fecha)}</span>
+        <span>📅 ${formatDate(r.fecha)} · 🕐 ${charlaFmtHora(r.createdAt)}</span>
         <span>👤 ${escapeHtml(r.responsable)}</span>
         <span>📍 ${escapeHtml(r.ubicacion)}</span>
+        ${r.turno ? `<span>🔄 ${escapeHtml(r.turno)}</span>` : ""}
       </div>
       ${r.evidencia && r.evidencia.length
         ? `<div class="charla-fotos-label">Evidencia (${r.evidencia.length})</div>${imgRowHtml(r.evidencia, false)}`
@@ -11249,6 +11316,8 @@ function renderCharlaList(){
 document.getElementById("charla-list").addEventListener("click", (e) => {
   const delBtn = e.target.closest(".charla-btn-del");
   if(delBtn) charlaEliminar(Number(delBtn.dataset.id), delBtn);
+  const editBtn = e.target.closest(".charla-btn-editar");
+  if(editBtn) charlaAbrirEditar(Number(editBtn.dataset.id));
 });
 
 async function charlaEliminar(id, btn){
@@ -11260,6 +11329,60 @@ async function charlaEliminar(id, btn){
   charlaReports = charlaReports.filter(r => r.id !== id);
   renderCharlaList();
 }
+
+/* Editar charla: solo Administrador — para corregir errores de carga (fecha,
+   responsable, tema, ubicación o turno) sin tener que borrar y volver a subir
+   las fotos de evidencia. */
+let charlaEditarId = null;
+function charlaAbrirEditar(id){
+  if(!esAdmin()){ alert("Solo un administrador puede editar este registro."); return; }
+  const r = charlaReports.find(x => x.id === id);
+  if(!r) return;
+  charlaEditarId = id;
+  document.getElementById("charla-editar-error").textContent = "";
+  document.getElementById("ce-fecha").value = r.fecha;
+  document.getElementById("ce-tema").value = r.tema;
+  fillSelect(document.getElementById("ce-responsable"), personalSupervisores, "Selecciona un responsable", "id", "nombre_completo");
+  fillSelect(document.getElementById("ce-ubicacion"), ubicacionesCat, "Selecciona una ubicación", "id", "nombre");
+  document.getElementById("ce-responsable").value = r.responsableId;
+  document.getElementById("ce-ubicacion").value = r.ubicacionId;
+  document.getElementById("ce-turno").value = r.turno || "";
+  document.getElementById("charla-editar-modal").classList.add("show");
+}
+function charlaCerrarEditar(){
+  document.getElementById("charla-editar-modal").classList.remove("show");
+  charlaEditarId = null;
+}
+document.getElementById("charla-editar-close").addEventListener("click", charlaCerrarEditar);
+document.getElementById("charla-editar-modal").addEventListener("click", (e)=>{
+  if(e.target.id === "charla-editar-modal") charlaCerrarEditar();
+});
+document.getElementById("charla-editar-guardar").addEventListener("click", async ()=>{
+  if(!esAdmin()){ alert("Solo un administrador puede editar este registro."); return; }
+  if(charlaEditarId == null) return;
+  const errorEl = document.getElementById("charla-editar-error");
+  errorEl.textContent = "";
+  const fecha = document.getElementById("ce-fecha").value;
+  const responsableId = document.getElementById("ce-responsable").value;
+  const tema = document.getElementById("ce-tema").value.trim();
+  const ubicacionId = document.getElementById("ce-ubicacion").value;
+  const turno = document.getElementById("ce-turno").value;
+  if(!fecha || !responsableId || !tema || !ubicacionId || !turno){
+    errorEl.textContent = "Completa todos los campos obligatorios.";
+    return;
+  }
+  const btn = document.getElementById("charla-editar-guardar");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  const { error } = await sb.from("ssoma_charlas_5min").update({
+    fecha, responsable_id: Number(responsableId), tema,
+    ubicacion_id: Number(ubicacionId), turno,
+  }).eq("id", charlaEditarId);
+  btn.disabled = false; btn.textContent = originalLabel;
+  if(error){ errorEl.textContent = "No se pudo guardar: " + error.message; return; }
+  charlaCerrarEditar();
+  await loadCharlas();
+});
 
 document.getElementById("charla-fecha").value = ssomaFormatISO(new Date());
 
@@ -11286,9 +11409,10 @@ document.getElementById("charla-form").addEventListener("submit", async (e)=>{
   const responsableId = document.getElementById("charla-responsable").value;
   const tema = document.getElementById("charla-tema").value.trim();
   const ubicacionId = document.getElementById("charla-ubicacion").value;
+  const turno = document.getElementById("charla-turno").value;
   const evidencia = getImages("charla");
 
-  if(!fecha || !responsableId || !tema || !ubicacionId){
+  if(!fecha || !responsableId || !tema || !ubicacionId || !turno){
     errorEl.textContent = "Completa todos los campos obligatorios del formulario.";
     return;
   }
@@ -11299,7 +11423,7 @@ document.getElementById("charla-form").addEventListener("submit", async (e)=>{
 
   const entry = {
     fecha, responsable_id: Number(responsableId), tema,
-    ubicacion_id: Number(ubicacionId), evidencia,
+    ubicacion_id: Number(ubicacionId), turno, evidencia,
   };
   const { error } = await sb.from("ssoma_charlas_5min").insert(entry);
   if(error){
