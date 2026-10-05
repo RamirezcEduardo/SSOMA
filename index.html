@@ -2592,6 +2592,10 @@
         <div class="import-status" id="bolsa-import-status" style="display:none;"></div>
       </div>
 
+      <div id="bolsa-vaciar-wrap" style="display:none;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn btn-ghost" id="bolsa-vaciar-btn" style="padding:6px 10px;font-size:11px;color:var(--red);">🗑️ Vaciar Bolsa LATAM</button>
+      </div>
+
       <div class="stats-row stats-row-4" style="margin-top:18px;">
         <div class="stat-card" style="border:1.5px solid var(--border);">
           <div class="stat-label">💰 Neto real — esto es lo que te cobran</div>
@@ -5761,6 +5765,26 @@ async function bolsaLatamLoadMotivosExcluidos(){
   bolsaLatamMotivosExcluidos = new Set((data || []).map(r => r.motivo));
 }
 
+/* Vaciar Bolsa LATAM: solo Administrador — para arrancar limpio (ej. inicio de
+   un trimestre nuevo) sin depender de que alguien lo borre a mano por SQL. Pide
+   escribir "VACIAR" porque borra TODO el historial (incluida la Tendencia
+   semanal), no se puede deshacer. No toca ⚙️ Motivos (esa configuración se
+   mantiene). */
+document.getElementById("bolsa-vaciar-btn").addEventListener("click", async (e)=>{
+  if(!esAdmin()){ alert("Solo un administrador puede vaciar Bolsa LATAM."); return; }
+  const confirmacion = prompt(`Esto borra TODAS las ${bolsaLatamLineas.length.toLocaleString("es-PE")} transacciones cargadas en Bolsa LATAM — incluido el historial de la Tendencia semanal — y no se puede deshacer.\n\nEscribe VACIAR para confirmar:`);
+  if(confirmacion === null) return;
+  if(confirmacion.trim().toUpperCase() !== "VACIAR"){ alert("No coincide con \"VACIAR\" — no se borró nada."); return; }
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Vaciando…";
+  const { error } = await sb.from("ssoma_bolsa_latam_lineas").delete().gte("id", 0);
+  btn.disabled = false; btn.textContent = originalLabel;
+  if(error){ alert("No se pudo vaciar: " + error.message); return; }
+  await bolsaLatamLoad();
+  alert("✅ Bolsa LATAM quedó en cero. Listo para la carga semanal.");
+});
+
 function bolsaLatamPopulateFiltros(){
   const campos = [
     ["bolsa-f-mes", [...new Set(bolsaLatamLineas.map(r=>r.mes).filter(Boolean))]],
@@ -8512,6 +8536,8 @@ async function trLoadUsuarios(){
 function aplicarVisibilidadNav(){
   const costosCard = document.getElementById("sp-costos-admin");
   if(costosCard) costosCard.style.display = esAdmin() ? "" : "none";
+  const bolsaVaciarWrap = document.getElementById("bolsa-vaciar-wrap");
+  if(bolsaVaciarWrap) bolsaVaciarWrap.style.display = esAdmin() ? "flex" : "none";
 
   // Sin puesto mapeado (jefatura/coordinador/supervisor/ssoma) pero con rol "operador"
   // en Adecco KPI -> por defecto ve Inventario (personal operativo de almacén).
