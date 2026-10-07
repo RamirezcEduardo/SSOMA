@@ -2316,6 +2316,20 @@
           </div>
           <textarea id="aic-su-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
         </div>
+        <div class="opk-lpn-copy-box" style="margin-top:12px;">
+          <div class="opk-lpn-copy-head">
+            <span>📋 Nro Grupo pendientes — para pegar en el WMS</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label class="btn btn-ghost" for="aic-su-grupo-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;padding:6px 12px;cursor:pointer;">
+                📤 Vincular Nro Grupo
+                <input type="file" id="aic-su-grupo-file" accept=".xlsx,.xls,.csv" hidden>
+              </label>
+              <button type="button" class="btn btn-ghost" id="aic-su-grupo-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+            </div>
+          </div>
+          <div class="import-status" id="aic-su-grupo-status" style="display:none;margin:8px 0;"></div>
+          <textarea id="aic-su-grupo-text" class="opk-lpn-textarea" readonly rows="2" placeholder="Sube el export &quot;Historial de actividad&quot; del WMS (columnas Nro Grupo, Historial de actividad, Nro LPN) para generar esta lista."></textarea>
+        </div>
         <div class="opk-grid" id="aic-su-grid"></div>
       </div>
 
@@ -7051,6 +7065,94 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     statusEl.className = "import-status error";
     statusEl.style.display = "block";
   }
+});
+
+/* ---- Vincular Nro Grupo (Sin Ubicación) ----
+   Herramienta aparte del "Subir desde WMS" de arriba: no guarda nada en Supabase,
+   solo arma una lista para copiar al WMS. Sube el export "Historial de actividad"
+   del WMS (columnas Nro Grupo / Historial de actividad / Nro LPN) y cruza por
+   Nro LPN contra lo que esté pendiente ahora mismo en Sin Ubicación — de cada LPN
+   pendiente, se queda con el Nro Grupo de su fila "29 - Create Allocatable
+   Container" (el historial que genera el LPN de activo; las demás filas del mismo
+   LPN traen un Nro Grupo distinto que no sirve acá). Se recalcula cada vez que se
+   sube un archivo nuevo, no se persiste. */
+document.getElementById("aic-su-grupo-file").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  const statusEl = document.getElementById("aic-su-grupo-status");
+  const textarea = document.getElementById("aic-su-grupo-text");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      nroGrupo: ["Nro Grupo"], historial: ["Historial de actividad"], nroLpn: ["Nro LPN"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Nro Grupo, Historial de actividad y Nro LPN. Revisa que sea el export "Historial de actividad" del WMS, tal cual.`);
+
+    const grupoPorLpn = new Map();
+    hoja.rows.forEach(row => {
+      const historial = bolsaNormalizeHeader(row[hoja.cols.historial]);
+      if(historial !== bolsaNormalizeHeader("29 - Create Allocatable Container")) return;
+      const nroLpn = bpoLimpiaFormula(row[hoja.cols.nroLpn]);
+      const nroGrupo = bpoLimpiaFormula(row[hoja.cols.nroGrupo]);
+      if(!nroLpn || !nroGrupo) return;
+      grupoPorLpn.set(nroLpn, nroGrupo);
+    });
+
+    // LPN pendientes de Sin Ubicación en pantalla ahora mismo (sin duplicar si un
+    // mismo LPN trae varios productos multi-SKU).
+    const lpnsPendientes = [...new Set(
+      bpoRegistros
+        .filter(r => r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa")
+        .map(r => r.nroLpn)
+    )];
+
+    const gruposEncontrados = [];
+    let sinMatch = 0;
+    lpnsPendientes.forEach(lpn => {
+      const grupo = grupoPorLpn.get(lpn);
+      if(grupo){ if(!gruposEncontrados.includes(grupo)) gruposEncontrados.push(grupo); }
+      else sinMatch++;
+    });
+
+    textarea.value = gruposEncontrados.join(",");
+    let msg = gruposEncontrados.length
+      ? `✅ ${gruposEncontrados.length} Nro Grupo encontrados (de ${lpnsPendientes.length} LPN pendientes en Sin Ubicación).`
+      : `⚠ Ningún LPN pendiente de Sin Ubicación coincide con las filas "29 - Create Allocatable Container" de este archivo.`;
+    if(sinMatch) msg += ` ${sinMatch} LPN pendientes no tienen fila "29 - Create Allocatable Container" en este archivo.`;
+    statusEl.textContent = msg;
+    statusEl.className = gruposEncontrados.length ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }
+});
+document.getElementById("aic-su-grupo-copiar").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const textarea = document.getElementById("aic-su-grupo-text");
+  const texto = textarea.value;
+  const originalLabel = btn.textContent;
+  let copiado = false;
+  try{
+    await navigator.clipboard.writeText(texto);
+    copiado = true;
+  }catch(err){
+    textarea.removeAttribute("readonly");
+    textarea.focus();
+    textarea.select();
+    try{ copiado = document.execCommand("copy"); }catch(err2){ copiado = false; }
+    textarea.setAttribute("readonly", "readonly");
+  }
+  btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
+  btn.classList.toggle("copiado", copiado);
+  setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
 });
 
 /* ============ Seguimiento Diario (Auditoría de Inventario) ============
