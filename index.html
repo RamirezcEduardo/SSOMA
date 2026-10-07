@@ -2316,6 +2316,20 @@
           </div>
           <textarea id="aic-su-lpn-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
         </div>
+        <div class="opk-lpn-copy-box" style="margin-top:12px;">
+          <div class="opk-lpn-copy-head">
+            <span>📋 Nro Grupo pendientes — para pegar en el WMS</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label class="btn btn-ghost" for="aic-su-grupo-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;padding:6px 12px;cursor:pointer;">
+                📤 Vincular Nro Grupo
+                <input type="file" id="aic-su-grupo-file" accept=".xlsx,.xls,.csv" hidden>
+              </label>
+              <button type="button" class="btn btn-ghost" id="aic-su-grupo-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+            </div>
+          </div>
+          <div class="import-status" id="aic-su-grupo-status" style="display:none;margin:8px 0;"></div>
+          <textarea id="aic-su-grupo-text" class="opk-lpn-textarea" readonly rows="2" placeholder="Sube el export &quot;Historial de actividad&quot; del WMS (columnas Nro Grupo, Historial de actividad, Nro LPN) para generar esta lista."></textarea>
+        </div>
         <div class="opk-grid" id="aic-su-grid"></div>
       </div>
 
@@ -2592,6 +2606,10 @@
         <div class="import-status" id="bolsa-import-status" style="display:none;"></div>
       </div>
 
+      <div id="bolsa-vaciar-wrap" style="display:none;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn btn-ghost" id="bolsa-vaciar-btn" style="padding:6px 10px;font-size:11px;color:var(--red);">🗑️ Vaciar Bolsa LATAM</button>
+      </div>
+
       <div class="stats-row stats-row-4" style="margin-top:18px;">
         <div class="stat-card" style="border:1.5px solid var(--border);">
           <div class="stat-label">💰 Neto real — esto es lo que te cobran</div>
@@ -2611,7 +2629,19 @@
         </div>
       </div>
 
-      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:26px;">
+        <h3 style="font-size:14px;font-weight:800;color:var(--text);margin:0;">📈 Tendencia semanal — cierre de Bolsa LATAM</h3>
+        <button type="button" class="btn btn-ghost" id="bolsa-tendencia-export-btn" style="padding:6px 10px;font-size:11px;">📤 Exportar</button>
+      </div>
+      <p class="section-desc" style="margin:4px 0 8px;">Cómo cerró la bolsa cada semana (agrupado por la fecha real de cada transacción, semana ISO lunes-domingo) y el Neto acumulado corriendo, para ver si crece o baja — <b style="color:var(--red);">rojo</b> cuando empeora, <b style="color:#16A34A;">verde</b> cuando mejora. No depende de los filtros de abajo: siempre muestra todas las semanas cargadas, se actualiza solo con cada import nuevo.</p>
+      <div class="table-wrap" id="bolsa-tendencia-wrap" style="margin-top:4px;">
+        <table class="data-table" id="bolsa-tendencia-table">
+          <thead><tr><th>Semana</th><th>Periodo</th><th>Transacciones</th><th>Neto de la semana (S/)</th><th>Neto acumulado (S/)</th><th>Variación vs. semana anterior</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:26px;">
         <div class="field" style="min-width:130px;margin-bottom:0;">
           <label>Mes</label>
           <select id="bolsa-f-mes"><option value="">Todos</option></select>
@@ -5719,6 +5749,7 @@ let bolsaLatamSobrantesActual = [];
 let bolsaLatamMontoSobranteActual = 0;
 let bolsaLatamNetoTotalActual = 0;
 let bolsaLatamMotivosExcluidos = new Set();
+let bolsaLatamTendenciaActual = [];
 
 async function bolsaLatamLoad(){
   const { data, error } = await sbSelectAll("ssoma_bolsa_latam_lineas", "*", q => q.order("fecha", { ascending: false }));
@@ -5747,6 +5778,26 @@ async function bolsaLatamLoadMotivosExcluidos(){
   if(error){ console.error("No se pudo cargar motivos excluidos:", error.message); return; }
   bolsaLatamMotivosExcluidos = new Set((data || []).map(r => r.motivo));
 }
+
+/* Vaciar Bolsa LATAM: solo Administrador — para arrancar limpio (ej. inicio de
+   un trimestre nuevo) sin depender de que alguien lo borre a mano por SQL. Pide
+   escribir "VACIAR" porque borra TODO el historial (incluida la Tendencia
+   semanal), no se puede deshacer. No toca ⚙️ Motivos (esa configuración se
+   mantiene). */
+document.getElementById("bolsa-vaciar-btn").addEventListener("click", async (e)=>{
+  if(!esAdmin()){ alert("Solo un administrador puede vaciar Bolsa LATAM."); return; }
+  const confirmacion = prompt(`Esto borra TODAS las ${bolsaLatamLineas.length.toLocaleString("es-PE")} transacciones cargadas en Bolsa LATAM — incluido el historial de la Tendencia semanal — y no se puede deshacer.\n\nEscribe VACIAR para confirmar:`);
+  if(confirmacion === null) return;
+  if(confirmacion.trim().toUpperCase() !== "VACIAR"){ alert("No coincide con \"VACIAR\" — no se borró nada."); return; }
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Vaciando…";
+  const { error } = await sb.from("ssoma_bolsa_latam_lineas").delete().gte("id", 0);
+  btn.disabled = false; btn.textContent = originalLabel;
+  if(error){ alert("No se pudo vaciar: " + error.message); return; }
+  await bolsaLatamLoad();
+  alert("✅ Bolsa LATAM quedó en cero. Listo para la carga semanal.");
+});
 
 function bolsaLatamPopulateFiltros(){
   const campos = [
@@ -5790,6 +5841,60 @@ function bolsaLatamFiltradas(){
   );
 }
 
+/* Tendencia semanal — cómo "cierra" la bolsa cada semana. Agrupa por semana ISO
+   real (lunes-domingo) de la FECHA de cada transacción — no por el texto "SEMANA"
+   del archivo del auditor, que puede venir en formatos distintos entre imports —
+   así el orden cronológico siempre es correcto, incluso si cruza de año. Usa TODO
+   lo cargado hasta ahora (solo descuenta los motivos marcados como "no considerar"
+   en ⚙️ Motivos), sin importar los filtros de Mes/Semana/Familia de abajo — para
+   eso están esos filtros, esto es para comparar una semana contra otra. Se
+   recalcula solo cada vez que se importa un archivo nuevo (bolsaLatamRender). */
+function bolsaLatamTendenciaSemanal(){
+  const porSemana = new Map();
+  bolsaLatamLineas.forEach(r=>{
+    if(!r.fecha || bolsaLatamMotivosExcluidos.has(r.motivoOp)) return;
+    const label = bolsaSemanaLabel(new Date(r.fecha + "T00:00:00Z"));
+    if(!porSemana.has(label)) porSemana.set(label, { label, monto: 0, n: 0, minFecha: r.fecha, maxFecha: r.fecha });
+    const g = porSemana.get(label);
+    g.monto += r.montoReversado;
+    g.n++;
+    if(r.fecha < g.minFecha) g.minFecha = r.fecha;
+    if(r.fecha > g.maxFecha) g.maxFecha = r.fecha;
+  });
+  const semanas = [...porSemana.values()].sort((a,b)=> a.minFecha.localeCompare(b.minFecha));
+  let acumulado = 0;
+  return semanas.map((g, i)=>{
+    const acumuladoAnterior = i > 0 ? acumulado : null;
+    acumulado += g.monto;
+    const variacion = acumuladoAnterior === null ? null : (acumulado - acumuladoAnterior);
+    const variacionPct = (variacion === null || !acumuladoAnterior) ? null : (variacion / Math.abs(acumuladoAnterior)) * 100;
+    return { ...g, acumulado, variacion, variacionPct };
+  });
+}
+
+function bolsaLatamFilaTendenciaHtml(g){
+  const periodo = formatDate(g.minFecha) + (g.minFecha !== g.maxFecha ? " – " + formatDate(g.maxFecha) : "");
+  const colorMonto = g.monto < -0.005 ? "var(--red)" : (g.monto > 0.005 ? "#16A34A" : "");
+  const colorAcum = g.acumulado < -0.005 ? "var(--red)" : (g.acumulado > 0.005 ? "#16A34A" : "");
+  let variacionHtml = `<span style="color:var(--muted);">— primera semana cargada</span>`;
+  if(g.variacion !== null){
+    const mejora = g.variacion > 0.005, empeora = g.variacion < -0.005;
+    const color = mejora ? "#16A34A" : (empeora ? "var(--red)" : "var(--muted)");
+    const flecha = mejora ? "▼ Bajó" : (empeora ? "▲ Creció" : "– Igual");
+    const pctTxt = g.variacionPct === null ? "" : ` (${Math.abs(g.variacionPct).toFixed(1)}%)`;
+    variacionHtml = `<span style="color:${color};font-weight:700;">${flecha} S/ ${Math.abs(g.variacion).toFixed(2)}${pctTxt}</span>`;
+  }
+  return `
+    <tr>
+      <td>${escapeHtml(g.label)}</td>
+      <td>${periodo}</td>
+      <td style="text-align:right;">${g.n}</td>
+      <td style="text-align:right;color:${colorMonto};">${g.monto.toFixed(2)}</td>
+      <td style="text-align:right;font-weight:700;color:${colorAcum};">${g.acumulado.toFixed(2)}</td>
+      <td style="text-align:right;">${variacionHtml}</td>
+    </tr>`;
+}
+
 /* Neto acumulado por Código Alterno — el mismo producto puede traer varias
    transacciones (correcciones, conteos cíclicos) que se van compensando; lo que
    importa para saber cuánto se cobra es la SUMA de Cant Reversada/monto reversado
@@ -5828,6 +5933,12 @@ function bolsaLatamRender(){
 
   const btnMotivos = document.getElementById("bolsa-motivos-config-btn");
   btnMotivos.textContent = bolsaLatamMotivosExcluidos.size ? `⚙️ Motivos (${bolsaLatamMotivosExcluidos.size} excluidos)` : "⚙️ Motivos";
+
+  bolsaLatamTendenciaActual = bolsaLatamTendenciaSemanal();
+  const tendenciaBody = document.querySelector("#bolsa-tendencia-table tbody");
+  tendenciaBody.innerHTML = bolsaLatamTendenciaActual.length
+    ? bolsaLatamTendenciaActual.map(bolsaLatamFilaTendenciaHtml).join("")
+    : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Aún no hay data cargada.</td></tr>`;
 
   const grupos = bolsaLatamAgrupar(rows);
   const netoTotal = grupos.reduce((s,g)=> s + g.monto, 0);
@@ -5962,6 +6073,25 @@ document.getElementById("bolsa-sobrantes-export-btn").addEventListener("click", 
     campoFecha: () => null,
     columnas: BOLSA_LATAM_COLUMNAS,
     nombreArchivo: "bolsa_latam_sobrantes.csv",
+  });
+});
+
+const BOLSA_LATAM_TENDENCIA_COLUMNAS = [
+  { header: "Semana", get: g => g.label },
+  { header: "Periodo", get: g => formatDate(g.minFecha) + (g.minFecha !== g.maxFecha ? " - " + formatDate(g.maxFecha) : "") },
+  { header: "Transacciones", get: g => g.n },
+  { header: "Neto de la semana (S/)", get: g => g.monto.toFixed(2) },
+  { header: "Neto acumulado (S/)", get: g => g.acumulado.toFixed(2) },
+  { header: "Variación vs. semana anterior (S/)", get: g => g.variacion === null ? "" : g.variacion.toFixed(2) },
+  { header: "Variación vs. semana anterior (%)", get: g => g.variacionPct === null ? "" : g.variacionPct.toFixed(1) },
+];
+document.getElementById("bolsa-tendencia-export-btn").addEventListener("click", ()=>{
+  abrirExportModal({
+    titulo: "Bolsa LATAM — Tendencia semanal",
+    obtenerFilas: () => bolsaLatamTendenciaActual,
+    campoFecha: () => null,
+    columnas: BOLSA_LATAM_TENDENCIA_COLUMNAS,
+    nombreArchivo: "bolsa_latam_tendencia_semanal.csv",
   });
 });
 
@@ -6935,6 +7065,94 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     statusEl.className = "import-status error";
     statusEl.style.display = "block";
   }
+});
+
+/* ---- Vincular Nro Grupo (Sin Ubicación) ----
+   Herramienta aparte del "Subir desde WMS" de arriba: no guarda nada en Supabase,
+   solo arma una lista para copiar al WMS. Sube el export "Historial de actividad"
+   del WMS (columnas Nro Grupo / Historial de actividad / Nro LPN) y cruza por
+   Nro LPN contra lo que esté pendiente ahora mismo en Sin Ubicación — de cada LPN
+   pendiente, se queda con el Nro Grupo de su fila "29 - Create Allocatable
+   Container" (el historial que genera el LPN de activo; las demás filas del mismo
+   LPN traen un Nro Grupo distinto que no sirve acá). Se recalcula cada vez que se
+   sube un archivo nuevo, no se persiste. */
+document.getElementById("aic-su-grupo-file").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  const statusEl = document.getElementById("aic-su-grupo-status");
+  const textarea = document.getElementById("aic-su-grupo-text");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      nroGrupo: ["Nro Grupo"], historial: ["Historial de actividad"], nroLpn: ["Nro LPN"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Nro Grupo, Historial de actividad y Nro LPN. Revisa que sea el export "Historial de actividad" del WMS, tal cual.`);
+
+    const grupoPorLpn = new Map();
+    hoja.rows.forEach(row => {
+      const historial = bolsaNormalizeHeader(row[hoja.cols.historial]);
+      if(historial !== bolsaNormalizeHeader("29 - Create Allocatable Container")) return;
+      const nroLpn = bpoLimpiaFormula(row[hoja.cols.nroLpn]);
+      const nroGrupo = bpoLimpiaFormula(row[hoja.cols.nroGrupo]);
+      if(!nroLpn || !nroGrupo) return;
+      grupoPorLpn.set(nroLpn, nroGrupo);
+    });
+
+    // LPN pendientes de Sin Ubicación en pantalla ahora mismo (sin duplicar si un
+    // mismo LPN trae varios productos multi-SKU).
+    const lpnsPendientes = [...new Set(
+      bpoRegistros
+        .filter(r => r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa")
+        .map(r => r.nroLpn)
+    )];
+
+    const gruposEncontrados = [];
+    let sinMatch = 0;
+    lpnsPendientes.forEach(lpn => {
+      const grupo = grupoPorLpn.get(lpn);
+      if(grupo){ if(!gruposEncontrados.includes(grupo)) gruposEncontrados.push(grupo); }
+      else sinMatch++;
+    });
+
+    textarea.value = gruposEncontrados.join(",");
+    let msg = gruposEncontrados.length
+      ? `✅ ${gruposEncontrados.length} Nro Grupo encontrados (de ${lpnsPendientes.length} LPN pendientes en Sin Ubicación).`
+      : `⚠ Ningún LPN pendiente de Sin Ubicación coincide con las filas "29 - Create Allocatable Container" de este archivo.`;
+    if(sinMatch) msg += ` ${sinMatch} LPN pendientes no tienen fila "29 - Create Allocatable Container" en este archivo.`;
+    statusEl.textContent = msg;
+    statusEl.className = gruposEncontrados.length ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }
+});
+document.getElementById("aic-su-grupo-copiar").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const textarea = document.getElementById("aic-su-grupo-text");
+  const texto = textarea.value;
+  const originalLabel = btn.textContent;
+  let copiado = false;
+  try{
+    await navigator.clipboard.writeText(texto);
+    copiado = true;
+  }catch(err){
+    textarea.removeAttribute("readonly");
+    textarea.focus();
+    textarea.select();
+    try{ copiado = document.execCommand("copy"); }catch(err2){ copiado = false; }
+    textarea.setAttribute("readonly", "readonly");
+  }
+  btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
+  btn.classList.toggle("copiado", copiado);
+  setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
 });
 
 /* ============ Seguimiento Diario (Auditoría de Inventario) ============
@@ -8420,6 +8638,8 @@ async function trLoadUsuarios(){
 function aplicarVisibilidadNav(){
   const costosCard = document.getElementById("sp-costos-admin");
   if(costosCard) costosCard.style.display = esAdmin() ? "" : "none";
+  const bolsaVaciarWrap = document.getElementById("bolsa-vaciar-wrap");
+  if(bolsaVaciarWrap) bolsaVaciarWrap.style.display = esAdmin() ? "flex" : "none";
 
   // Sin puesto mapeado (jefatura/coordinador/supervisor/ssoma) pero con rol "operador"
   // en Adecco KPI -> por defecto ve Inventario (personal operativo de almacén).
