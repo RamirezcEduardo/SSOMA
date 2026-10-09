@@ -6449,6 +6449,7 @@ async function bpoLoadRegistros(){
     cantidad: r.cantidad_actual === null ? null : Number(r.cantidad_actual),
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
     unidadesRecuperadas: r.unidades_recuperadas === null ? 0 : Number(r.unidades_recuperadas),
+    nroGrupo: r.nro_grupo || "",
     estado: r.estado, recuperadoEn: r.recuperado_en, archivoOrigen: r.archivo_origen || "",
     creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
@@ -6690,7 +6691,7 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
         <div class="opk-card-body">
           ${enGrupo ? "" : `<span class="opk-lpn-chip">${escapeHtml(r.nroLpn)}</span>`}
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
-          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}</div>
+          <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}${r.nroGrupo ? ` · <span style="color:var(--purple);font-weight:700;">Grupo ${escapeHtml(r.nroGrupo)}</span>` : ""}</div>
           ${extraHtml}
           ${qtyRow}
         </div>
@@ -7068,14 +7069,13 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
 });
 
 /* ---- Vincular Nro Grupo (Sin Ubicación) ----
-   Herramienta aparte del "Subir desde WMS" de arriba: no guarda nada en Supabase,
-   solo arma una lista para copiar al WMS. Sube el export "Historial de actividad"
-   del WMS (columnas Nro Grupo / Historial de actividad / Nro LPN) y cruza por
-   Nro LPN contra lo que esté pendiente ahora mismo en Sin Ubicación — de cada LPN
-   pendiente, se queda con el Nro Grupo de su fila "29 - Create Allocatable
-   Container" (el historial que genera el LPN de activo; las demás filas del mismo
-   LPN traen un Nro Grupo distinto que no sirve acá). Se recalcula cada vez que se
-   sube un archivo nuevo, no se persiste. */
+   Sube el export "Historial de actividad" del WMS (columnas Nro Grupo /
+   Historial de actividad / Nro LPN) y cruza por Nro LPN contra lo que esté
+   pendiente ahora mismo en Sin Ubicación — de cada LPN pendiente, se queda con
+   el Nro Grupo de su fila "29 - Create Allocatable Container" (el historial que
+   genera el LPN de activo; las demás filas del mismo LPN traen un Nro Grupo
+   distinto que no sirve acá). El Nro Grupo se GUARDA en cada registro (se ve en
+   su tarjeta del checklist) y además arma la lista para copiar al WMS. */
 document.getElementById("aic-su-grupo-file").addEventListener("change", async (e)=>{
   const file = e.target.files[0];
   e.target.value = "";
@@ -7103,25 +7103,44 @@ document.getElementById("aic-su-grupo-file").addEventListener("change", async (e
       grupoPorLpn.set(nroLpn, nroGrupo);
     });
 
-    // LPN pendientes de Sin Ubicación en pantalla ahora mismo (sin duplicar si un
-    // mismo LPN trae varios productos multi-SKU).
-    const lpnsPendientes = [...new Set(
-      bpoRegistros
-        .filter(r => r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa")
-        .map(r => r.nroLpn)
-    )];
+    // Registros pendientes de Sin Ubicación en pantalla ahora mismo — se actualizan
+    // TODOS los que compartan Nro LPN (un LPN multi-SKU trae varios productos, pero
+    // el Nro Grupo es del contenedor/LPN, no de cada producto suelto).
+    const pendientes = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa");
+    const lpnsPendientes = [...new Set(pendientes.map(r => r.nroLpn))];
 
     const gruposEncontrados = [];
     let sinMatch = 0;
+    const porActualizar = [];
     lpnsPendientes.forEach(lpn => {
       const grupo = grupoPorLpn.get(lpn);
-      if(grupo){ if(!gruposEncontrados.includes(grupo)) gruposEncontrados.push(grupo); }
-      else sinMatch++;
+      if(!grupo){ sinMatch++; return; }
+      if(!gruposEncontrados.includes(grupo)) gruposEncontrados.push(grupo);
+      pendientes.filter(r => r.nroLpn === lpn && r.nroGrupo !== grupo).forEach(r => porActualizar.push({ id: r.id, nroGrupo: grupo }));
     });
+
+    if(porActualizar.length){
+      statusEl.textContent = `Guardando Nro Grupo en ${porActualizar.length} registro(s)…`;
+      statusEl.className = "import-status";
+      statusEl.style.display = "block";
+      const resultados = await Promise.all(porActualizar.map(({ id, nroGrupo }) =>
+        sb.from("ssoma_bpo_registros").update({ nro_grupo: nroGrupo }).eq("id", id)
+          .then(({ error }) => ({ id, nroGrupo, error }))
+          .catch(error => ({ id, nroGrupo, error }))
+      ));
+      const conError = resultados.filter(x => x.error);
+      resultados.filter(x => !x.error).forEach(({ id, nroGrupo }) => {
+        const r = bpoRegistros.find(x => x.id === id);
+        if(r) r.nroGrupo = nroGrupo;
+      });
+      bpoChkRender("perdidos");
+      bpoChkRender("sin_ubicacion");
+      if(conError.length) console.error("No se pudo guardar Nro Grupo en algunos registros:", conError);
+    }
 
     textarea.value = gruposEncontrados.join(",");
     let msg = gruposEncontrados.length
-      ? `✅ ${gruposEncontrados.length} Nro Grupo encontrados (de ${lpnsPendientes.length} LPN pendientes en Sin Ubicación).`
+      ? `✅ ${gruposEncontrados.length} Nro Grupo vinculados y guardados (de ${lpnsPendientes.length} LPN pendientes en Sin Ubicación).`
       : `⚠ Ningún LPN pendiente de Sin Ubicación coincide con las filas "29 - Create Allocatable Container" de este archivo.`;
     if(sinMatch) msg += ` ${sinMatch} LPN pendientes no tienen fila "29 - Create Allocatable Container" en este archivo.`;
     statusEl.textContent = msg;
