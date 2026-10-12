@@ -7172,20 +7172,28 @@ document.getElementById("aic-su-grupo-file").addEventListener("change", async (e
       grupoPorLpn.set(nroLpn, nroGrupo);
     });
 
-    // Registros pendientes de Sin Ubicación en pantalla ahora mismo — se actualizan
-    // TODOS los que compartan Nro LPN (un LPN multi-SKU trae varios productos, pero
-    // el Nro Grupo es del contenedor/LPN, no de cada producto suelto).
-    const pendientes = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa");
-    const lpnsPendientes = [...new Set(pendientes.map(r => r.nroLpn))];
+    // TODOS los registros de Sin Ubicación (pendientes Y ya recuperados/migrados) —
+    // el historial del WMS no distingue si ya se levantó o no, y se necesita vincular
+    // el Nro Grupo también en los ya resueltos para poder armar tendencias por área
+    // con el histórico completo, no solo con lo que sigue pendiente hoy. Se
+    // actualizan TODOS los que compartan Nro LPN (un LPN multi-SKU trae varios
+    // productos, pero el Nro Grupo es del contenedor/LPN, no de cada producto suelto).
+    const todosSu = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion");
+    const lpnsPendientes = [...new Set(todosSu.map(r => r.nroLpn))];
 
+    // La caja "Nro Grupo pendientes — para pegar en el WMS" debe seguir siendo SOLO de lo
+    // pendiente aunque el vínculo ahora también se guarde en los ya recuperados.
+    const lpnsPend = new Set(todosSu.filter(r => r.estado !== "recuperado" && r.estado !== "migrado_bolsa").map(r => r.nroLpn));
     const gruposEncontrados = [];
+    const gruposPendientes = [];
     let sinMatch = 0;
     const porActualizar = [];
     lpnsPendientes.forEach(lpn => {
       const grupo = grupoPorLpn.get(lpn);
       if(!grupo){ sinMatch++; return; }
       if(!gruposEncontrados.includes(grupo)) gruposEncontrados.push(grupo);
-      pendientes.filter(r => r.nroLpn === lpn && r.nroGrupo !== grupo).forEach(r => porActualizar.push({ id: r.id, nroGrupo: grupo }));
+      if(lpnsPend.has(lpn) && !gruposPendientes.includes(grupo)) gruposPendientes.push(grupo);
+      todosSu.filter(r => r.nroLpn === lpn && r.nroGrupo !== grupo).forEach(r => porActualizar.push({ id: r.id, nroGrupo: grupo }));
     });
 
     let fallosGuardado = [];
@@ -7209,11 +7217,11 @@ document.getElementById("aic-su-grupo-file").addEventListener("change", async (e
       if(conError.length) console.error("No se pudo guardar Nro Grupo en algunos registros:", conError);
     }
 
-    textarea.value = gruposEncontrados.join(",");
+    textarea.value = gruposPendientes.join(",");
     let msg = gruposEncontrados.length
-      ? `✅ ${gruposEncontrados.length} Nro Grupo vinculados y guardados (de ${lpnsPendientes.length} LPN pendientes en Sin Ubicación).`
-      : `⚠ Ningún LPN pendiente de Sin Ubicación coincide con las filas "29 - Create Allocatable Container" de este archivo.`;
-    if(sinMatch) msg += ` ${sinMatch} LPN pendientes no tienen fila "29 - Create Allocatable Container" en este archivo.`;
+      ? `✅ ${gruposEncontrados.length} Nro Grupo vinculados y guardados (de ${lpnsPendientes.length} LPN de Sin Ubicación, incluidos los ya recuperados).`
+      : `⚠ Ningún LPN de Sin Ubicación (pendiente o ya recuperado) coincide con las filas "29 - Create Allocatable Container" de este archivo.`;
+    if(sinMatch) msg += ` ${sinMatch} LPN sin fila "29 - Create Allocatable Container" en este archivo.`;
     // Si la base rechazó el guardado, que no diga "guardados": avisa el error real
     // (típico: falta correr la migración 0067 que crea la columna nro_grupo).
     const falloGuardado = fallosGuardado.length ? fallosGuardado[0].error : null;
@@ -7285,9 +7293,11 @@ document.getElementById("aic-su-ubicacion-envio-file").addEventListener("change"
       ubicacionPorGrupo.set(nroGrupo, ubicacion);
     });
 
-    // Solo tiene sentido para los que YA tienen Nro Grupo vinculado (paso anterior).
+    // TODOS los de Sin Ubicación (pendientes y ya recuperados/migrados) que YA
+    // tengan Nro Grupo vinculado (paso anterior) — incluir los ya resueltos permite
+    // armar tendencias por área con el histórico completo, no solo con lo pendiente.
     const pendientesConGrupo = bpoRegistros.filter(r =>
-      r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa" && r.nroGrupo
+      r.clasificacion === "sin_ubicacion" && r.nroGrupo
     );
 
     let encontrados = 0, sinMatch = 0;
@@ -7321,10 +7331,10 @@ document.getElementById("aic-su-ubicacion-envio-file").addEventListener("change"
     }
 
     let msg = encontrados
-      ? `✅ ${encontrados} ubicación(es) de envío vinculadas y guardadas (de ${pendientesConGrupo.length} LPN pendientes con Nro Grupo ya vinculado).`
+      ? `✅ ${encontrados} ubicación(es) de envío vinculadas y guardadas (de ${pendientesConGrupo.length} LPN con Nro Grupo ya vinculado, pendientes o recuperados).`
       : `⚠ Ningún Nro Grupo ya vinculado coincide con las filas "4 - Inventory Adjusted pre verification" de este archivo.`;
     if(sinMatch) msg += ` ${sinMatch} no tienen fila "4 - Inventory Adjusted pre verification" en este archivo.`;
-    if(!pendientesConGrupo.length) msg = `⚠ Ningún LPN pendiente de Sin Ubicación tiene Nro Grupo vinculado todavía — primero usa "Vincular Nro Grupo" arriba.`;
+    if(!pendientesConGrupo.length) msg = `⚠ Ningún LPN de Sin Ubicación tiene Nro Grupo vinculado todavía — primero usa "Vincular Nro Grupo" arriba.`;
     // Igual que en "Vincular Nro Grupo": no decir "guardadas" si la base rechazó el guardado
     // (típico: falta correr la migración 0068 que crea la columna ubicacion_envio).
     const falloGuardado = fallosGuardado.length ? fallosGuardado[0].error : null;
