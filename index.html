@@ -7383,6 +7383,7 @@ document.getElementById("aic-su-otras-ubic-file").addEventListener("change", asy
       pendientes.filter(r => r.codAlternat === cod).forEach(r => porActualizar.push({ id: r.id, lista }));
     });
 
+    let fallosGuardado = [];
     if(porActualizar.length){
       statusEl.textContent = `Guardando otras ubicaciones en ${porActualizar.length} registro(s)…`;
       statusEl.className = "import-status";
@@ -7399,6 +7400,7 @@ document.getElementById("aic-su-otras-ubic-file").addEventListener("change", asy
       });
       bpoChkRender("perdidos");
       bpoChkRender("sin_ubicacion");
+      fallosGuardado = conError;
       if(conError.length) console.error("No se pudo guardar otras ubicaciones en algunos registros:", conError);
     }
 
@@ -7406,8 +7408,14 @@ document.getElementById("aic-su-otras-ubic-file").addEventListener("change", asy
       ? `✅ ${encontrados} Cod Alterno con otras ubicaciones vinculadas (de ${codsPendientes.length} Cod Alterno pendientes en Sin Ubicación).`
       : `⚠ Ningún Cod Alterno pendiente coincide con stock disponible (Cantidad actual > 0) en este archivo.`;
     if(sinMatch) msg += ` ${sinMatch} Cod Alterno sin stock disponible en este archivo.`;
+    // Igual que en "Vincular Nro Grupo/Ubicación": no decir "vinculadas" si la base rechazó
+    // el guardado (típico: falta correr la migración 0069 que crea otras_ubicaciones).
+    const falloGuardado = fallosGuardado.length ? fallosGuardado[0].error : null;
+    if(falloGuardado){
+      msg = `❌ No se pudieron guardar las otras ubicaciones en ${fallosGuardado.length} de ${porActualizar.length} registro(s): ${falloGuardado.message || falloGuardado}. ¿Ya corriste la migración 0069 en Supabase?`;
+    }
     statusEl.textContent = msg;
-    statusEl.className = encontrados ? "import-status success" : "import-status error";
+    statusEl.className = (encontrados && !falloGuardado) ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
   }catch(err){
     console.error(err);
