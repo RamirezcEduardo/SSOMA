@@ -2341,6 +2341,24 @@
           <p class="section-desc" style="margin:4px 0 0;">Sube el export "Historial de actividad" filtrado a "4 - Inventory Adjusted pre verification" (trae Nro Grupo y Ubicacion, sin Nro LPN) — se cruza con el Nro Grupo que ya quedó vinculado arriba, para saber desde qué ubicación se envió cada LPN a Sin Ubicación.</p>
           <div class="import-status" id="aic-su-ubicacion-envio-status" style="display:none;margin-top:8px;"></div>
         </div>
+        <div class="opk-lpn-copy-box" style="margin-top:12px;">
+          <div class="opk-lpn-copy-head">
+            <span>📋 Cod Alterno pendientes — para copiar</span>
+            <button type="button" class="btn btn-ghost" id="aic-su-cod-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+          </div>
+          <textarea id="aic-su-cod-text" class="opk-lpn-textarea" readonly rows="2"></textarea>
+        </div>
+        <div class="opk-lpn-copy-box" style="margin-top:12px;">
+          <div class="opk-lpn-copy-head">
+            <span>📦 Vincular otras ubicaciones (mismo Cod Alterno)</span>
+            <label class="btn btn-ghost" for="aic-su-otras-ubic-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;padding:6px 12px;cursor:pointer;">
+              📤 Vincular Ubicaciones
+              <input type="file" id="aic-su-otras-ubic-file" accept=".xlsx,.xls,.csv" hidden>
+            </label>
+          </div>
+          <p class="section-desc" style="margin:4px 0 0;">Copia los Cod Alterno de arriba, fíltralos en el WMS y descarga el export "ActiveInventory" (Cod Alternat, Ubicacion, Cantidad actual). Se vincula por Cod Alternat — en cada tarjeta se van a ver las demás ubicaciones del almacén donde ese mismo producto tiene stock ahora.</p>
+          <div class="import-status" id="aic-su-otras-ubic-status" style="display:none;margin-top:8px;"></div>
+        </div>
         <div class="opk-grid" id="aic-su-grid"></div>
       </div>
 
@@ -6461,6 +6479,7 @@ async function bpoLoadRegistros(){
     nroLote: r.nro_lote || "", valTot: r.val_tot === null ? 0 : Number(r.val_tot),
     unidadesRecuperadas: r.unidades_recuperadas === null ? 0 : Number(r.unidades_recuperadas),
     nroGrupo: r.nro_grupo || "", ubicacionEnvio: r.ubicacion_envio || "",
+    otrasUbicaciones: Array.isArray(r.otras_ubicaciones) ? r.otras_ubicaciones : [],
     estado: r.estado, recuperadoEn: r.recuperado_en, archivoOrigen: r.archivo_origen || "",
     creadoPorId: r.creado_por_id, createdAt: r.created_at,
   }));
@@ -6704,6 +6723,7 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
           <div class="opk-prod-name">${escapeHtml(r.descripcion || r.producto)}</div>
           <div class="opk-sub">Cod ${escapeHtml(r.codAlternat)}${r.nroLote ? " · Lote " + escapeHtml(r.nroLote) : ""}${r.semana ? " · " + escapeHtml(r.semana) : ""}${r.nroGrupo ? ` · <span style="color:var(--purple);font-weight:700;">Grupo ${escapeHtml(r.nroGrupo)}</span>` : ""}</div>
           ${r.ubicacionEnvio ? `<div class="opk-sub">📍 Enviado desde <span style="color:var(--blue);font-weight:700;">${escapeHtml(r.ubicacionEnvio)}</span></div>` : ""}
+          ${r.otrasUbicaciones && r.otrasUbicaciones.length ? `<div class="opk-sub">📦 Otras ubicaciones: ${r.otrasUbicaciones.map(u => `<span style="color:var(--green,#16A34A);font-weight:700;">${escapeHtml(u.ubicacion)} (${u.cantidad})</span>`).join(", ")}</div>` : ""}
           ${extraHtml}
           ${qtyRow}
         </div>
@@ -6754,6 +6774,14 @@ function bpoChkRender(clasificacion){
   const btnCopiar = document.getElementById(`aic-${prefijo}-lpn-copiar`);
   btnCopiar.textContent = `Copiar (${lpnPendUnicos.length})`;
   btnCopiar.classList.remove("copiado");
+
+  if(prefijo === "su"){
+    const codPendUnicos = [...new Set(pendRows.map(r => r.codAlternat).filter(Boolean))];
+    document.getElementById("aic-su-cod-text").value = codPendUnicos.join(",");
+    const btnCodCopiar = document.getElementById("aic-su-cod-copiar");
+    btnCodCopiar.textContent = `Copiar (${codPendUnicos.length})`;
+    btnCodCopiar.classList.remove("copiado");
+  }
 
   const sinFiltro = !document.getElementById(`aic-${prefijo}-buscar`).value && !document.getElementById(`aic-${prefijo}-semana`).value;
   const grupos = opkAgruparPorLpn(rows);
@@ -7276,6 +7304,110 @@ document.getElementById("aic-su-ubicacion-envio-file").addEventListener("change"
     }
     statusEl.textContent = msg;
     statusEl.className = (encontrados && !falloGuardado) ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }
+});
+
+document.getElementById("aic-su-cod-copiar").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const textarea = document.getElementById("aic-su-cod-text");
+  const texto = textarea.value;
+  const originalLabel = btn.textContent;
+  let copiado = false;
+  try{
+    await navigator.clipboard.writeText(texto);
+    copiado = true;
+  }catch(err){
+    textarea.removeAttribute("readonly");
+    textarea.focus();
+    textarea.select();
+    try{ copiado = document.execCommand("copy"); }catch(err2){ copiado = false; }
+    textarea.setAttribute("readonly", "readonly");
+  }
+  btn.textContent = copiado ? "✓ Copiado" : "No se pudo copiar";
+  btn.classList.toggle("copiado", copiado);
+  setTimeout(()=>{ btn.textContent = originalLabel; btn.classList.remove("copiado"); }, 2000);
+});
+
+/* ---- Vincular otras ubicaciones (Sin Ubicación) ----
+   Sube el export "ActiveInventory" del WMS (Cod Alternat, Ubicacion, Cantidad
+   actual) — a diferencia de los dos anteriores, este se vincula por Cod
+   Alternat (el archivo no trae Nro LPN ni Nro Grupo). Para cada Cod Alternat
+   pendiente en Sin Ubicación, junta TODAS las ubicaciones del almacén donde
+   ese mismo producto tiene stock ahora (solo filas con Cantidad actual > 0,
+   sumando si el mismo producto repite ubicación en distinto lote), y lo
+   guarda para que se vea en la tarjeta — útil para saber dónde más buscar o
+   de dónde abastecerse mientras se resuelve el pendiente. */
+document.getElementById("aic-su-otras-ubic-file").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  const statusEl = document.getElementById("aic-su-otras-ubic-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      codAlternat: ["Cod Alternat"], ubicacion: ["Ubicacion", "Ubicación"], cantidad: ["Cantidad actual"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Cod Alternat, Ubicacion y Cantidad actual. Revisa que sea el export "ActiveInventory" del WMS, tal cual.`);
+
+    const ubicPorCod = new Map();
+    hoja.rows.forEach(row => {
+      const codAlternat = bpoLimpiaFormula(row[hoja.cols.codAlternat]);
+      const ubicacion = bpoLimpiaFormula(row[hoja.cols.ubicacion]);
+      const cantidad = Number(row[hoja.cols.cantidad]) || 0;
+      if(!codAlternat || !ubicacion || cantidad <= 0) return;
+      if(!ubicPorCod.has(codAlternat)) ubicPorCod.set(codAlternat, new Map());
+      const m = ubicPorCod.get(codAlternat);
+      m.set(ubicacion, (m.get(ubicacion) || 0) + cantidad);
+    });
+
+    const pendientes = bpoRegistros.filter(r => r.clasificacion === "sin_ubicacion" && r.estado !== "recuperado" && r.estado !== "migrado_bolsa");
+    const codsPendientes = [...new Set(pendientes.map(r => r.codAlternat).filter(Boolean))];
+
+    let encontrados = 0, sinMatch = 0;
+    const porActualizar = [];
+    codsPendientes.forEach(cod => {
+      const m = ubicPorCod.get(cod);
+      if(!m){ sinMatch++; return; }
+      encontrados++;
+      const lista = [...m.entries()].map(([ubicacion, cantidad]) => ({ ubicacion, cantidad }));
+      pendientes.filter(r => r.codAlternat === cod).forEach(r => porActualizar.push({ id: r.id, lista }));
+    });
+
+    if(porActualizar.length){
+      statusEl.textContent = `Guardando otras ubicaciones en ${porActualizar.length} registro(s)…`;
+      statusEl.className = "import-status";
+      statusEl.style.display = "block";
+      const resultados = await Promise.all(porActualizar.map(({ id, lista }) =>
+        sb.from("ssoma_bpo_registros").update({ otras_ubicaciones: lista }).eq("id", id)
+          .then(({ error }) => ({ id, lista, error }))
+          .catch(error => ({ id, lista, error }))
+      ));
+      const conError = resultados.filter(x => x.error);
+      resultados.filter(x => !x.error).forEach(({ id, lista }) => {
+        const r = bpoRegistros.find(x => x.id === id);
+        if(r) r.otrasUbicaciones = lista;
+      });
+      bpoChkRender("perdidos");
+      bpoChkRender("sin_ubicacion");
+      if(conError.length) console.error("No se pudo guardar otras ubicaciones en algunos registros:", conError);
+    }
+
+    let msg = encontrados
+      ? `✅ ${encontrados} Cod Alterno con otras ubicaciones vinculadas (de ${codsPendientes.length} Cod Alterno pendientes en Sin Ubicación).`
+      : `⚠ Ningún Cod Alterno pendiente coincide con stock disponible (Cantidad actual > 0) en este archivo.`;
+    if(sinMatch) msg += ` ${sinMatch} Cod Alterno sin stock disponible en este archivo.`;
+    statusEl.textContent = msg;
+    statusEl.className = encontrados ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
   }catch(err){
     console.error(err);
