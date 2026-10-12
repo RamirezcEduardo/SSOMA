@@ -2309,6 +2309,12 @@
           </div>
         </div>
         <div class="import-status" id="aic-su-wms-status" style="display:none;margin-bottom:14px;"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+          <span style="font-size:12.5px;font-weight:700;color:var(--muted);">🧰 Herramientas de vinculación WMS</span>
+          <button type="button" class="btn btn-ghost" id="aic-su-tools-toggle" style="padding:6px 12px;font-size:12px;">Ocultar</button>
+        </div>
+        <div id="aic-su-tools-body">
         <div class="opk-lpn-copy-box">
           <div class="opk-lpn-copy-head">
             <span>📋 LPN pendientes — para pegar en el WMS</span>
@@ -2358,6 +2364,7 @@
           </div>
           <p class="section-desc" style="margin:4px 0 0;">Copia los Cod Alterno de arriba, fíltralos en el WMS y descarga el export "ActiveInventory" (Cod Alternat, Ubicacion, Cantidad actual). Se vincula por Cod Alternat — en cada tarjeta se van a ver las demás ubicaciones del almacén donde ese mismo producto tiene stock ahora.</p>
           <div class="import-status" id="aic-su-otras-ubic-status" style="display:none;margin-top:8px;"></div>
+        </div>
         </div>
         <div class="opk-grid" id="aic-su-grid"></div>
       </div>
@@ -6829,6 +6836,28 @@ document.getElementById("aic-bp-buscar").addEventListener("input", ()=> bpoChkRe
 document.getElementById("aic-bp-semana").addEventListener("change", ()=> bpoChkRender("perdidos"));
 document.getElementById("aic-su-buscar").addEventListener("input", ()=> bpoChkRender("sin_ubicacion"));
 document.getElementById("aic-su-semana").addEventListener("change", ()=> bpoChkRender("sin_ubicacion"));
+
+/* Ocultar/mostrar las herramientas de vinculación WMS (LPN, Nro Grupo,
+   ubicación de envío, Cod Alterno, otras ubicaciones) — son 5 cajas que
+   ocupan mucho espacio en mobile una vez que ya se usaron. Se recuerda la
+   preferencia entre sesiones (por navegador, no por usuario). */
+(function(){
+  const KEY = "ssoma_su_tools_collapsed";
+  const body = document.getElementById("aic-su-tools-body");
+  const btn = document.getElementById("aic-su-tools-toggle");
+  function aplicar(colapsado){
+    body.style.display = colapsado ? "none" : "";
+    btn.textContent = colapsado ? "Mostrar" : "Ocultar";
+  }
+  let colapsadoInicial = false;
+  try{ colapsadoInicial = localStorage.getItem(KEY) === "1"; }catch(e){}
+  aplicar(colapsadoInicial);
+  btn.addEventListener("click", ()=>{
+    const colapsado = body.style.display !== "none";
+    try{ localStorage.setItem(KEY, colapsado ? "1" : "0"); }catch(e){}
+    aplicar(colapsado);
+  });
+})();
 
 document.querySelectorAll(".opk-lpn-copiar").forEach(btn=>{
   btn.addEventListener("click", async ()=>{
