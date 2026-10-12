@@ -7388,12 +7388,19 @@ document.getElementById("aic-su-otras-ubic-file").addEventListener("change", asy
     });
     if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Cod Alternat, Ubicacion y Cantidad actual. Revisa que sea el export "ActiveInventory" del WMS, tal cual.`);
 
+    // Zonas del WMS que NO son ubicaciones reales de almacén (SIN-UBICACION-*, MERMA-*,
+    // RMERMA-*, DROP-*): el export las trae con stock, pero no sirven para saber dónde
+    // más buscar el producto — se omiten al vincular (si no, un archivo con esas zonas
+    // las llenaba en las tarjetas como si fueran ubicaciones).
+    const ZONA_NO_ALMACEN = /^(SIN-UBICACION|R?MERMA|DROP)-/i;
+    let zonasOmitidas = 0;
     const ubicPorCod = new Map();
     hoja.rows.forEach(row => {
       const codAlternat = bpoLimpiaFormula(row[hoja.cols.codAlternat]);
       const ubicacion = bpoLimpiaFormula(row[hoja.cols.ubicacion]);
       const cantidad = Number(row[hoja.cols.cantidad]) || 0;
       if(!codAlternat || !ubicacion || cantidad <= 0) return;
+      if(ZONA_NO_ALMACEN.test(ubicacion)){ zonasOmitidas++; return; }
       if(!ubicPorCod.has(codAlternat)) ubicPorCod.set(codAlternat, new Map());
       const m = ubicPorCod.get(codAlternat);
       m.set(ubicacion, (m.get(ubicacion) || 0) + cantidad);
@@ -7436,7 +7443,8 @@ document.getElementById("aic-su-otras-ubic-file").addEventListener("change", asy
     let msg = encontrados
       ? `✅ ${encontrados} Cod Alterno con otras ubicaciones vinculadas (de ${codsPendientes.length} Cod Alterno pendientes en Sin Ubicación).`
       : `⚠ Ningún Cod Alterno pendiente coincide con stock disponible (Cantidad actual > 0) en este archivo.`;
-    if(sinMatch) msg += ` ${sinMatch} Cod Alterno sin stock disponible en este archivo.`;
+    if(sinMatch) msg += ` ${sinMatch} Cod Alterno sin stock en ubicaciones de almacén en este archivo.`;
+    if(zonasOmitidas) msg += ` Se omitieron ${zonasOmitidas} fila(s) de zonas SIN-UBICACION/MERMA/DROP (no son ubicaciones de almacén).`;
     // Igual que en "Vincular Nro Grupo/Ubicación": no decir "vinculadas" si la base rechazó
     // el guardado (típico: falta correr la migración 0069 que crea otras_ubicaciones).
     const falloGuardado = fallosGuardado.length ? fallosGuardado[0].error : null;
