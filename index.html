@@ -7131,6 +7131,7 @@ document.getElementById("aic-su-grupo-file").addEventListener("change", async (e
       pendientes.filter(r => r.nroLpn === lpn && r.nroGrupo !== grupo).forEach(r => porActualizar.push({ id: r.id, nroGrupo: grupo }));
     });
 
+    let fallosGuardado = [];
     if(porActualizar.length){
       statusEl.textContent = `Guardando Nro Grupo en ${porActualizar.length} registro(s)…`;
       statusEl.className = "import-status";
@@ -7147,6 +7148,7 @@ document.getElementById("aic-su-grupo-file").addEventListener("change", async (e
       });
       bpoChkRender("perdidos");
       bpoChkRender("sin_ubicacion");
+      fallosGuardado = conError;
       if(conError.length) console.error("No se pudo guardar Nro Grupo en algunos registros:", conError);
     }
 
@@ -7155,8 +7157,14 @@ document.getElementById("aic-su-grupo-file").addEventListener("change", async (e
       ? `✅ ${gruposEncontrados.length} Nro Grupo vinculados y guardados (de ${lpnsPendientes.length} LPN pendientes en Sin Ubicación).`
       : `⚠ Ningún LPN pendiente de Sin Ubicación coincide con las filas "29 - Create Allocatable Container" de este archivo.`;
     if(sinMatch) msg += ` ${sinMatch} LPN pendientes no tienen fila "29 - Create Allocatable Container" en este archivo.`;
+    // Si la base rechazó el guardado, que no diga "guardados": avisa el error real
+    // (típico: falta correr la migración 0067 que crea la columna nro_grupo).
+    const falloGuardado = fallosGuardado.length ? fallosGuardado[0].error : null;
+    if(falloGuardado){
+      msg = `❌ No se pudo guardar el Nro Grupo en ${fallosGuardado.length} de ${porActualizar.length} registro(s): ${falloGuardado.message || falloGuardado}. ¿Ya corriste la migración 0067 en Supabase? (La lista para copiar al WMS sí se generó arriba.)`;
+    }
     statusEl.textContent = msg;
-    statusEl.className = gruposEncontrados.length ? "import-status success" : "import-status error";
+    statusEl.className = (gruposEncontrados.length && !falloGuardado) ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
   }catch(err){
     console.error(err);
@@ -7234,6 +7242,7 @@ document.getElementById("aic-su-ubicacion-envio-file").addEventListener("change"
       if(r.ubicacionEnvio !== ubicacion) porActualizar.push({ id: r.id, ubicacion });
     });
 
+    let fallosGuardado = [];
     if(porActualizar.length){
       statusEl.textContent = `Guardando ubicación de envío en ${porActualizar.length} registro(s)…`;
       statusEl.className = "import-status";
@@ -7250,6 +7259,7 @@ document.getElementById("aic-su-ubicacion-envio-file").addEventListener("change"
       });
       bpoChkRender("perdidos");
       bpoChkRender("sin_ubicacion");
+      fallosGuardado = conError;
       if(conError.length) console.error("No se pudo guardar ubicación de envío en algunos registros:", conError);
     }
 
@@ -7258,8 +7268,14 @@ document.getElementById("aic-su-ubicacion-envio-file").addEventListener("change"
       : `⚠ Ningún Nro Grupo ya vinculado coincide con las filas "4 - Inventory Adjusted pre verification" de este archivo.`;
     if(sinMatch) msg += ` ${sinMatch} no tienen fila "4 - Inventory Adjusted pre verification" en este archivo.`;
     if(!pendientesConGrupo.length) msg = `⚠ Ningún LPN pendiente de Sin Ubicación tiene Nro Grupo vinculado todavía — primero usa "Vincular Nro Grupo" arriba.`;
+    // Igual que en "Vincular Nro Grupo": no decir "guardadas" si la base rechazó el guardado
+    // (típico: falta correr la migración 0068 que crea la columna ubicacion_envio).
+    const falloGuardado = fallosGuardado.length ? fallosGuardado[0].error : null;
+    if(falloGuardado){
+      msg = `❌ No se pudo guardar la ubicación de envío en ${fallosGuardado.length} de ${porActualizar.length} registro(s): ${falloGuardado.message || falloGuardado}. ¿Ya corriste la migración 0068 en Supabase?`;
+    }
     statusEl.textContent = msg;
-    statusEl.className = encontrados ? "import-status success" : "import-status error";
+    statusEl.className = (encontrados && !falloGuardado) ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
   }catch(err){
     console.error(err);
