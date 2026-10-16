@@ -6728,6 +6728,10 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
   const btnHtml = (done || migrado || soloLectura) ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
   const migradoBtn = (done || migrado || soloLectura) ? "" : `<button type="button" class="btn btn-ghost opk-btn-migrado" data-id="${r.id}" style="margin-top:6px;width:100%;padding:8px;font-size:11.5px;color:var(--purple);">📦 Migró a Bolsa</button>`;
   const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="bpo" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
+  // Revertir: solo administrador, y solo si ya se reportó algo (recuperado, parcial o
+  // migrado a bolsa) — deja el registro como recién cargado otra vez (sin tocar los
+  // datos del WMS como Nro Grupo/ubicación de envío, que siguen siendo válidos).
+  const revertirBtn = (!soloLectura && esAdmin() && (done || parcial || migrado)) ? `<button type="button" class="btn btn-ghost opk-btn-revertir" data-id="${r.id}" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--orange,#D97706);">↩️ Revertir</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""} ${migrado ? "migrado" : ""}">
       <div class="opk-card-top">
@@ -6744,6 +6748,7 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
       </div>
       ${btnHtml}
       ${migradoBtn}
+      ${revertirBtn}
       ${delBtn}
     </div>`;
 }
@@ -6819,6 +6824,32 @@ function bpoChkRender(clasificacion){
   grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
     btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_bpo_registros", Number(btn.dataset.id), btn));
   });
+  grid.querySelectorAll(".opk-btn-revertir").forEach(btn=>{
+    btn.addEventListener("click", ()=> bpoRevertirRegistro(Number(btn.dataset.id), btn));
+  });
+}
+
+/* Botón "Revertir": deshace un "Marcar como recuperado"/"Reportar unidades"/"Migró a
+   Bolsa" hecho por error, dejando el registro otra vez como pendiente (unidades
+   recuperadas en 0, sin fecha de recuperación). Solo administrador, porque borra el
+   avance ya reportado por el equipo. No toca Nro Grupo/ubicación de envío/otras
+   ubicaciones: esos datos del WMS siguen siendo válidos aunque se revierta el estado. */
+async function bpoRevertirRegistro(id, btn){
+  if(!esAdmin()){ alert("Solo un administrador puede revertir un registro."); return; }
+  const r = bpoRegistros.find(x => x.id === id);
+  if(!r) return;
+  if(!confirm(`¿Revertir "${r.descripcion || r.producto}" (LPN ${r.nroLpn}) a pendiente? Se perderá lo reportado como recuperado.`)) return;
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_bpo_registros")
+    .update({ estado: "pendiente", unidades_recuperadas: 0, recuperado_en: null, actualizado_en: new Date().toISOString() })
+    .eq("id", id);
+  if(error){ alert("No se pudo revertir: " + error.message); btn.disabled = false; return; }
+  r.estado = "pendiente";
+  r.unidadesRecuperadas = 0;
+  r.recuperadoEn = null;
+  bpoChkRender("perdidos");
+  bpoChkRender("sin_ubicacion");
+  bpoRender();
 }
 
 /* Botón "Migró a Bolsa": solo etiqueta el registro como dato informativo de que
