@@ -2258,9 +2258,16 @@
           </div>
           <div class="opk-search-box">
             <div class="opk-search"><span>🔍</span><input type="text" id="aic-bp-buscar" placeholder="Buscar por LPN o producto…"></div>
-            <select id="aic-bp-semana"><option value="">Todas</option></select>
+            <div style="display:flex;gap:8px;">
+              <select id="aic-bp-semana" style="flex:1;"><option value="">Todas</option></select>
+              <label class="btn btn-ghost" for="aic-bp-wms-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12.5px;padding:0 12px;cursor:pointer;">
+                📤 Subir desde WMS
+                <input type="file" id="aic-bp-wms-file" accept=".xlsx,.xls,.csv" hidden>
+              </label>
+            </div>
           </div>
         </div>
+        <div class="import-status" id="aic-bp-wms-status" style="display:none;margin-bottom:14px;"></div>
         <div class="opk-lpn-copy-box">
           <div class="opk-lpn-copy-head">
             <span>📋 LPN pendientes — para pegar en el WMS</span>
@@ -6721,6 +6728,10 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
   const btnHtml = (done || migrado || soloLectura) ? "" : `<button type="button" class="opk-btn-mark ${parcial ? "parcial" : ""}" data-id="${r.id}">✓ ${parcial ? "Reportar más unidades" : "Marcar como recuperado"}</button>`;
   const migradoBtn = (done || migrado || soloLectura) ? "" : `<button type="button" class="btn btn-ghost opk-btn-migrado" data-id="${r.id}" style="margin-top:6px;width:100%;padding:8px;font-size:11.5px;color:var(--purple);">📦 Migró a Bolsa</button>`;
   const delBtn = (!soloLectura && esAdmin()) ? `<button type="button" class="btn btn-ghost opk-btn-del" data-id="${r.id}" data-tabla="bpo" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--red);">🗑️ Eliminar</button>` : "";
+  // Revertir: solo administrador, y solo si ya se reportó algo (recuperado, parcial o
+  // migrado a bolsa) — deja el registro como recién cargado otra vez (sin tocar los
+  // datos del WMS como Nro Grupo/ubicación de envío, que siguen siendo válidos).
+  const revertirBtn = (!soloLectura && esAdmin() && (done || parcial || migrado)) ? `<button type="button" class="btn btn-ghost opk-btn-revertir" data-id="${r.id}" style="margin-top:8px;width:100%;padding:8px;font-size:11.5px;color:var(--orange,#D97706);">↩️ Revertir</button>` : "";
   return `
     <div class="opk-card ${done ? "done" : ""} ${migrado ? "migrado" : ""}">
       <div class="opk-card-top">
@@ -6737,6 +6748,7 @@ function bpoChkCardHtml(r, enGrupo, soloLectura){
       </div>
       ${btnHtml}
       ${migradoBtn}
+      ${revertirBtn}
       ${delBtn}
     </div>`;
 }
@@ -6812,6 +6824,32 @@ function bpoChkRender(clasificacion){
   grid.querySelectorAll(".opk-btn-del").forEach(btn=>{
     btn.addEventListener("click", ()=> opkEliminarRegistro("ssoma_bpo_registros", Number(btn.dataset.id), btn));
   });
+  grid.querySelectorAll(".opk-btn-revertir").forEach(btn=>{
+    btn.addEventListener("click", ()=> bpoRevertirRegistro(Number(btn.dataset.id), btn));
+  });
+}
+
+/* Botón "Revertir": deshace un "Marcar como recuperado"/"Reportar unidades"/"Migró a
+   Bolsa" hecho por error, dejando el registro otra vez como pendiente (unidades
+   recuperadas en 0, sin fecha de recuperación). Solo administrador, porque borra el
+   avance ya reportado por el equipo. No toca Nro Grupo/ubicación de envío/otras
+   ubicaciones: esos datos del WMS siguen siendo válidos aunque se revierta el estado. */
+async function bpoRevertirRegistro(id, btn){
+  if(!esAdmin()){ alert("Solo un administrador puede revertir un registro."); return; }
+  const r = bpoRegistros.find(x => x.id === id);
+  if(!r) return;
+  if(!confirm(`¿Revertir "${r.descripcion || r.producto}" (LPN ${r.nroLpn}) a pendiente? Se perderá lo reportado como recuperado.`)) return;
+  btn.disabled = true;
+  const { error } = await sb.from("ssoma_bpo_registros")
+    .update({ estado: "pendiente", unidades_recuperadas: 0, recuperado_en: null, actualizado_en: new Date().toISOString() })
+    .eq("id", id);
+  if(error){ alert("No se pudo revertir: " + error.message); btn.disabled = false; return; }
+  r.estado = "pendiente";
+  r.unidadesRecuperadas = 0;
+  r.recuperadoEn = null;
+  bpoChkRender("perdidos");
+  bpoChkRender("sin_ubicacion");
+  bpoRender();
 }
 
 /* Botón "Migró a Bolsa": solo etiqueta el registro como dato informativo de que
@@ -7126,6 +7164,108 @@ document.getElementById("aic-su-wms-file").addEventListener("change", async (e)=
     if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado fueron detectadas como duplicado. `;
     if(yaExistianEnServidor > 0) msg += `${yaExistianEnServidor} de las que parecían nuevas ya estaban guardadas de antes (tu pantalla tenía datos desactualizados — no se duplicaron). `;
     if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas. `;
+    statusEl.textContent = msg;
+    statusEl.className = guardadas ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }
+});
+
+/* ---- Subir desde WMS (Bultos Perdidos) ----
+   Mismo mecanismo que "Subir desde WMS" de Sin Ubicación, pero para el export de
+   LPN por Estado del WMS (columnas Nro LPN, Estado, Cod Alternat, Producto,
+   Descripcion, Nro de lote, Cantidad actual) filtrado a Estado = "Perdido" — así
+   no hace falta esperar a que el auditor arme y envíe el reporte "Pendientes de
+   Operación" completo, se puede cargar directo lo que ya está marcado como
+   perdido en el WMS. */
+document.getElementById("aic-bp-wms-file").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+
+  const chequeo = await importVerificarDuplicado("bultos_perdidos_wms", file);
+  if(!chequeo.ok) return;
+
+  const statusEl = document.getElementById("aic-bp-wms-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    await spCargarCostos();
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      estado: ["Estado"], nroLpn: ["Nro LPN"], codAlternat: ["Cod Alternat"],
+      producto: ["Producto"], descripcion: ["Descripcion", "Descripción"],
+      nroLote: ["Nro de lote"], cantidad: ["Cantidad actual"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Estado, Nro LPN, Cod Alternat, Producto, Descripcion, Nro de lote y Cantidad actual. Revisa que sea el export de LPN por Estado del WMS, tal cual.`);
+    // "Sem" no viene en este export — se calcula con "Fe y Hr Modif" (el último
+    // movimiento del caso en el WMS), no con la fecha en que se sube el archivo.
+    const idxFecha = bolsaFindCol(hoja.header, ["Fe y Hr Modif", "Fe y Hr Crea", "Fecha"]);
+
+    // La clave es Nro LPN + Cod Alternat, no solo el LPN — un mismo bulto puede
+    // traer varios productos distintos (multi-SKU), y cada uno se guarda como
+    // fila aparte en vez de descartar todo lo que no sea el primero.
+    const clavesExistentes = new Set(bpoRegistros.map(r => r.nroLpn + "|||" + r.codAlternat));
+    let ignoradasSinLpn = 0, duplicadas = 0, noPerdido = 0;
+    const filas = [];
+    hoja.rows.forEach(row => {
+      const estado = String(row[hoja.cols.estado] || "").trim();
+      if(!estado.toLowerCase().startsWith("perdido")){ noPerdido++; return; }
+      const nroLpn = bpoLimpiaFormula(row[hoja.cols.nroLpn]);
+      if(!nroLpn){ ignoradasSinLpn++; return; }
+      const codAlternat = bpoLimpiaFormula(row[hoja.cols.codAlternat]);
+      const clave = nroLpn + "|||" + codAlternat;
+      if(clavesExistentes.has(clave)){ duplicadas++; return; }
+      clavesExistentes.add(clave);
+      const cantidad = parseFloat(row[hoja.cols.cantidad]);
+      const cantidadNum = isNaN(cantidad) ? 0 : cantidad;
+      const fechaCreacion = idxFecha !== -1 ? wmsParseFecha(row[idxFecha]) : null;
+      const semana = bolsaSemanaLabel(fechaCreacion) || bolsaSemanaLabel(new Date());
+      filas.push({
+        proceso: estado, clasificacion: "perdidos",
+        responsable: "", supervisor: "", semana, familia: "",
+        nro_lpn: nroLpn,
+        producto: bpoLimpiaFormula(row[hoja.cols.producto]),
+        cod_alternat: codAlternat,
+        descripcion: String(row[hoja.cols.descripcion] || "").trim(),
+        cantidad_actual: cantidadNum,
+        nro_lote: bpoLimpiaFormula(row[hoja.cols.nroLote]),
+        val_tot: cantidadNum * spCosto(codAlternat),
+        estado: "pendiente", recuperado_en: null,
+        archivo_origen: file.name, actualizado_en: new Date().toISOString(),
+        creado_por_id: miUsuario ? miUsuario.id : null,
+      });
+    });
+    if(!filas.length && !duplicadas) throw new Error(`El archivo no trajo ninguna fila con Estado = "Perdido" en la hoja "${hoja.sheetName}".`);
+
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      // .select("id") para contar solo lo que en verdad se insertó — sin esto, filas que
+      // ignoreDuplicates descarta en silencio (sesión con datos desactualizados) se
+      // contaban igual como "guardadas", mintiendo en el mensaje de éxito.
+      const { data, error } = await sb.from("ssoma_bpo_registros")
+        .upsert(lote, { onConflict: "nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += (data || []).length;
+    }
+    const yaExistianEnServidor = filas.length - guardadas;
+    if(guardadas) await importRegistrarLog("bultos_perdidos_wms", file, chequeo.hash, guardadas);
+    await bpoLoadRegistros();
+
+    let msg = guardadas
+      ? `✅ Importado desde WMS: ${guardadas} líneas nuevas con Estado "Perdido" (hoja "${hoja.sheetName}"). `
+      : `⚠ No se cargó ninguna línea nueva — todo lo que trae este archivo ya estaba cargado. `;
+    if(duplicadas) msg += `${duplicadas} filas con Nro LPN que ya estaba cargado fueron detectadas como duplicado. `;
+    if(yaExistianEnServidor > 0) msg += `${yaExistianEnServidor} de las que parecían nuevas ya estaban guardadas de antes (tu pantalla tenía datos desactualizados — no se duplicaron). `;
+    if(ignoradasSinLpn) msg += `${ignoradasSinLpn} filas sin Nro LPN fueron ignoradas. `;
+    if(noPerdido) msg += `${noPerdido} filas no tenían Estado "Perdido" y se omitieron.`;
     statusEl.textContent = msg;
     statusEl.className = guardadas ? "import-status success" : "import-status error";
     statusEl.style.display = "block";
