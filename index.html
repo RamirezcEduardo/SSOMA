@@ -2888,8 +2888,96 @@
     <section class="panel" id="panel-reabastecimiento">
       <div class="section-head">
         <h2 class="section-title">Reabastecimiento</h2>
+        <span class="count-pill" id="reab-count">0 olas</span>
       </div>
-      <p class="section-desc">Próximamente.</p>
+      <p class="section-desc">Audita el reabasto: sube las Olas del WMS ("Allocation Run Header") y vincula su detalle de ejecución ("Allocation") por Numero Ejecuc, para comparar la cantidad/LPN planeados contra lo realmente ejecutado por ubicación de destino.</p>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Subir Olas de Reabasto</div>
+            <div class="import-card-sub">Sube el export "Allocation Run Header" tal cual — se detectan todas las Olas (ciclo normal y por quiebre reportado en área).</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="reab-olas-import-btn" disabled>Importar Olas</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="reab-olas-file" id="reab-olas-drop">
+            <input type="file" id="reab-olas-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Allocation Run Header</span>
+            <span class="import-drop-hint" id="reab-olas-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="reab-olas-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="opk-lpn-copy-box" style="margin-bottom:22px;">
+        <div class="opk-lpn-copy-head">
+          <span>📋 Numero Ejecuc — para pegar en el WMS</span>
+          <button type="button" class="btn btn-ghost" id="reab-ejecuc-copiar" style="padding:6px 12px;font-size:12px;">Copiar</button>
+        </div>
+        <textarea id="reab-ejecuc-text" class="opk-lpn-textarea" readonly rows="3"></textarea>
+      </div>
+
+      <div class="import-card">
+        <div class="import-card-head">
+          <div>
+            <div class="import-card-title">📤 Vincular Detalle de Reabasto</div>
+            <div class="import-card-sub">Sube el export "Allocation" (detalle por LPN/cartón) — se cruza por Numero Ejecuc con las Olas ya cargadas arriba.</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="reab-lineas-import-btn" disabled>Importar Detalle</button>
+        </div>
+        <div class="import-drop-row">
+          <label class="import-drop" for="reab-lineas-file" id="reab-lineas-drop">
+            <input type="file" id="reab-lineas-file" accept=".xlsx,.xls,.csv" hidden>
+            <span class="import-drop-icon">📦</span>
+            <span class="import-drop-title">Allocation (detalle)</span>
+            <span class="import-drop-hint" id="reab-lineas-file-name">Arrastra el archivo o haz clic para elegirlo</span>
+          </label>
+        </div>
+        <div class="import-status" id="reab-lineas-import-status" style="display:none;"></div>
+      </div>
+
+      <div class="stats-row stats-row-4">
+        <div class="stat-card">
+          <div class="stat-label">Olas cargadas</div>
+          <div class="stat-value" id="reab-stat-olas">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cumplimiento promedio</div>
+          <div class="stat-value" id="reab-stat-cumplimiento">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">⚠ Incompletas</div>
+          <div class="stat-value" id="reab-stat-incompletas" style="color:var(--orange);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🔴 Sobre-reabastecidas</div>
+          <div class="stat-value" id="reab-stat-sobre" style="color:var(--red);">0</div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:18px;">
+        <table class="data-table" id="reab-olas-table">
+          <thead><tr>
+            <th>Numero Ejecuc</th><th>Ola</th><th>Cant. asignada</th><th>LPN asignados</th>
+            <th>LPN ejecutados</th><th>Cumplimiento</th><th>Auditoría</th><th>Última ejecución</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-subhead" style="margin-top:28px;">Detalle por LPN/cartón ejecutado</div>
+      <div class="opk-search" style="margin-bottom:12px;max-width:360px;"><span>🔍</span><input type="text" id="reab-lineas-buscar" placeholder="Buscar por Numero Ejecuc, Cod Alternat o producto…"></div>
+      <div class="table-wrap">
+        <table class="data-table" id="reab-lineas-table">
+          <thead><tr>
+            <th>Numero Ejecuc</th><th>Producto</th><th>Cod Alternat</th><th>Cant. asignada</th>
+            <th>Nro LPN/Cartón</th><th>Ubic destino</th><th>Fecha/hora ejecución</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- INBOUND · RECEPCIÓN DE PRODUCTOS IMPORTADOS -->
@@ -9033,6 +9121,301 @@ document.getElementById("bpo-import-btn").addEventListener("click", async (e)=>{
 });
 
 bpoLoadRegistros();
+
+/* ============================================================
+   REABASTECIMIENTO — auditoría de Olas vs. ejecución real
+   Dos exports del WMS cruzados por Numero Ejecuc:
+     - "Allocation Run Header" -> ssoma_reabasto_olas (1 fila por Ola,
+       con el total planeado extraído de "Texto de mensaje").
+     - "Allocation" (detalle)  -> ssoma_reabasto_lineas (1 fila por
+       LPN/cartón realmente ejecutado).
+   ============================================================ */
+let reabOlas = [];
+let reabLineas = [];
+
+async function reabLoadOlas(){
+  const { data, error } = await sbSelectAll("ssoma_reabasto_olas", "*");
+  if(error){ console.error("No se pudieron cargar las Olas de Reabasto:", error.message); return; }
+  reabOlas = (data || []).map(r => ({
+    numeroEjecuc: r.numero_ejecuc, ola: r.ola || "", plantillaCiclo: r.plantilla_ciclo || "",
+    estado: r.estado || "", cantidadAsignadaHdr: r.cantidad_asignada_hdr === null ? null : Number(r.cantidad_asignada_hdr),
+    lpnsAsignadosHdr: r.lpns_asignados_hdr === null ? null : Number(r.lpns_asignados_hdr),
+    fechaCrea: r.fecha_crea, fechaModif: r.fecha_modif,
+  }));
+  reabRenderOlas();
+}
+async function reabLoadLineas(){
+  const { data, error } = await sbSelectAll("ssoma_reabasto_lineas", "*");
+  if(error){ console.error("No se pudo cargar el detalle de Reabasto:", error.message); return; }
+  reabLineas = (data || []).map(r => ({
+    id: r.id, numeroEjecuc: r.numero_ejecuc, producto: r.producto || "", descripcion: r.descripcion || "",
+    codAlternat: r.cod_alternat || "", cantidadAsignada: r.cantidad_asignada === null ? null : Number(r.cantidad_asignada),
+    nroLpn: r.nro_lpn || "", ubicDestino: r.ubic_destino || "", fechaModif: r.fecha_modif,
+  }));
+  reabRenderOlas();
+  reabRenderLineas();
+}
+
+function reabFmtFecha(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? "—" : d.toLocaleString("es-PE", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+
+/* Compara lo planeado (header) contra lo realmente ejecutado (conteo de líneas del
+   detalle, ya que "Num Carton"/"Nro LPN Entrada" son excluyentes y cada fila del
+   detalle es un LPN/cartón distinto) para auditar cada Ola. */
+function reabAuditoria(ola, ejecutados){
+  if(ola.lpnsAsignadosHdr === null || ola.lpnsAsignadosHdr === undefined) return { label: "Sin dato", clase: "" };
+  if(!ejecutados) return { label: "⚪ Sin ejecutar", clase: "" };
+  if(ejecutados > ola.lpnsAsignadosHdr) return { label: "🔴 Sobre-reabastecido", clase: "sobre" };
+  if(ejecutados < ola.lpnsAsignadosHdr) return { label: "⚠ Incompleto", clase: "incompleto" };
+  return { label: "✅ OK", clase: "ok" };
+}
+
+function reabRenderOlas(){
+  const porEjecuc = new Map();
+  reabLineas.forEach(l => {
+    if(!porEjecuc.has(l.numeroEjecuc)) porEjecuc.set(l.numeroEjecuc, []);
+    porEjecuc.get(l.numeroEjecuc).push(l);
+  });
+
+  document.getElementById("reab-count").textContent = `${reabOlas.length} ola${reabOlas.length === 1 ? "" : "s"}`;
+  document.getElementById("reab-stat-olas").textContent = reabOlas.length;
+
+  let incompletas = 0, sobre = 0, sumaPct = 0, conPct = 0;
+  const tbody = document.querySelector("#reab-olas-table tbody");
+  const filas = reabOlas.slice().sort((a,b)=> new Date(b.fechaModif||0) - new Date(a.fechaModif||0));
+  tbody.innerHTML = filas.length ? filas.map(ola=>{
+    const lineasOla = porEjecuc.get(ola.numeroEjecuc) || [];
+    const ejecutados = lineasOla.length;
+    const auditoria = reabAuditoria(ola, ejecutados);
+    if(auditoria.clase === "incompleto") incompletas++;
+    if(auditoria.clase === "sobre") sobre++;
+    let pctTxt = "—";
+    if(ola.lpnsAsignadosHdr){
+      const pct = Math.round((ejecutados / ola.lpnsAsignadosHdr) * 100);
+      pctTxt = pct + "%";
+      sumaPct += pct; conPct++;
+    }
+    const ultimaEjecucion = lineasOla.reduce((max, l) => (l.fechaModif && (!max || new Date(l.fechaModif) > new Date(max))) ? l.fechaModif : max, null);
+    return `<tr>
+      <td>${escapeHtml(ola.numeroEjecuc)}</td>
+      <td>${escapeHtml(ola.ola || ola.plantillaCiclo)}</td>
+      <td class="num">${ola.cantidadAsignadaHdr === null ? "—" : ola.cantidadAsignadaHdr.toLocaleString("es-PE")}</td>
+      <td class="num">${ola.lpnsAsignadosHdr === null ? "—" : ola.lpnsAsignadosHdr}</td>
+      <td class="num">${ejecutados}</td>
+      <td class="num">${pctTxt}</td>
+      <td>${auditoria.label}</td>
+      <td>${reabFmtFecha(ultimaEjecucion)}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="8" style="text-align:center;color:var(--muted);">Sin Olas cargadas todavía.</td></tr>`;
+
+  document.getElementById("reab-stat-incompletas").textContent = incompletas;
+  document.getElementById("reab-stat-sobre").textContent = sobre;
+  document.getElementById("reab-stat-cumplimiento").textContent = conPct ? Math.round(sumaPct / conPct) + "%" : "—";
+}
+
+function reabRenderLineas(){
+  const q = (document.getElementById("reab-lineas-buscar").value || "").trim().toLowerCase();
+  const filtradas = !q ? reabLineas : reabLineas.filter(l =>
+    l.numeroEjecuc.toLowerCase().includes(q) || l.codAlternat.toLowerCase().includes(q) ||
+    l.producto.toLowerCase().includes(q) || l.descripcion.toLowerCase().includes(q)
+  );
+  const orden = filtradas.slice().sort((a,b)=> new Date(b.fechaModif||0) - new Date(a.fechaModif||0)).slice(0, 500);
+  const tbody = document.querySelector("#reab-lineas-table tbody");
+  tbody.innerHTML = orden.length ? orden.map(l=>`<tr>
+      <td>${escapeHtml(l.numeroEjecuc)}</td>
+      <td>${escapeHtml(l.descripcion || l.producto)}</td>
+      <td>${escapeHtml(l.codAlternat)}</td>
+      <td class="num">${l.cantidadAsignada === null ? "—" : l.cantidadAsignada.toLocaleString("es-PE")}</td>
+      <td>${escapeHtml(l.nroLpn)}</td>
+      <td>${escapeHtml(l.ubicDestino) || "—"}</td>
+      <td>${reabFmtFecha(l.fechaModif)}</td>
+    </tr>`).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);">${reabLineas.length ? "Sin resultados para ese filtro." : "Sin detalle cargado todavía."}</td></tr>`;
+}
+document.getElementById("reab-lineas-buscar").addEventListener("input", reabRenderLineas);
+
+document.getElementById("reab-olas-file").addEventListener("change", ()=>{
+  const f = document.getElementById("reab-olas-file").files[0];
+  document.getElementById("reab-olas-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("reab-olas-drop").classList.toggle("filled", !!f);
+  document.getElementById("reab-olas-import-btn").disabled = !f;
+});
+document.getElementById("reab-lineas-file").addEventListener("change", ()=>{
+  const f = document.getElementById("reab-lineas-file").files[0];
+  document.getElementById("reab-lineas-file-name").textContent = f ? f.name : "Arrastra el archivo o haz clic para elegirlo";
+  document.getElementById("reab-lineas-drop").classList.toggle("filled", !!f);
+  document.getElementById("reab-lineas-import-btn").disabled = !f;
+});
+
+document.getElementById("reab-olas-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  const file = document.getElementById("reab-olas-file").files[0];
+  if(!file) return;
+
+  const chequeo = await importVerificarDuplicado("reabasto_olas", file);
+  if(!chequeo.ok) return;
+
+  btn.disabled = true;
+  btn.textContent = "Importando…";
+  const statusEl = document.getElementById("reab-olas-import-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      numeroEjecuc: ["Numero Ejecuc"], plantillaCiclo: ["Plantilla de ciclo"],
+      textoMensaje: ["Texto de mensaje"], estado: ["Estado"],
+      modoAsignacion: ["Descripción de modo de asignación"],
+      fechaCrea: ["Fe y Hr Crea"], fechaModif: ["Fe y Hr Modif"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Numero Ejecuc, Plantilla de ciclo, Texto de mensaje, Estado, Descripción de modo de asignación, Fe y Hr Crea y Fe y Hr Modif. Revisa que sea el export "Allocation Run Header" del WMS, tal cual.`);
+
+    const ejecucEncontrados = [];
+    const filas = [];
+    hoja.rows.forEach(row => {
+      const numeroEjecuc = String(row[hoja.cols.numeroEjecuc] || "").trim();
+      if(!numeroEjecuc) return;
+      ejecucEncontrados.push(numeroEjecuc);
+      // "Cantidad asignada: 15349(867 LPNs)" -> 15349 y 867. Sin esas dos cifras no hay
+      // con qué auditar la Ola después, pero igual se guarda (quedan en null).
+      const msg = String(row[hoja.cols.textoMensaje] || "");
+      const m = msg.match(/Cantidad asignada:\s*([\d.,]+)\s*\(\s*(\d+)\s*LPNs?\)/i);
+      const cantidadHdr = m ? parseFloat(m[1].replace(/,/g, "")) : null;
+      const lpnsHdr = m ? parseInt(m[2], 10) : null;
+      filas.push({
+        numero_ejecuc: numeroEjecuc,
+        ola: String(row[hoja.cols.modoAsignacion] || "").trim(),
+        plantilla_ciclo: String(row[hoja.cols.plantillaCiclo] || "").trim(),
+        estado: String(row[hoja.cols.estado] || "").trim(),
+        cantidad_asignada_hdr: isNaN(cantidadHdr) ? null : cantidadHdr,
+        lpns_asignados_hdr: isNaN(lpnsHdr) ? null : lpnsHdr,
+        fecha_crea: (wmsParseFecha(row[hoja.cols.fechaCrea]) || null)?.toISOString() ?? null,
+        fecha_modif: (wmsParseFecha(row[hoja.cols.fechaModif]) || null)?.toISOString() ?? null,
+        archivo_origen: file.name, creado_por_id: miUsuario ? miUsuario.id : null,
+        actualizado_en: new Date().toISOString(),
+      });
+    });
+    if(!filas.length) throw new Error(`El archivo no trajo ninguna fila con Numero Ejecuc en la hoja "${hoja.sheetName}".`);
+
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { error } = await sb.from("ssoma_reabasto_olas").upsert(lote, { onConflict: "numero_ejecuc" });
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+    }
+    await importRegistrarLog("reabasto_olas", file, chequeo.hash, filas.length);
+    await reabLoadOlas();
+
+    document.getElementById("reab-ejecuc-text").value = ejecucEncontrados.join(",");
+    statusEl.textContent = `✅ ${filas.length} Ola(s) importadas/actualizadas de la hoja "${hoja.sheetName}". Copia el cuadro de Numero Ejecuc de abajo y pégalo en el WMS para descargar el detalle de cada una.`;
+    statusEl.className = "import-status success";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("reab-olas-file").files[0];
+  }
+});
+
+document.getElementById("reab-lineas-import-btn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  const originalLabel = btn.textContent;
+  const file = document.getElementById("reab-lineas-file").files[0];
+  if(!file) return;
+
+  const chequeo = await importVerificarDuplicado("reabasto_lineas", file);
+  if(!chequeo.ok) return;
+
+  btn.disabled = true;
+  btn.textContent = "Importando…";
+  const statusEl = document.getElementById("reab-lineas-import-status");
+  statusEl.style.display = "none";
+  statusEl.className = "import-status";
+
+  try{
+    const wb = await bolsaReadWorkbook(file);
+    const hoja = bolsaPickSheet(wb, {
+      numeroEjecuc: ["Numero Ejecuc"], producto: ["Producto"], descripcion: ["Descripcion", "Descripción"],
+      codAlternat: ["Cod Alternat"], cantidad: ["Cantidad asignada"], nroLpnEntrada: ["Nro LPN Entrada"],
+      numCarton: ["Num Carton"], ubicDestino: ["Ubic destino"], fechaModif: ["Fe y Hr Modif"],
+    });
+    if(!hoja) throw new Error(`No encontré en "${file.name}" una hoja con las columnas Numero Ejecuc, Producto, Descripcion, Cod Alternat, Cantidad asignada, Nro LPN Entrada, Num Carton, Ubic destino y Fe y Hr Modif. Revisa que sea el export "Allocation" (detalle) del WMS, tal cual.`);
+
+    let ignoradasSinEjecuc = 0, ignoradasSinLpn = 0;
+    const filas = [];
+    hoja.rows.forEach(row => {
+      const numeroEjecuc = String(row[hoja.cols.numeroEjecuc] || "").trim();
+      if(!numeroEjecuc){ ignoradasSinEjecuc++; return; }
+      // Nro LPN Entrada y Num Carton son excluyentes según cómo se ejecutó esa línea
+      // (pallet/unidad vs. caja) — cualquiera de los dos identifica el bulto.
+      const nroLpn = String(row[hoja.cols.nroLpnEntrada] || row[hoja.cols.numCarton] || "").trim();
+      if(!nroLpn){ ignoradasSinLpn++; return; }
+      filas.push({
+        numero_ejecuc: numeroEjecuc,
+        producto: String(row[hoja.cols.producto] || "").trim(),
+        descripcion: String(row[hoja.cols.descripcion] || "").trim(),
+        cod_alternat: String(row[hoja.cols.codAlternat] || "").trim(),
+        cantidad_asignada: isNaN(parseFloat(row[hoja.cols.cantidad])) ? null : parseFloat(row[hoja.cols.cantidad]),
+        nro_lpn: nroLpn,
+        ubic_destino: String(row[hoja.cols.ubicDestino] || "").trim(),
+        fecha_modif: (wmsParseFecha(row[hoja.cols.fechaModif]) || null)?.toISOString() ?? null,
+        archivo_origen: file.name, creado_por_id: miUsuario ? miUsuario.id : null,
+      });
+    });
+    if(!filas.length) throw new Error(`El archivo no trajo ninguna fila válida (con Numero Ejecuc y Nro LPN Entrada/Num Carton) en la hoja "${hoja.sheetName}".`);
+
+    let guardadas = 0;
+    const LOTE = 500;
+    for(let i = 0; i < filas.length; i += LOTE){
+      const lote = filas.slice(i, i + LOTE);
+      const { data, error } = await sb.from("ssoma_reabasto_lineas")
+        .upsert(lote, { onConflict: "numero_ejecuc,nro_lpn,cod_alternat", ignoreDuplicates: true }).select("id");
+      if(error) throw new Error(`No se pudo guardar en Supabase: ${error.message}`);
+      guardadas += (data || []).length;
+    }
+    if(guardadas) await importRegistrarLog("reabasto_lineas", file, chequeo.hash, guardadas);
+    await reabLoadLineas();
+
+    let msg = guardadas
+      ? `✅ Importadas ${guardadas} línea(s) nuevas de la hoja "${hoja.sheetName}".`
+      : `⚠ No se cargó ninguna línea nueva — todo lo que trae este archivo ya estaba cargado.`;
+    if(ignoradasSinEjecuc) msg += ` ${ignoradasSinEjecuc} filas sin Numero Ejecuc fueron ignoradas.`;
+    if(ignoradasSinLpn) msg += ` ${ignoradasSinLpn} filas sin Nro LPN Entrada/Num Carton fueron ignoradas.`;
+    statusEl.textContent = msg;
+    statusEl.className = guardadas ? "import-status success" : "import-status error";
+    statusEl.style.display = "block";
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "❌ " + err.message;
+    statusEl.className = "import-status error";
+    statusEl.style.display = "block";
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = !document.getElementById("reab-lineas-file").files[0];
+  }
+});
+
+document.getElementById("reab-ejecuc-copiar").addEventListener("click", (e)=>{
+  const ta = document.getElementById("reab-ejecuc-text");
+  if(!ta.value) return;
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    const btn = e.currentTarget;
+    const original = btn.textContent;
+    btn.textContent = "¡Copiado!";
+    setTimeout(()=> btn.textContent = original, 1500);
+  });
+});
+
+reabLoadOlas();
+reabLoadLineas();
 
 /* ---- Designación de Tareas (conectado a Supabase: tabla ssoma_tareas) ----
    Los roles y el organigrama (Jefatura/Coordinador/Supervisor, quién reporta a quién)
