@@ -1458,6 +1458,16 @@
         <button class="navitem" data-view="bultos-pendientes-operacion"><span class="dot" style="background:#EA580C;"></span><span class="label">Bultos Pendientes de Operación</span><span class="tag">Activo</span></button>
       </div>
 
+      <button type="button" class="navgroup-header" id="navgroup-reabastecimiento-toggle" aria-expanded="false" style="margin-top:10px;">
+        <span class="navgroup-icon">🔄</span>
+        <span class="navgroup-title">Reabastecimiento</span>
+        <span class="navgroup-count" id="navgroup-reabastecimiento-count">1</span>
+        <span class="navgroup-chevron">⌄</span>
+      </button>
+      <div class="navgroup-body" id="navgroup-reabastecimiento-body">
+        <button class="navitem" data-view="reabastecimiento"><span class="dot" style="background:#0D9488;"></span><span class="label">Reabastecimiento</span></button>
+      </div>
+
       <button type="button" class="navgroup-header" id="navgroup-suministros-toggle" aria-expanded="false" style="margin-top:10px;">
         <span class="navgroup-icon">🧾</span>
         <span class="navgroup-title">Suministros</span>
@@ -2872,6 +2882,14 @@
         <span class="ic">📌</span>
         <div>Para marcar un bulto como recuperado (total o parcial, por unidades), hazlo desde su checklist en <b>Auditoría de Inventario</b> → pestañas <b>📦 Bultos Perdidos</b> / <b>📍 Sin Ubicación</b>. Acá solo se importa y se consulta el listado completo con su estado.</div>
       </div>
+    </section>
+
+    <!-- REABASTECIMIENTO -->
+    <section class="panel" id="panel-reabastecimiento">
+      <div class="section-head">
+        <h2 class="section-title">Reabastecimiento</h2>
+      </div>
+      <p class="section-desc">Próximamente.</p>
     </section>
 
     <!-- INBOUND · RECEPCIÓN DE PRODUCTOS IMPORTADOS -->
@@ -9072,6 +9090,8 @@ function aplicarVisibilidadNav(){
   const cuerpoSsoma = document.getElementById("navgroup-ssoma-body");
   const grupoInventario = document.getElementById("navgroup-inventario-toggle");
   const cuerpoInventario = document.getElementById("navgroup-inventario-body");
+  const grupoReabastecimiento = document.getElementById("navgroup-reabastecimiento-toggle");
+  const cuerpoReabastecimiento = document.getElementById("navgroup-reabastecimiento-body");
   const grupoSuministros = document.getElementById("navgroup-suministros-toggle");
   const cuerpoSuministros = document.getElementById("navgroup-suministros-body");
   const grupoLiderVida = document.getElementById("navgroup-lidervida-toggle");
@@ -9085,13 +9105,15 @@ function aplicarVisibilidadNav(){
   const itemTareas = document.querySelector('.navitem[data-view="tareas-supervisor"]');
 
   if(seccion === "admin"){
-    [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
+    [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoReabastecimiento, cuerpoReabastecimiento,
+     grupoSuministros, cuerpoSuministros,
      grupoLiderVida, cuerpoLiderVida, grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas,
      grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, true));
     return;
   }
 
-  [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoSuministros, cuerpoSuministros,
+  [grupoSsoma, cuerpoSsoma, grupoInventario, cuerpoInventario, grupoReabastecimiento, cuerpoReabastecimiento,
+   grupoSuministros, cuerpoSuministros,
    grupoLiderVida, cuerpoLiderVida, grupoTareas, cuerpoTareas, itemJefatura, itemCoordinador, itemTareas,
    grupoInbound, cuerpoInbound].forEach(el=> mostrar(el, false));
 
@@ -9121,6 +9143,7 @@ function aplicarVisibilidadNav(){
     vistaInicial = "tareas-supervisor";
   } else if(seccion === "inventario"){
     mostrar(grupoInventario, true); mostrar(cuerpoInventario, true);
+    mostrar(grupoReabastecimiento, true); mostrar(cuerpoReabastecimiento, true);
     mostrar(grupoSuministros, true); mostrar(cuerpoSuministros, true);
     mostrar(grupoLiderVida, true); mostrar(cuerpoLiderVida, true);
     mostrar(grupoInbound, true); mostrar(cuerpoInbound, true);
