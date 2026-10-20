@@ -5928,24 +5928,38 @@ function bolsaPickSheet(wb, requiredCandidateLists){
   return null;
 }
 function bolsaReadWorkbook(file){
-  // El CSV crudo del WMS ("Historial Inventario") se lee como texto UTF-8, no como binario:
-  // leído como ArrayBuffer, SheetJS interpreta tildes/ñ mal (mojibake) y además auto-detecta
-  // fechas tipo "1/07/2026" como si fueran MM/DD (asume inglés) en vez de DD/MM (el formato
-  // real del WMS) — por eso se lee como string con cellDates:false, y wmsParseFecha() se encarga
-  // de parsear el DD/MM/YYYY a mano, sin ambigüedad.
+  // El CSV crudo del WMS ("Historial Inventario") se lee como texto, no como binario:
+  // leído como ArrayBuffer sin decodificar, SheetJS interpreta tildes/ñ mal (mojibake) y
+  // además auto-detecta fechas tipo "1/07/2026" como si fueran MM/DD (asume inglés) en vez
+  // de DD/MM (el formato real del WMS) — por eso se lee como string con cellDates:false, y
+  // wmsParseFecha() se encarga de parsear el DD/MM/YYYY a mano, sin ambigüedad.
+  //
+  // El archivo del auditor LATAM (y algunos export del WMS) NO vienen en UTF-8 sino en
+  // ISO-8859-1/Windows-1252 — forzar "UTF-8" a secas los corrompía en silencio (tildes y
+  // Ñ quedaban como basura), y como el encabezado esperado trae columnas acentuadas
+  // ("UBICACIÓN", "Observación", "Gestión"), el import fallaba con "no se encontró una
+  // hoja con las columnas esperadas" aunque el archivo SÍ las traía. Se lee siempre como
+  // bytes crudos (ArrayBuffer) y se decodifica probando UTF-8 estricto primero; si esos
+  // bytes no son UTF-8 válido, se decodifica como Windows-1252 en su lugar.
   const esCsv = /\.csv$/i.test(file.name);
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onload = (e)=>{
       try{
-        resolve(esCsv
-          ? XLSX.read(e.target.result, { type:"string", cellDates:false, raw:true })
-          : XLSX.read(e.target.result, { type:"array", cellDates:true }));
+        if(esCsv){
+          const buf = e.target.result;
+          let texto;
+          try{ texto = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+          catch(errUtf8){ texto = new TextDecoder("windows-1252").decode(buf); }
+          resolve(XLSX.read(texto, { type:"string", cellDates:false, raw:true }));
+        }else{
+          resolve(XLSX.read(e.target.result, { type:"array", cellDates:true }));
+        }
       }
       catch(err){ reject(err); }
     };
     reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo"));
-    if(esCsv) reader.readAsText(file, "UTF-8"); else reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(file);
   });
 }
 
