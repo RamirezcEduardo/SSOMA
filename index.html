@@ -9510,7 +9510,14 @@ let audAreaActual = null;
 let audEditando = null; // { id, tipo: "de_mas" | "de_menos" } — línea con el campo de cantidad abierto
 
 function audAreaDe(ubicDestino){
-  const m = String(ubicDestino || "").trim().match(/^([A-Za-z]+[0-9]*)/);
+  const u = String(ubicDestino || "").trim();
+  // Mezzanine (MZ1/MZ2) tiene 4 pisos cada uno — el segmento que sigue a "MZ1-"/"MZ2-"
+  // (ej. "MZ1-01-23-10" -> piso 01) es el piso real, así que ahí el área se parte por
+  // piso ("MZ1-01", "MZ1-02"...) en vez de agrupar todo el mezzanine junto. El resto de
+  // zonas (EA, EB, EST1, EST2, DISTRI...) no tiene esa subdivisión por piso.
+  const mzPiso = u.match(/^(MZ[12])-(\d+)/i);
+  if(mzPiso) return `${mzPiso[1].toUpperCase()}-${mzPiso[2]}`;
+  const m = u.match(/^([A-Za-z]+[0-9]*)/);
   return m ? m[1] : "";
 }
 
