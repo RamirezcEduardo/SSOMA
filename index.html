@@ -2360,6 +2360,7 @@
             <div class="opk-search"><span>🔍</span><input type="text" id="aic-su-buscar" placeholder="Buscar por LPN o producto…"></div>
             <div style="display:flex;gap:8px;">
               <select id="aic-su-semana" style="flex:1;"><option value="">Todas</option></select>
+              <select id="aic-su-area" style="flex:1;"><option value="">Área (origen)</option></select>
               <label class="btn btn-ghost" for="aic-su-wms-file" style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12.5px;padding:0 12px;cursor:pointer;">
                 📤 Subir desde WMS
                 <input type="file" id="aic-su-wms-file" accept=".xlsx,.xls,.csv" hidden>
@@ -6876,12 +6877,29 @@ function bpoChkRenderFiltroSemana(clasificacion){
   sel.value = semanas.includes(actual) ? actual : "";
 }
 
+/* Solo Sin Ubicación trae ubicación de envío (de dónde se reportó el bulto como Sin
+   Ubicación) — el área se saca con la misma lógica de prefijo que Auditoría de
+   Abastecimientos (audAreaDe), así ambos filtros quedan consistentes. */
+function bpoChkRenderFiltroArea(clasificacion){
+  const prefijo = bpoChkPrefijo(clasificacion);
+  const sel = document.getElementById(`aic-${prefijo}-area`);
+  if(!sel) return;
+  const actual = sel.value;
+  const areas = [...new Set(bpoRegistros.filter(r => r.clasificacion === clasificacion && r.ubicacionEnvio)
+    .map(r => audAreaDe(r.ubicacionEnvio)).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Área (origen)</option>' + areas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("");
+  sel.value = areas.includes(actual) ? actual : "";
+}
+
 function bpoChkFiltered(clasificacion){
   const prefijo = bpoChkPrefijo(clasificacion);
   const buscar = (document.getElementById(`aic-${prefijo}-buscar`).value || "").trim().toLowerCase();
   const semana = document.getElementById(`aic-${prefijo}-semana`).value;
+  const areaSel = document.getElementById(`aic-${prefijo}-area`);
+  const area = areaSel ? areaSel.value : "";
   return bpoRegistros.filter(r => r.clasificacion === clasificacion
     && (!semana || r.semana === semana)
+    && (!area || audAreaDe(r.ubicacionEnvio) === area)
     && (!buscar
       || r.nroLpn.toLowerCase().includes(buscar)
       || r.descripcion.toLowerCase().includes(buscar)
@@ -6957,6 +6975,7 @@ function bpoChkGrupoHtml(grupo){
 
 function bpoChkRender(clasificacion){
   bpoChkRenderFiltroSemana(clasificacion);
+  bpoChkRenderFiltroArea(clasificacion);
   const prefijo = bpoChkPrefijo(clasificacion);
   const rows = bpoChkFiltered(clasificacion);
   const pendRows = rows.filter(r => r.estado !== "recuperado" && r.estado !== "migrado_bolsa");
@@ -7060,6 +7079,7 @@ document.getElementById("aic-bp-buscar").addEventListener("input", ()=> bpoChkRe
 document.getElementById("aic-bp-semana").addEventListener("change", ()=> bpoChkRender("perdidos"));
 document.getElementById("aic-su-buscar").addEventListener("input", ()=> bpoChkRender("sin_ubicacion"));
 document.getElementById("aic-su-semana").addEventListener("change", ()=> bpoChkRender("sin_ubicacion"));
+document.getElementById("aic-su-area").addEventListener("change", ()=> bpoChkRender("sin_ubicacion"));
 
 /* Ocultar/mostrar las herramientas de vinculación WMS (LPN, Nro Grupo,
    ubicación de envío, Cod Alterno, otras ubicaciones) — son 5 cajas que
